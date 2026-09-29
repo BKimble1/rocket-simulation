@@ -1,9 +1,1130 @@
 {
-  "version": "film-1",
-  "voice": "bm_george",
-  "speed": 1.0,
-  "note": "Watch-mode narration. Each segment carries its mission and anchor (event or phase, plus an offset in mission seconds). Built to public/narration/<version>/ by tools/narration/build.sh.",
-  "segments": [
-    { "id": "leo-intro", "mission": "leo", "anchor": { "phase": "pad" }, "offset": 0, "cues": [ { "id": "a", "text": "This is the K-1, a two-stage rocket fuelled with liquid oxygen and kerosene, on the pad before launch." } ] }
-  ]
+ "version": "film-1",
+ "voice": "bm_george",
+ "speed": 1.0,
+ "note": "Watch-mode narration. Each segment carries its mission and anchor (event or phase, plus an offset in mission seconds). Built to public/narration/<version>/ by tools/narration/build.sh. Captions show the text exactly.",
+ "segments": [
+  {
+   "id": "leo-intro",
+   "mission": "leo",
+   "anchor": {
+    "phase": "pad"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "This is the K-1, a two-stage rocket, standing on its launch pad."
+    },
+    {
+     "id": "b",
+     "text": "Its tanks hold liquid oxygen and RP-1, a refined kerosene. A rocket carries its oxidizer as well as its fuel, because there is no air to burn where it is going."
+    }
+   ]
+  },
+  {
+   "id": "leo-venting",
+   "mission": "leo",
+   "anchor": {
+    "event": "arms-retract"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The access arms swing back. The white vapor is liquid oxygen boiling at minus one hundred and eighty-three degrees Celsius. It is vented, and topped up, until the final minutes."
+    }
+   ]
+  },
+  {
+   "id": "leo-ignition",
+   "mission": "leo",
+   "anchor": {
+    "event": "engine-start"
+   },
+   "offset": -0.5,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Engine start. A self-igniting fluid called T E A, T E B flashes green, the turbopumps spin up, and seven engines build thrust."
+    },
+    {
+     "id": "b",
+     "text": "Clamps still hold the rocket down while the flight computers confirm that every engine is healthy."
+    }
+   ]
+  },
+  {
+   "id": "leo-liftoff",
+   "mission": "leo",
+   "anchor": {
+    "event": "liftoff"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Release, and liftoff. Five point three meganewtons of thrust lift about four hundred and forty tonnes, so the rocket accelerates slowly at first."
+    }
+   ]
+  },
+  {
+   "id": "leo-tower",
+   "mission": "leo",
+   "anchor": {
+    "event": "tower-clear"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Tower cleared. The rocket now tips over, just slightly, toward the east."
+    }
+   ]
+  },
+  {
+   "id": "leo-gravityturn",
+   "mission": "leo",
+   "anchor": {
+    "phase": "pitchover"
+   },
+   "offset": 6,
+   "cues": [
+    {
+     "id": "a",
+     "text": "From here it does not fight the air. It keeps its nose along the airflow and lets gravity bend its path into a curve: a gravity turn."
+    },
+    {
+     "id": "b",
+     "text": "Heading east also borrows the Earth's own spin, about four hundred meters per second at this latitude."
+    }
+   ]
+  },
+  {
+   "id": "leo-maxq",
+   "mission": "leo",
+   "anchor": {
+    "event": "max-q"
+   },
+   "offset": -10,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The air is thinning, but the rocket is going faster. Dynamic pressure, half the air density times the speed squared, is at its peak."
+    },
+    {
+     "id": "b",
+     "text": "This is the moment of greatest aerodynamic load, and the engines throttle back to ease through it."
+    }
+   ]
+  },
+  {
+   "id": "leo-meco",
+   "mission": "leo",
+   "anchor": {
+    "event": "meco"
+   },
+   "offset": -2,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Main engine cutoff. The first stage has used most of its propellant, keeping a reserve to fly itself home."
+    }
+   ]
+  },
+  {
+   "id": "leo-sep",
+   "mission": "leo",
+   "anchor": {
+    "event": "stage-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Stage separation. Pneumatic pushers ease the stages apart. Both are still climbing at the same speed; they drift apart gently."
+    }
+   ]
+  },
+  {
+   "id": "leo-ses1",
+   "mission": "leo",
+   "anchor": {
+    "event": "ses1"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The upper-stage engine lights once it is clear of the interstage. Its huge nozzle extension would not work at sea level. It is shaped for the near-vacuum up here."
+    }
+   ]
+  },
+  {
+   "id": "leo-booster",
+   "mission": "leo",
+   "anchor": {
+    "event": "boostback-start"
+   },
+   "offset": -4,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Meanwhile, the booster has flipped around with small nitrogen thrusters, and relights three engines to head back toward the coast. You can follow it in the mission explorer."
+    }
+   ]
+  },
+  {
+   "id": "leo-fairing",
+   "mission": "leo",
+   "anchor": {
+    "event": "fairing-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Above about a hundred and ten kilometers, the air is too thin to heat or batter the satellite. The fairing halves swing open and fall away: carrying them higher would only waste propellant."
+    }
+   ]
+  },
+  {
+   "id": "leo-upperburn",
+   "mission": "leo",
+   "anchor": {
+    "phase": "upper-burn"
+   },
+   "offset": 20,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The upper stage now burns for several minutes, pointing more and more horizontally."
+    },
+    {
+     "id": "b",
+     "text": "Orbit is not about height. It is about going sideways so fast, about seven point seven kilometers per second here, that the ground curves away as quickly as you fall."
+    }
+   ]
+  },
+  {
+   "id": "leo-seco",
+   "mission": "leo",
+   "anchor": {
+    "event": "seco"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Engine cutoff. The vehicle is in orbit. Nothing pushes it now, and it does not slow down. It is falling around the Earth."
+    }
+   ]
+  },
+  {
+   "id": "leo-coast",
+   "mission": "leo",
+   "anchor": {
+    "phase": "coast"
+   },
+   "offset": 8,
+   "cues": [
+    {
+     "id": "a",
+     "text": "This coast is shown sped up. The stage and its satellite keep moving at nearly eight kilometers per second, on a path set by gravity alone."
+    }
+   ]
+  },
+  {
+   "id": "leo-deploy",
+   "mission": "leo",
+   "anchor": {
+    "event": "payload-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Payload separation. A clamp band lets go, and springs push the satellite gently away from the stage."
+    }
+   ]
+  },
+  {
+   "id": "leo-arrays",
+   "mission": "leo",
+   "anchor": {
+    "event": "arrays-deploy"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The satellite unfolds its solar arrays, turns them toward the Sun, and raises its antenna to contact the ground. The rocket's job is done."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-intro",
+   "mission": "suborbital",
+   "anchor": {
+    "phase": "pad"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "A suborbital research flight uses the booster alone, with a capsule on top instead of an upper stage."
+    },
+    {
+     "id": "b",
+     "text": "It carries a reduced propellant load: the goal is height, not orbital speed."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-ignition",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "engine-start"
+   },
+   "offset": -0.5,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Engine start, and the hold-down clamps release when thrust is confirmed."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-liftoff",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "liftoff"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Liftoff. The rocket climbs almost straight up, tilted a little to the east so the capsule will come down over the ocean."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-meco",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "meco"
+   },
+   "offset": -1,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Engine cutoff, early. The booster has enough speed to throw the capsule above one hundred kilometers, and no more."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-sep",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "capsule-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The capsule separates. From here both are simply coasting: rising, slowing, and about to fall back."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-space",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "karman-up"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The capsule crosses one hundred kilometers, a common definition of the edge of space. Inside, experiments are in free fall."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-apogee",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "apogee"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The top of the arc. The capsule is barely moving sideways, so it cannot stay up here. Reaching space is not the same as staying in orbit."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-descent",
+   "mission": "suborbital",
+   "anchor": {
+    "phase": "descent"
+   },
+   "offset": 5,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Falling back, it gains speed again. With no sideways speed to spare, the path returns to Earth a few minutes after launch."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-entry",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "peak-heating"
+   },
+   "offset": -6,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The heat shield leads. Entry from a suborbital arc is gentler than from orbit, but the capsule still meets the air at several times the speed of sound."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-drogue",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "drogue-deploy"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Drogue parachutes steady the capsule and slow it before the mains."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-mains",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "main-deploy"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Main parachutes open in stages. Reefing lines hold each canopy partly closed at first, limiting the opening shock."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-splash",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "splashdown"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Splashdown, at a few meters per second. Recovery crews are on the way."
+    }
+   ]
+  },
+  {
+   "id": "suborbital-booster",
+   "mission": "suborbital",
+   "anchor": {
+    "event": "landing-start"
+   },
+   "offset": -2,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The booster has flown its own path back and lights its center engine for landing."
+    }
+   ]
+  },
+  {
+   "id": "gto-intro",
+   "mission": "gto",
+   "anchor": {
+    "phase": "pad"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "This mission carries a communications satellite toward geostationary orbit, thirty-five thousand seven hundred and eighty-six kilometers up."
+    },
+    {
+     "id": "b",
+     "text": "The rocket will not take it all the way. Watch which vehicle performs each maneuver."
+    }
+   ]
+  },
+  {
+   "id": "gto-liftoff",
+   "mission": "gto",
+   "anchor": {
+    "event": "liftoff"
+   },
+   "offset": 1,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Liftoff. This time the booster is not recovered: the energy for a high orbit uses the propellant that would otherwise bring it home."
+    }
+   ]
+  },
+  {
+   "id": "gto-maxq",
+   "mission": "gto",
+   "anchor": {
+    "event": "max-q"
+   },
+   "offset": -4,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Maximum dynamic pressure, then the climb out of the dense air."
+    }
+   ]
+  },
+  {
+   "id": "gto-sep",
+   "mission": "gto",
+   "anchor": {
+    "event": "stage-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Stage separation, and the upper stage takes over."
+    }
+   ]
+  },
+  {
+   "id": "gto-fairing",
+   "mission": "gto",
+   "anchor": {
+    "event": "fairing-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The fairing falls away above the atmosphere."
+    }
+   ]
+  },
+  {
+   "id": "gto-parking",
+   "mission": "gto",
+   "anchor": {
+    "event": "seco1"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "First cutoff. The stage and satellite are in a low parking orbit, coasting around the Earth."
+    }
+   ]
+  },
+  {
+   "id": "gto-coast",
+   "mission": "gto",
+   "anchor": {
+    "phase": "parking-coast"
+   },
+   "offset": 10,
+   "cues": [
+    {
+     "id": "a",
+     "text": "They coast until they reach the right point: the next burn must happen where the orbit crosses the equator, so the high point of the new orbit lies over the equator too."
+    }
+   ]
+  },
+  {
+   "id": "gto-settle",
+   "mission": "gto",
+   "anchor": {
+    "event": "settling"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Before the engine restarts, small thrusters nudge the stage forward. In free fall the propellant floats; this settles it over the tank outlets."
+    }
+   ]
+  },
+  {
+   "id": "gto-restart",
+   "mission": "gto",
+   "anchor": {
+    "event": "ses2"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Restart. The upper-stage engine burns again, adding speed at the low point of the orbit."
+    }
+   ]
+  },
+  {
+   "id": "gto-injection",
+   "mission": "gto",
+   "anchor": {
+    "event": "seco2"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Cutoff. The orbit now stretches from about two hundred kilometers to thirty-six thousand. This is a transfer orbit, not the final orbit."
+    }
+   ]
+  },
+  {
+   "id": "gto-deploy",
+   "mission": "gto",
+   "anchor": {
+    "event": "payload-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The satellite separates. From here, the satellite's own engine does the rest."
+    }
+   ]
+  },
+  {
+   "id": "gto-climb",
+   "mission": "gto",
+   "anchor": {
+    "phase": "transfer-coast"
+   },
+   "offset": 30,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The long climb to the high point takes about five hours, shown here greatly sped up. The satellite slows as it rises, trading speed for height."
+    }
+   ]
+  },
+  {
+   "id": "gto-apogee",
+   "mission": "gto",
+   "anchor": {
+    "event": "apogee-burn-start"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "At the high point the satellite fires its apogee engine, sideways, to raise the low point and to remove the tilt of the orbit."
+    },
+    {
+     "id": "b",
+     "text": "In reality this takes several burns over days. It is shown here as one, as an explanation."
+    }
+   ]
+  },
+  {
+   "id": "station-intro",
+   "mission": "station",
+   "anchor": {
+    "phase": "pad"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "A crew capsule on the K-1. Above it, the abort tower: a solid rocket motor that can pull the capsule clear of a failing booster in seconds."
+    }
+   ]
+  },
+  {
+   "id": "station-plane",
+   "mission": "station",
+   "anchor": {
+    "event": "liftoff"
+   },
+   "offset": 1,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Liftoff, timed for the moment the launch site passes under the station's orbital plane. Launching into the right plane saves an expensive change of direction later."
+    }
+   ]
+  },
+  {
+   "id": "station-maxq",
+   "mission": "station",
+   "anchor": {
+    "event": "max-q"
+   },
+   "offset": -4,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Maximum dynamic pressure. The abort tower is ready throughout this phase."
+    }
+   ]
+  },
+  {
+   "id": "station-sep",
+   "mission": "station",
+   "anchor": {
+    "event": "stage-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Stage separation."
+    }
+   ]
+  },
+  {
+   "id": "station-tower",
+   "mission": "station",
+   "anchor": {
+    "event": "les-jettison"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "With the dense air behind, the abort tower is no longer needed. Its jettison motor carries it away."
+    }
+   ]
+  },
+  {
+   "id": "station-insert",
+   "mission": "station",
+   "anchor": {
+    "event": "seco"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Cutoff. The capsule is in orbit, lower than the station and some distance behind it."
+    }
+   ]
+  },
+  {
+   "id": "station-capsep",
+   "mission": "station",
+   "anchor": {
+    "event": "capsule-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The capsule separates from the upper stage and opens its solar arrays."
+    }
+   ]
+  },
+  {
+   "id": "station-phasing",
+   "mission": "station",
+   "anchor": {
+    "phase": "phasing"
+   },
+   "offset": 10,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Why not point at the station and fly straight to it? Because pushing forward raises your orbit, and a higher orbit is slower. You would climb and fall behind."
+    },
+    {
+     "id": "b",
+     "text": "Instead, the capsule stays lower, where orbits are faster, and catches up gradually. This phase is shown with long quiet intervals omitted."
+    }
+   ]
+  },
+  {
+   "id": "station-raise",
+   "mission": "station",
+   "anchor": {
+    "event": "phasing-burn-1"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "A burn raises the high point of the orbit toward the station's altitude."
+    }
+   ]
+  },
+  {
+   "id": "station-raise2",
+   "mission": "station",
+   "anchor": {
+    "event": "phasing-burn-2"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "A second burn at the top rounds out the orbit just below and behind the station."
+    }
+   ]
+  },
+  {
+   "id": "station-approach",
+   "mission": "station",
+   "anchor": {
+    "phase": "approach"
+   },
+   "offset": 5,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Final approach along the line toward the Earth's center, from below. Here orbital motion helps: small thrusts, holds at fixed distances, and a closing speed of a few centimeters per second."
+    }
+   ]
+  },
+  {
+   "id": "station-soft",
+   "mission": "station",
+   "anchor": {
+    "event": "soft-capture"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Soft capture. Latches catch the docking ring, and springs absorb the remaining motion."
+    }
+   ]
+  },
+  {
+   "id": "station-hard",
+   "mission": "station",
+   "anchor": {
+    "event": "hard-capture"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Hard capture. Hooks pull the two vehicles into an airtight seal. Delivery complete."
+    }
+   ]
+  },
+  {
+   "id": "return-undock",
+   "mission": "return",
+   "anchor": {
+    "phase": "undock"
+   },
+   "offset": 2,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The capsule undocks and backs away from the station with small thruster firings."
+    }
+   ]
+  },
+  {
+   "id": "return-deorbit",
+   "mission": "return",
+   "anchor": {
+    "event": "deorbit-start"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The deorbit burn. The service module's engine fires against the direction of travel."
+    },
+    {
+     "id": "b",
+     "text": "Losing about a hundred meters per second is enough: the low point of the orbit now dips into the atmosphere."
+    }
+   ]
+  },
+  {
+   "id": "return-smsep",
+   "mission": "return",
+   "anchor": {
+    "event": "sm-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The service module is no longer needed. It separates, and will burn up. Only the capsule, with its heat shield, is built to survive what comes next."
+    }
+   ]
+  },
+  {
+   "id": "return-entry",
+   "mission": "return",
+   "anchor": {
+    "event": "entry-interface"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Entry interface, about a hundred and twenty kilometers up. The capsule meets the air at nearly eight kilometers per second, heat shield first."
+    }
+   ]
+  },
+  {
+   "id": "return-heating",
+   "mission": "return",
+   "anchor": {
+    "event": "peak-heating"
+   },
+   "offset": -4,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Peak heating. The shock layer in front of the shield glows at thousands of degrees."
+    },
+    {
+     "id": "b",
+     "text": "The ablative shield chars and slowly erodes, carrying heat away as it does, while the structure behind it stays cool."
+    }
+   ]
+  },
+  {
+   "id": "return-g",
+   "mission": "return",
+   "anchor": {
+    "event": "peak-g"
+   },
+   "offset": -2,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The air takes away the orbital energy. The crew feel several times their normal weight."
+    }
+   ]
+  },
+  {
+   "id": "return-drogue",
+   "mission": "return",
+   "anchor": {
+    "event": "drogue-deploy"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Drogue parachutes stabilize the capsule and slow it."
+    }
+   ]
+  },
+  {
+   "id": "return-mains",
+   "mission": "return",
+   "anchor": {
+    "event": "main-deploy"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Three main parachutes open, reefed at first, then fully."
+    }
+   ]
+  },
+  {
+   "id": "return-splash",
+   "mission": "return",
+   "anchor": {
+    "event": "splashdown"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Splashdown in the Atlantic. The mission ends where it began: on Earth, a short way from the launch site."
+    }
+   ]
+  },
+  {
+   "id": "lunar-intro",
+   "mission": "lunar",
+   "anchor": {
+    "phase": "pad"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "This rocket carries a small probe to fly past the Moon. It will not stop there: a flyby, not an orbit."
+    }
+   ]
+  },
+  {
+   "id": "lunar-liftoff",
+   "mission": "lunar",
+   "anchor": {
+    "event": "liftoff"
+   },
+   "offset": 1,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Liftoff."
+    }
+   ]
+  },
+  {
+   "id": "lunar-sep",
+   "mission": "lunar",
+   "anchor": {
+    "event": "stage-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Stage separation. The booster is expended on this mission."
+    }
+   ]
+  },
+  {
+   "id": "lunar-parking",
+   "mission": "lunar",
+   "anchor": {
+    "event": "seco1"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The upper stage reaches a parking orbit and coasts, waiting for the right moment to leave."
+    }
+   ]
+  },
+  {
+   "id": "lunar-settle",
+   "mission": "lunar",
+   "anchor": {
+    "event": "settling"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Settling thrusters push the propellant to the back of the tanks before the restart."
+    }
+   ]
+  },
+  {
+   "id": "lunar-tli",
+   "mission": "lunar",
+   "anchor": {
+    "event": "ses2"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Trans-lunar injection. The engine burns for several minutes, raising the speed to nearly eleven kilometers per second."
+    }
+   ]
+  },
+  {
+   "id": "lunar-cutoff",
+   "mission": "lunar",
+   "anchor": {
+    "event": "seco2"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Cutoff. The probe is now on a long, stretched path that reaches out to the Moon's distance."
+    }
+   ]
+  },
+  {
+   "id": "lunar-sep2",
+   "mission": "lunar",
+   "anchor": {
+    "event": "payload-sep"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The probe separates. From here it coasts: no engine is running, yet it is moving the whole time."
+    }
+   ]
+  },
+  {
+   "id": "lunar-cruise",
+   "mission": "lunar",
+   "anchor": {
+    "phase": "cruise"
+   },
+   "offset": 60,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away."
+    }
+   ]
+  },
+  {
+   "id": "lunar-soi",
+   "mission": "lunar",
+   "anchor": {
+    "event": "soi-enter"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "The probe crosses into the region where the Moon's gravity dominates. Seen from the Moon, it is now falling toward it."
+    }
+   ]
+  },
+  {
+   "id": "lunar-flyby",
+   "mission": "lunar",
+   "anchor": {
+    "event": "closest-approach"
+   },
+   "offset": -8,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Closest approach, over the far side. The Moon bends the probe's path and swings it onward."
+    }
+   ]
+  },
+  {
+   "id": "lunar-outbound",
+   "mission": "lunar",
+   "anchor": {
+    "event": "soi-exit"
+   },
+   "offset": 0,
+   "cues": [
+    {
+     "id": "a",
+     "text": "Leaving the Moon's sphere of influence on an outbound trajectory. A flyby changes direction and speed without an engine burn, but to stay in lunar orbit the probe would have had to brake."
+    }
+   ]
+  }
+ ]
 }
