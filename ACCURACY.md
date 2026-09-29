@@ -51,6 +51,13 @@ Authored (guidance and choices a real mission would make):
 - Burn timing for boostback, entry and landing burns, orbit changes, deorbit and trans-lunar
   injection, found by deterministic searches against targets (landing point, splashdown
   region, closest lunar approach).
+- Mission design choices: the station mission expends its booster because the crew stack
+  (capsule, service module and abort tower from the dataset) needs its whole propellant load;
+  crew ascent is throttled to hold 4 g; the geostationary satellite reaches its orbit with three
+  finite burns of a 450 N apogee engine centred on successive apogees (perigee raised and the
+  28.5° inclination removed in steps); the lunar probe passes the Moon's trailing side, so the
+  flyby adds energy (a gravity assist) and it leaves the Earth-Moon system; expended boosters
+  are tracked ballistically to the sea.
 
 Simplifications (stated so they are not mistaken for physics):
 - No J2 (Earth oblateness), no winds, no solar or lunar perturbations on Earth orbits.
@@ -62,7 +69,8 @@ Simplifications (stated so they are not mistaken for physics):
 - Entry heating and the plasma glow are driven by a qualitative heating proxy
   (proportional to ρ^0.5·v³), not a solved thermal or material-response model; heat-shield
   charring is illustrative.
-- Parachute inflation, reefing and splashdown are authored from representative speeds.
+- Parachute drag areas come from the canopy sizes in the dataset with representative drag
+  coefficients; inflation and reefing timing are authored.
 - Capsule attitude during entry is heat-shield first by construction.
 
 ## Presentation time
