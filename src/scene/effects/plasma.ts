@@ -140,7 +140,8 @@ vec3 field(vec3 p) {
     // fades out before the end of the bounding volume (no visible cut)
     float tailFade = 1.0 - smoothstep(0.55, 0.95, x / max(yr - uY0, 1e-3));
     float sl = exp(-pow((r - rsl) / w, 2.0)) * exp(-x / uWake) * (0.6 + 0.8 * nz) * tailFade;
-    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 1.0;
+    // faint beside the shock layer: the ionised wake glows far less than the gas at the shield
+    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 0.5;
   }
   // soft glow around the stagnation region (the eye sees the bright layer bleed)
   float hd = length(vec2(r, y - uDelta * 0.5)) / (0.9 * R);
@@ -275,7 +276,7 @@ export class PlasmaVolume {
       u.uBodyLen.value = 1.62 * R;
       u.uBodyR1.value = 0.36 * R;
       u.uNeck.value = 2.4 * R;
-      u.uWake.value = 9 * R;
+      u.uWake.value = 7 * R;
       (u.uColHot.value as THREE.Color).setRGB(1.0, 0.7, 0.46);
       (u.uColRim.value as THREE.Color).setRGB(1.0, 0.46, 0.36);
       (u.uColWake.value as THREE.Color).setRGB(0.95, 0.34, 0.52);
