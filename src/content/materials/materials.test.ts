@@ -28,7 +28,7 @@ const fmt = (x: number, d = 0) => x.toLocaleString('en-US', { minimumFractionDig
 
 function textOf(id: MaterialId): string {
   const m = MATERIALS[id];
-  return [m.focus, m.suits, m.limits, m.manufacturing, m.inspection, m.question?.q ?? '', m.question?.a ?? '', ...m.compare.map((c) => c.text), ...m.properties.map((p) => `${p.value} ${p.condition}`)].join('\n');
+  return [m.focus, m.suits, m.limits, m.manufacturing, m.inspection, m.question?.q ?? '', m.question?.a ?? '', ...m.compare.map((c) => c.text), ...m.elsewhere.map((e) => e.text), ...m.properties.map((p) => `${p.value} ${p.condition}`)].join('\n');
 }
 
 describe('materials index: completeness and the ASSIGNMENTS contract', () => {
@@ -129,6 +129,8 @@ describe('materials: worked numbers', () => {
     expect(text).toContain(`about ${fmt(Math.round(dTni / 10) * 10, 0)} K`);
     expect(dTni).toBeGreaterThan(1336 + 273.15); // above the 718 melting range
     expect(text).toContain(`about ${fmt(344 / 11.4, 0)} times`);
+    // against the earlier NARloy-Z liner alloy (same NASA report)
+    expect(text).toContain('344 against 296 W/(m·K)');
   });
 
   it('C-103: radiative flux at 1,370 °C with emissivity 0.8', () => {
@@ -162,6 +164,16 @@ describe('materials: worked numbers', () => {
     const hc = textOf('honeycomb-core');
     expect(hc).toContain(`${fmt(areal, 2)} kg/m²`);
     expect(hc).toContain(`${fmt(tSolid * 1000, 2)} mm`);
+    // the core density quoted for a stated product, and its fraction of solid aluminium
+    expect(hc).toContain('1/8 in cells of 0.0007 in 5052 foil) weighs about 50 kg/m³ (3.1 lb/ft³)');
+    expect(hc).toContain(`about ${fmt((rhoCore / 2840) * 100)} % of solid aluminium`);
+    expect(Math.abs(3.1 * 16.0185 - rhoCore)).toBeLessThan(1); // lb/ft³ to kg/m³
+  });
+
+  it('honeycomb in the common bulkhead is described as a non-metallic, insulating core', () => {
+    const hc = textOf('honeycomb-core');
+    expect(hc).toContain('non-metallic core');
+    expect(MATERIALS['honeycomb-core'].elsewhere.some((e) => e.source === 'saturn-v-flight-manual')).toBe(true);
   });
 
   it('titanium: stiffness and density ratios against aluminium 2219', () => {

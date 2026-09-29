@@ -43,10 +43,8 @@ import {
   ENG_LES_JETTISON,
   FAIRING_OPEN_ANGLE,
   LANDED_NOZZLE_HEIGHT,
-  LES_ITEM,
   LES_JETTISON_PROP,
   areaOf,
-  boosterDry,
   fairingHalf,
   sumMass,
   type MassItem,
@@ -65,6 +63,8 @@ export interface AscentConfig {
   /** Insertion orbit (altitudes, m). */
   insertion: { rp: number; ra: number };
   ltg0: { A: number; B: number };
+  /** Warm start for the pitch-kick search (deg): the stored converged value. */
+  kick0?: number;
   gLimitS1: number;
   gLimitS2: number;
   /** Upper-stage propellant to keep for later burns (kg). */
@@ -127,7 +127,7 @@ export function flyOrbitalAscent(ctx: Ctx, cfg: AscentConfig): AscentResult {
   // ── deterministic sizing: kick angle, then (RTLS) reserve and boostback aim bias
   let reserve = cfg.rtls ? cfg.rtls.reserve0 : 0;
   let bias = cfg.rtls ? { ...cfg.rtls.bias0 } : { e: 0, n: 0 };
-  let kick = shootKick(make, s1Params(cfg, reserve), cfg.gammaMeco).kick;
+  let kick = shootKick(make, s1Params(cfg, reserve), cfg.gammaMeco, cfg.kick0 ?? 1.0).kick;
   if (cfg.rtls) {
     for (let it = 0; it < 7; it++) {
       const c = make();
@@ -137,7 +137,7 @@ export function flyOrbitalAscent(ctx: Ctx, cfg: AscentConfig): AscentResult {
       const zem = rr.aeroZem;
       const dProp = rr.propLeft - cfg.rtls.margin;
       const zemOk = !zem || Math.hypot(zem.e, zem.n) < 250;
-      if (Math.abs(dProp) < 150 && zemOk && rr.ok) break;
+      if (Math.abs(dProp) < 150 && zemOk && rr.miss < 3 && rr.touchdownSpeed < 2) break;
       if (zem) bias = { e: bias.e + zem.e / 0.95, n: bias.n + zem.n / 0.95 };
       // a failed landing leaves an unreliable propellant count: only adjust the reserve when the aim was good
       if (zemOk || it > 2) reserve = clamp(reserve - dProp * 1.15, 20_000, 120_000);
@@ -177,7 +177,7 @@ export function flyOrbitalAscent(ctx: Ctx, cfg: AscentConfig): AscentResult {
   const upperTarget = { r: R_EARTH + cfg.insertion.rp, energy: ellipseEnergy(R_EARTH + cfg.insertion.rp, R_EARTH + cfg.insertion.ra) };
   const basePlan: UpperBurnPlan = { tIgn: sep.tSes1, tGuide: sep.tSes1 + 4, planeN: v3(0, 0, -1), side: v3(0, 0, 1), gLimit: cfg.gLimitS2, drops: [], target: upperTarget, A: cfg.ltg0.A, B: cfg.ltg0.B, residual: cfg.s2Keep };
   let dropT = cfg.spec.crew ? sep.tSes1 + 12 : fairingTime(stack, basePlan);
-  const dropKg = cfg.spec.crew ? ABORT_TOWER.mass : FAIRING.mass;
+  const dropKg = cfg.spec.crew ? (cfg.spec.crewKg?.les ?? ABORT_TOWER.mass) : FAIRING.mass;
   const dropId = cfg.spec.crew ? 'les' : 'fairing';
   const releaseDelay = cfg.spec.crew ? 0 : FAIRING_OPEN_TIME;
   let plan: UpperBurnPlan = { ...basePlan, drops: [{ t: dropT + releaseDelay, kg: dropKg, id: dropId }] };
@@ -237,6 +237,14 @@ export function flyOrbitalAscent(ctx: Ctx, cfg: AscentConfig): AscentResult {
   if (!cfg.spec.crew) ev.ev('fairing-sep', dropT, 'Fairing separation', 'separation', ['fairingA', 'fairingB', 'upper'], 'pyro');
   else ev.ev('les-jettison', dropT, 'Abort tower jettisoned by its own motor', 'separation', ['les', 'capsule'], 'pyro');
   if (rtls) rtlsEvents(ctx, rtls);
+  ctx.fact('search.kickDeg', kick);
+  ctx.fact('search.ltgA', sol.A);
+  ctx.fact('search.ltgB', sol.B);
+  if (cfg.rtls) {
+    ctx.fact('search.rtlsReserveKg', reserve);
+    ctx.fact('search.rtlsBiasE', bias.e);
+    ctx.fact('search.rtlsBiasN', bias.n);
+  }
   return { upper: stack, booster, s1, rtls, kick, reserve, times, burn: { tCut: burn.tCut, tEnd: burn.tEnd, prop: burn.prop }, detached, items, liftoffMass };
 }
 
@@ -278,9 +286,9 @@ export function s2Channels(ctx: Ctx, c: Craft) {
 /** Fairing halves released from the upper stack: outward push and a slow tumble. */
 function releaseFairing(_ctx: Ctx, c: Craft, items: MassItem[], cfg: AscentConfig): Craft[] {
   const out: Craft[] = [];
-  let rest = items.filter((it) => it.m !== FAIRING.mass / 2);
   // the upper stack's fixed items: everything but the booster dry and the fairing halves
-  rest = rest.slice(boosterDry(cfg.spec.recovery).length);
+  const rest = items.filter((it) => it.tag !== 'booster' && it.tag !== 'fairingA' && it.tag !== 'fairingB');
+  void cfg;
   const w0 = c.w;
   for (const side of ['A', 'B'] as const) {
     const it = fairingHalf(side, 1);
@@ -309,12 +317,13 @@ function releaseFairing(_ctx: Ctx, c: Craft, items: MassItem[], cfg: AscentConfi
 
 /** Abort tower jettison: separates with its jettison motor (1.5 s), then coasts. */
 function jettisonLes(ctx: Ctx, c: Craft, items: MassItem[], cfg: AscentConfig): Craft {
-  const rest = items.slice(boosterDry(cfg.spec.recovery).length).filter((it) => it !== LES_ITEM);
+  const rest = items.filter((it) => it.tag !== 'booster' && it.tag !== 'les');
+  const les = items.find((it) => it.tag === 'les')!;
   const child = c.split({
     bodies: ['les'],
-    fixedMass: LES_ITEM.m - LES_JETTISON_PROP,
+    fixedMass: les.m - LES_JETTISON_PROP,
     aero: { area: areaOf(1.2), cd: cdSlender },
-    comFn: () => LES_ITEM.c,
+    comFn: () => les.c,
     parentFixedMass: sumMass(rest).m,
     parentComFn: comFrom(rest),
   });
@@ -347,7 +356,7 @@ function flyDetached(ctx: Ctx, d: Craft, until: number) {
 }
 
 /** Expended booster: tumbles slowly, falls toward the ocean; its track ends before impact. */
-function disposeBooster(ctx: Ctx, b: Craft, until: number) {
+export function disposeBooster(ctx: Ctx, b: Craft, until: number) {
   b.aero = { area: areaOf(3.7), cd: () => 1.1 };
   b.w = vadd(b.w, vscale(qrot(b.q, v3(0, 0, 1)), 1.5 * DEG));
   for (const g of b.groups) {
@@ -363,7 +372,7 @@ function disposeBooster(ctx: Ctx, b: Craft, until: number) {
 }
 
 /** Booster standing on the landing zone, carried by the rotating Earth. */
-function landedBooster(ctx: Ctx, b: Craft, end: number) {
+export function landedBooster(ctx: Ctx, b: Craft, end: number) {
   const t0 = b.t;
   const o0 = b.origin();
   const q0 = b.q;
@@ -378,7 +387,7 @@ function landedBooster(ctx: Ctx, b: Craft, end: number) {
   ctx.direct.push({ bodies: ['booster'], origins });
 }
 
-function rtlsEvents(ctx: Ctx, r: RtlsResult) {
+export function rtlsEvents(ctx: Ctx, r: RtlsResult) {
   ctx.ev('boostback-start', r.boostbackStart, 'Boostback burn: three engines reverse the downrange velocity', 'burn', ['booster'], 'ignition');
   ctx.ev('boostback-end', r.boostbackEnd, 'Boostback cutoff: now falling back toward the landing zone', 'burn', ['booster'], 'cutoff');
   ctx.ev('fins-deploy', r.finsDeploy, 'Grid fins deploy', 'deploy', ['booster'], 'valve');
@@ -436,3 +445,69 @@ export function ascentFacts(ctx: Ctx, a: AscentResult, prefix = '') {
 export const LZ = LANDING_ZONE;
 export { LANDED_NOZZLE_HEIGHT, PAYLOADS, airVelocity, elements, MU_EARTH, lzMiss, vlen, vsub, vnorm, qaxisY, RATE_UPPER };
 export type { AttitudeCmd, V3 };
+
+/**
+ * Parking-orbit coast of the upper stage to a restart: Kepler coast (prograde attitude) to a
+ * minute before ignition, slew to the burn attitude, settling thrusters (s2.rcs, ullage) for
+ * `settle` seconds, then the restart with an ignition ramp and an exact cutoff on `done`.
+ */
+export function coastSettleBurn(
+  ctx: Ctx,
+  up: Craft,
+  o: { tIgn: number; settle: number; dir: (c: Craft) => V3; done: (r: V3, v: V3) => number; throttle?: number; dt?: number; onStep?: (c: Craft) => void },
+): { settleStart: number; start: number; cut: number; end: number } {
+  const rec = (c: Craft) => s2Channels(ctx, c);
+  const pro = (c: Craft): AttitudeCmd => ({ q: progradeQ(c.r, c.v), wMax: 2 * DEG, aMax: 0.5 * DEG, tau: 3 });
+  const tSettle = o.tIgn - o.settle;
+  coastKeplerProgradeTo(ctx, up, tSettle - 60);
+  // slew and settle with integrated steps
+  while (up.t < tSettle - 1e-9) {
+    up.step(Math.min(1, tSettle - up.t), pro(up));
+    ctx.rec(up, 2);
+  }
+  ctx.ch.key('s2.rcs', tSettle - 0.1, 0);
+  ctx.ch.key('s2.rcs', tSettle + 0.3, 1);
+  const settleAcc = (2 * 440) / up.mass;
+  while (up.t < o.tIgn - 1e-9) {
+    up.extra = vscale(qaxisY(up.q), settleAcc);
+    up.step(Math.min(0.5, o.tIgn - up.t), pro(up));
+    ctx.rec(up, 1);
+    rec(up);
+  }
+  up.extra = v3();
+  const burn = orbitBurnS2(ctx, up, o);
+  ctx.ch.key('s2.rcs', burn.start + 1.0, 1);
+  ctx.ch.key('s2.rcs', burn.start + 1.5, 0);
+  return { settleStart: tSettle, ...burn };
+}
+
+import { coastKepler, orbitBurn, progradeAttitude as progradeQ } from '../physics/orbit';
+
+function coastKeplerProgradeTo(ctx: Ctx, c: Craft, until: number) {
+  if (until <= c.t + 1) return;
+  // a few integrated seconds first so the attitude settles on the prograde law, then Kepler
+  const tt = Math.min(until, c.t + 30);
+  while (c.t < tt - 1e-9) {
+    c.step(Math.min(1, tt - c.t), { q: progradeQ(c.r, c.v), wMax: 2 * DEG, aMax: 0.5 * DEG, tau: 3 });
+    ctx.rec(c, 2);
+    s2Channels(ctx, c);
+  }
+  coastKepler(ctx, c, until, 20, (r, v) => progradeQ(r, v));
+}
+
+function orbitBurnS2(ctx: Ctx, up: Craft, o: { dir: (c: Craft) => V3; done: (r: V3, v: V3) => number; throttle?: number; dt?: number; onStep?: (c: Craft) => void }) {
+  return orbitBurn(ctx, up, {
+    group: 's2',
+    dir: o.dir,
+    done: o.done,
+    ignition: 1.5,
+    tail: 0.6,
+    throttle: o.throttle ?? 1,
+    dt: o.dt ?? 0.25,
+    rate: { wMax: 3 * DEG, aMax: 1 * DEG },
+    onStep: (c) => {
+      s2Channels(ctx, c);
+      o.onStep?.(c);
+    },
+  }, 1.0);
+}

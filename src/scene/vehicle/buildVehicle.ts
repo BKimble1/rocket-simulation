@@ -26,8 +26,10 @@ import { buildRecovery, poseLegs, poseFins } from './recovery';
 import { buildUpper } from './upper';
 import { buildFairing, poseFairing, fairingProfile } from './fairing';
 import { FlowOverlays } from './flow';
+import { SandwichCoupon } from './coupon';
+import { lockNoCast } from './instancing';
 import { Liquid } from './liquids';
-import { WEDGE, ENGINES, EXPLODE, DEG } from './layout';
+import { WEDGE, EXPLODE, DEG } from './layout';
 import { TANKS, levelHeight, centroidAt } from './tanks';
 
 export { LENS_COLORS } from './mats';
@@ -56,7 +58,7 @@ const DEFAULT_STATE: VehicleVisualState = {
   entryScorch: 0,
 };
 
-const ENGINE_DEMOS = new Set(['turbopump', 'combustion', 'nozzle-pressure', 'regen-cooling', 'tvc', 'gnc-loop']);
+const ENGINE_DEMOS = new Set(['turbopump', 'combustion', 'nozzle-pressure', 'regen-cooling', 'tvc']);
 const SPACECRAFT_DEMOS = new Set(['spacecraft-ops', 'capsule-return', 'heat-shield-stack']);
 
 const smooth = (x: number) => {
@@ -64,6 +66,7 @@ const smooth = (x: number) => {
   return t * t * (3 - 2 * t);
 };
 const ramp = (p: number, a: number, b: number) => smooth((p - a) / (b - a));
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
 export function buildVehicle(config: VehicleConfig): VehicleModel {
   const hangar = config.detail === 'hangar';
@@ -105,7 +108,18 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     hangar,
     content,
     maxTex: Math.min(4096, tier.maxTexture),
-    movers: { engines: [], legs: [], fins: [], boots: [], collets: [], pusherRods: [], fairing: { A: null, B: null }, sandwichLayers: [] },
+    movers: {
+      engines: [],
+      legs: [],
+      fins: [],
+      boots: [],
+      collets: [],
+      pusherRods: [],
+      fairing: { A: null, B: null },
+      sandwichLayers: [],
+      inst: { legs: null, fins: null, collets: null, pushers: null },
+      cluster: null,
+    },
     flows: [],
     liquids: [],
     s1Rcs: [],
@@ -144,10 +158,19 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   }
 
   kit.flush(root);
+  // repeated rigs become instanced meshes of their posed template
+  for (const r of Object.values(ctx.movers.inst)) r?.build();
 
-  // liquids and flow overlays (hangar only)
+  // liquids, flow overlays and the sandwich coupon (hangar only)
   const liquids: Liquid[] = hangar ? ctx.liquids.map((l) => new Liquid(kit, mats, l.tank, l.section, seg.mid)) : [];
   const flows = new FlowOverlays(kit, ctx.flows);
+  const coupon = hangar
+    ? satellite
+      ? new SandwichCoupon(kit, content.fairingA!, (S.fairingBase + S.fairingCylinderTop) / 2, 'fairing', 'fairingA')
+      : new SandwichCoupon(kit, content.booster!, (S.s1ForwardSkirtTop + S.interstageTop) / 2, full ? 'interstage' : 'payload-adapter', 'booster')
+    : null;
+  // overlays, cut faces and liquids never cast shadows (integrations switch shadows on for every mesh)
+  for (const e of kit.registry) if (e.kind === 'overlay' || e.kind === 'cap' || e.kind === 'liquid') lockNoCast(e.mesh);
 
   // ── parts map
   const parts = new Map<PartId, THREE.Object3D[]>();
@@ -156,8 +179,8 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     if (!l) parts.set(p, (l = []));
     if (!l.includes(o)) l.push(o);
   };
-  const primary = ENGINES.reduce((a, b) => (b.z > a.z ? b : a)).id; // the engine facing +Z
   const s1Engines = ctx.movers.engines.filter((m) => m.kind === 'E-1');
+  const liveS1 = s1Engines.filter((m) => m.instance === undefined);
   const s2Engine = ctx.movers.engines.find((m) => m.kind === 'E-1V') ?? null;
   const meshesOf = (m: EngineMount) => {
     const out: THREE.Mesh[] = [];
@@ -167,15 +190,14 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     return out;
   };
   const engineMeshes = new Set<THREE.Object3D>();
-  for (const m of s1Engines)
+  // the full (selectable) E-1 is the one facing the pad cameras; the other six are instances
+  for (const m of liveS1)
     for (const mesh of meshesOf(m)) {
       engineMeshes.add(mesh);
       push('s1-engine-cluster', mesh);
-      if (m.id === primary) {
-        push('engine', mesh);
-        const p = mesh.userData.part as PartId | undefined;
-        if (p && p !== 'engine' && PARTS[p]) push(p, mesh);
-      }
+      push('engine', mesh);
+      const p = mesh.userData.part as PartId | undefined;
+      if (p && p !== 'engine' && PARTS[p]) push(p, mesh);
     }
   if (s2Engine)
     for (const mesh of meshesOf(s2Engine)) {
@@ -192,9 +214,10 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   // the engine cluster also owns the thermal boots
   for (const b of ctx.movers.boots) push('s1-engine-cluster', b.mesh);
 
-  // ── anchors
-  const s1Nozzles = s1Engines.map((m) => ({ id: m.id, exit: new THREE.Vector3(m.pivot.x, m.pivot.y + m.engine.exitY, m.pivot.z), exitRadius: m.engine.exitRadius, centre: m.centre }));
-  const s2Nozzle = s2Engine ? { exit: new THREE.Vector3(0, s2Engine.pivot.y + s2Engine.engine.exitY, 0), exitRadius: s2Engine.engine.exitRadius } : { exit: new THREE.Vector3(0, S.s2NozzleExit, 0), exitRadius: E1V.exitDiameter / 2 };
+  // ── anchors (nozzle exits follow the gimbals)
+  const exits = ctx.movers.engines.map((m) => new THREE.Vector3(m.pivot.x, m.pivot.y + m.engine.exitY, m.pivot.z));
+  const s1Nozzles = s1Engines.map((m) => ({ id: m.id, exit: exits[ctx.movers.engines.indexOf(m)], exitRadius: m.engine.exitRadius, centre: m.centre }));
+  const s2Nozzle = s2Engine ? { exit: exits[ctx.movers.engines.indexOf(s2Engine)], exitRadius: s2Engine.engine.exitRadius } : { exit: new THREE.Vector3(0, S.s2NozzleExit, 0), exitRadius: E1V.exitDiameter / 2 };
   const anchors: VehicleAnchors = {
     s1Nozzles,
     s2Nozzle,
@@ -208,7 +231,7 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     com: computeCom(config, sc, root),
   };
 
-  // ── clipping planes: updated from the root's world matrix right before rendering
+  // ── clipping planes: updated from the root's world matrix right before rendering (cutaway only)
   const localPlanes = [new THREE.Plane(), new THREE.Plane()];
   const hookGeo = new THREE.BufferGeometry();
   hookGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
@@ -218,6 +241,12 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   hook.frustumCulled = false;
   hook.renderOrder = -1e9;
   hook.raycast = () => {};
+  hook.visible = false;
+  // a helper, not hardware: tagged with the structure it serves (the cut shells)
+  hook.userData.part = 's1-lox-tank';
+  hook.userData.material = null;
+  hook.userData.helper = true;
+  lockNoCast(hook);
   const syncPlanes = () => {
     for (let k = 0; k < 2; k++) mats.planes[k].copy(localPlanes[k]).applyMatrix4(root.matrixWorld);
   };
@@ -238,50 +267,56 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   let exA = -1;
   let lookKey = '';
   let stackLift = 0;
+  // last applied values (NaN = never applied)
+  const done = { legs: NaN, fins: NaN, defl: NaN, open: NaN, frost: NaN, scorch: NaN, gp: NaN, gy: NaN, gp2: NaN, collet: NaN, push: NaN, apart: NaN };
 
-  const gimbalQ = (m: EngineMount, pitchDeg: number, yawDeg: number) => {
-    // pitch about the model X axis, yaw about the model Z axis
-    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(pitchDeg * DEG, 0, yawDeg * DEG, 'XZY'));
-    void m;
-    return q;
-  };
-  const engineAngles = (m: EngineMount): [number, number] => {
-    if (m.kind === 'E-1V') return [clampDeg(eff.s2GimbalPitch, E1V.gimbalRangeDeg), 0];
+  // scratch objects (setState/animate run every frame: no allocations)
+  const _q = new THREE.Quaternion();
+  const _qy = new THREE.Quaternion();
+  const _e = new THREE.Euler();
+  const _Y = new THREE.Vector3(0, 1, 0);
+  const _X = new THREE.Vector3(1, 0, 0);
+  let angP = 0;
+  let angY = 0;
+  /** Gimbal rotation: pitch about the model X axis, yaw about the model Z axis. */
+  const gimbalQ = (pitchDeg: number, yawDeg: number, out: THREE.Quaternion) => out.setFromEuler(_e.set(pitchDeg * DEG, 0, yawDeg * DEG, 'XZY'));
+  const engineAngles = (m: EngineMount) => {
+    if (m.kind === 'E-1V') {
+      angP = clampDeg(eff.s2GimbalPitch, E1V.gimbalRangeDeg);
+      angY = 0;
+      return;
+    }
+    // outer engines gimbal less than the centre (landing) engine
     const k = m.centre ? 1 : 0.7;
-    return [clampDeg(eff.s1GimbalPitch * k, E1.gimbalRangeDeg), clampDeg(eff.s1GimbalYaw * k, E1.gimbalRangeDeg)];
+    angP = clampDeg(eff.s1GimbalPitch * k, E1.gimbalRangeDeg);
+    angY = clampDeg(eff.s1GimbalYaw * k, E1.gimbalRangeDeg);
+  };
+  const bootRot = (m: EngineMount, out: THREE.Quaternion) => {
+    engineAngles(m);
+    return gimbalQ(angP, angY, out);
   };
   const applyGimbals = () => {
-    for (const m of ctx.movers.engines) {
-      const [p, y] = engineAngles(m);
-      if (m.selfGimbal) {
+    let cluster = false;
+    ctx.movers.engines.forEach((m, i) => {
+      engineAngles(m);
+      gimbalQ(angP, angY, _q);
+      if (m.instance !== undefined) {
+        m.mount.quaternion.copy(_q).multiply(_qy.setFromAxisAngle(_Y, m.yaw));
+        m.mount.updateMatrix();
+        ctx.movers.cluster?.set(m.instance, m.mount.matrix);
+        cluster = true;
+      } else if (m.selfGimbal) {
         // express the model-frame command in the engine frame (the mount is yawed about Y)
         const c = Math.cos(m.yaw);
         const s = Math.sin(m.yaw);
-        const lp = p * c - y * s;
-        const ly = p * s + y * c;
-        m.engine.setOperating({ pitch: lp, yaw: ly });
-        m.mount.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), m.yaw);
+        m.engine.setOperating({ pitch: angP * c - angY * s, yaw: angP * s + angY * c });
       } else {
-        const q = gimbalQ(m, p, y);
-        m.mount.quaternion.copy(q).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), m.yaw));
+        m.mount.quaternion.copy(_q).multiply(_qy.setFromAxisAngle(_Y, m.yaw));
       }
-      const exit = m.kind === 'E-1' ? s1Nozzles.find((n) => n.id === m.id)!.exit : s2Nozzle.exit;
-      exit.set(0, m.engine.exitY, 0).applyQuaternion(gimbalQ(m, p, y)).add(m.pivot);
-    }
-    if (ctx.movers.boots.length) updateBoots(ctx, (m) => gimbalQ(m, ...engineAngles(m)));
-  };
-
-  const applyState = () => {
-    poseLegs(ctx, eff.legs);
-    poseFins(ctx, eff.fins, eff.finDeflect);
-    poseFairing(ctx, eff.fairingOpen);
-    for (const l of liquids) {
-      const f = l.tank === 's1Lox' ? eff.s1Lox : l.tank === 's1Rp1' ? eff.s1Rp1 : l.tank === 's2Lox' ? eff.s2Lox : eff.s2Rp1;
-      if (l.setLevel(f)) setLiquidVisibility();
-    }
-    mats.uniforms.uFrost.value = Math.max(0, Math.min(1, eff.frost));
-    mats.uniforms.uScorch.value = Math.max(0, Math.min(1, eff.entryScorch));
-    applyGimbals();
+      exits[i].set(0, m.engine.exitY, 0).applyQuaternion(_q).add(m.pivot);
+    });
+    if (cluster) ctx.movers.cluster?.commit();
+    if (ctx.movers.boots.length) updateBoots(ctx, bootRot);
   };
 
   const setLiquidVisibility = () => {
@@ -292,6 +327,59 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     }
   };
 
+  const applyState = () => {
+    if (eff.legs !== done.legs) {
+      done.legs = eff.legs;
+      poseLegs(ctx, clamp01(eff.legs));
+    }
+    if (eff.fins !== done.fins || eff.finDeflect !== done.defl) {
+      done.fins = eff.fins;
+      done.defl = eff.finDeflect;
+      poseFins(ctx, eff.fins, eff.finDeflect);
+    }
+    if (eff.fairingOpen !== done.open) {
+      done.open = eff.fairingOpen;
+      poseFairing(ctx, eff.fairingOpen);
+    }
+    let liquidsChanged = false;
+    for (const l of liquids) {
+      const f = l.tank === 's1Lox' ? eff.s1Lox : l.tank === 's1Rp1' ? eff.s1Rp1 : l.tank === 's2Lox' ? eff.s2Lox : eff.s2Rp1;
+      if (l.setLevel(f)) liquidsChanged = true;
+    }
+    if (liquidsChanged) setLiquidVisibility();
+    if (eff.frost !== done.frost) {
+      done.frost = eff.frost;
+      mats.uniforms.uFrost.value = clamp01(eff.frost);
+    }
+    if (eff.entryScorch !== done.scorch) {
+      done.scorch = eff.entryScorch;
+      mats.uniforms.uScorch.value = clamp01(eff.entryScorch);
+    }
+    if (eff.s1GimbalPitch !== done.gp || eff.s1GimbalYaw !== done.gy || eff.s2GimbalPitch !== done.gp2) {
+      done.gp = eff.s1GimbalPitch;
+      done.gy = eff.s1GimbalYaw;
+      done.gp2 = eff.s2GimbalPitch;
+      applyGimbals();
+    }
+  };
+
+  // ── enclosed hardware: the E-1V inside the interstage and a satellite inside the closed fairing
+  // cannot be seen in the plain intact view, so they are not drawn then (large draw-call saving)
+  const s2Mount = s2Engine?.mount ?? null;
+  const payloadGroups = satellite ? payloadSections.map((s) => s.group) : [];
+  const attached = (a: THREE.Object3D | undefined, b: THREE.Object3D | undefined) =>
+    !!a && !!b && a.visible && b.visible && a.position.distanceToSquared(b.position) < 1e-4 && Math.abs(a.quaternion.dot(b.quaternion)) > 0.999999;
+  const updateEnclosure = () => {
+    // only ghosting (dimOthers) makes the shells see-through; a highlight alone does not
+    const ghost = view.dimOthers && (view.lens === 'materials' ? view.material !== null : view.highlight !== null);
+    const plain = cutA <= 0.001 && exA <= 0.001 && !ghost && stackLift === 0;
+    if (s2Mount) s2Mount.visible = !(plain && engineDemo === null && attached(bodies.booster, bodies.upper));
+    if (payloadGroups.length) {
+      const closed = plain && eff.fairingOpen <= 1e-4 && !(demo && SPACECRAFT_DEMOS.has(demo)) && attached(bodies.upper, bodies.fairingA) && attached(bodies.upper, bodies.fairingB);
+      for (const g of payloadGroups) g.visible = !closed;
+    }
+  };
+
   const sections = [...kit.sections.values()];
   const inRange = (sec: Section, phi: number) => {
     const norm = (a: number) => ((((a + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
@@ -299,18 +387,18 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     if (sec.id === 'fairingB') return Math.abs(norm(phi)) >= Math.PI / 2;
     return true;
   };
+  const _n = new THREE.Vector3();
 
   const applyCut = (a: number) => {
-    const on = a > 0.001;
-    if (!hangar) a = 0;
-    if (on && hangar) {
+    const on = hangar && a > 0.001;
+    if (on) {
       const mid = (WEDGE.from + WEDGE.to) / 2;
       const half = ((WEDGE.to - WEDGE.from) / 2) * smooth(a);
       const f1 = mid - half;
       const f2 = mid + half;
-      const t = (f: number) => new THREE.Vector3(Math.cos(f), 0, -Math.sin(f));
-      localPlanes[0].set(t(f1).negate(), 0);
-      localPlanes[1].set(t(f2), 0);
+      // a point is removed when it is on the inner side of both planes (clipIntersection)
+      localPlanes[0].set(_n.set(-Math.cos(f1), 0, Math.sin(f1)), 0);
+      localPlanes[1].set(_n.set(Math.cos(f2), 0, -Math.sin(f2)), 0);
       for (const s of sections) {
         s.caps[0].rotation.y = f1 - Math.PI / 2;
         s.caps[1].rotation.y = f2 - Math.PI / 2;
@@ -318,10 +406,11 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
         s.caps[1].visible = inRange(s, f2);
       }
     } else {
-      localPlanes[0].set(new THREE.Vector3(1, 0, 0), 1e6);
-      localPlanes[1].set(new THREE.Vector3(1, 0, 0), 1e6);
+      localPlanes[0].set(_X, 1e6);
+      localPlanes[1].set(_X, 1e6);
       for (const s of sections) s.caps[0].visible = s.caps[1].visible = false;
     }
+    hook.visible = on;
     root.updateMatrixWorld(true);
     syncPlanes();
     setLiquidVisibility();
@@ -379,8 +468,8 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   };
 
   const applyView = () => {
-    const c = view.mode === 'cutaway' ? Math.max(0, Math.min(1, view.amount)) : 0;
-    const x = view.mode === 'exploded' ? Math.max(0, Math.min(1, view.amount)) : 0;
+    const c = view.mode === 'cutaway' ? clamp01(view.amount) : 0;
+    const x = view.mode === 'exploded' ? clamp01(view.amount) : 0;
     if (c !== cutA) {
       cutA = c;
       applyCut(c);
@@ -397,22 +486,29 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     }
   };
 
-  // demonstrations
+  // demonstrations (hangar): effective state = base state + the running demo
+  const colletHinge = ctx.movers.collets[0] ?? null;
+  const colletQ0 = colletHinge ? colletHinge.quaternion.clone() : null;
+  const pusherRod = ctx.movers.pusherRods[0] ?? null;
+  const pusherY0 = pusherRod ? pusherRod.position.y : 0;
   const applyDemo = () => {
     Object.assign(eff, base);
     const p = demoP;
     let lift = 0;
     let colletOpen = 0;
-    let push = 0;
+    let pushOut = 0;
+    let apart = 0;
     switch (demo) {
       case 'tank-drain':
         eff.s1Lox = base.s1Lox * (1 - p * 0.97);
         eff.s1Rp1 = base.s1Rp1 * (1 - p * 0.97);
+        eff.s2Lox = base.s2Lox * (1 - ramp(p, 0.55, 1) * 0.6);
+        eff.s2Rp1 = base.s2Rp1 * (1 - ramp(p, 0.55, 1) * 0.6);
         break;
       case 'staging-sequence':
         colletOpen = ramp(p, 0.05, 0.3);
-        push = ramp(p, 0.32, 0.62);
-        lift = push * 0.45 + ramp(p, 0.62, 1) * 1.1;
+        pushOut = ramp(p, 0.32, 0.62);
+        lift = pushOut * 0.45 + ramp(p, 0.62, 1) * 1.1;
         break;
       case 'fairing-sep':
         eff.fairingOpen = ramp(p, 0.05, 0.95);
@@ -422,9 +518,13 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
         eff.finDeflect = p > 0.3 && p < 0.62 ? Math.sin(((p - 0.3) / 0.32) * Math.PI * 2) * 14 : 0;
         eff.legs = ramp(p, 0.64, 0.98);
         break;
+      case 'sandwich-panel':
+        apart = ramp(p, 0.08, 0.38) - ramp(p, 0.68, 0.95);
+        break;
       case 'tvc':
       case 'gnc-loop': {
-        const w = demo === 'tvc' ? 1 : 0.4;
+        // steering corrections: the computer commands small gimbal angles (slowed, illustrative)
+        const w = demo === 'tvc' ? 1 : 0.5;
         eff.s1GimbalPitch = Math.sin(demoT * 1.3) * E1.gimbalRangeDeg * w;
         eff.s1GimbalYaw = Math.cos(demoT * 1.3) * E1.gimbalRangeDeg * w;
         eff.s2GimbalPitch = Math.sin(demoT * 1.1) * E1V.gimbalRangeDeg * w;
@@ -432,37 +532,44 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
       }
     }
     // staging mechanism (hangar demonstration: the upper stack moves up a little)
-    ctx.movers.collets.forEach((g, i) => {
-      g.userData.q0 ??= g.quaternion.clone();
-      g.quaternion.copy(g.userData.q0 as THREE.Quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.55 * colletOpen));
-      void i;
-    });
-    for (const r of ctx.movers.pusherRods) {
-      r.userData.y0 ??= r.position.y;
-      r.position.y = (r.userData.y0 as number) + push * 0.45;
+    if (colletHinge && colletQ0 && colletOpen !== done.collet) {
+      done.collet = colletOpen;
+      colletHinge.quaternion.copy(colletQ0).multiply(_q.setFromAxisAngle(_X, -0.55 * colletOpen));
+      ctx.movers.inst.collets?.update();
+    }
+    if (pusherRod && pushOut !== done.push) {
+      done.push = pushOut;
+      pusherRod.position.y = pusherY0 + pushOut * 0.45;
+      ctx.movers.inst.pushers?.update();
     }
     if (lift !== stackLift) {
       stackLift = lift;
       for (const id of Object.keys(content) as BodyId[]) if (id !== 'booster') content[id]!.position.y = lift;
     }
+    if (coupon && (demo === 'sandwich-panel') !== coupon.group.visible) coupon.set(demo === 'sandwich-panel', apart);
+    if (coupon && demo === 'sandwich-panel' && apart !== done.apart) {
+      done.apart = apart;
+      coupon.set(true, apart);
+    }
     applyState();
   };
 
-  // engine demonstrations run on the booster engines (and the E-1V)
+  // engine demonstrations run on the full booster engine and the E-1V (the hangar also shows them
+  // on the engine stands)
   let engineDemo: string | null = null;
+  const liveEngines = ctx.movers.engines.filter((m) => m.instance === undefined);
   const applyEngineDemo = (t: number) => {
     const on = demo && ENGINE_DEMOS.has(demo) ? demo : null;
     if (on !== engineDemo) {
-      for (const m of ctx.movers.engines) {
+      for (const m of liveEngines) {
         m.engine.setFlowOverlay(on === 'regen-cooling' || on === 'combustion' || on === 'turbopump' || on === 'nozzle-pressure');
         if (!on) m.engine.setOperating({ flow: 0, gg: false, ignite: 0, shaftAngle: 0 });
       }
       engineDemo = on;
     }
     if (!on) return;
-    const flow = on === 'tvc' || on === 'gnc-loop' ? 0 : 1;
-    for (const m of ctx.movers.engines)
-      m.engine.setOperating({ flow, gg: flow > 0, shaftAngle: t * Math.PI * 2 * 0.5, ignite: on === 'combustion' ? Math.max(0, 1 - demoP * 8) : 0 });
+    const flow = on === 'tvc' ? 0 : 1;
+    for (const m of liveEngines) m.engine.setOperating({ flow, gg: flow > 0, shaftAngle: t * Math.PI * 2 * 0.5, ignite: on === 'combustion' ? Math.max(0, 1 - demoP * 8) : 0 });
   };
 
   const model: VehicleModel = {
@@ -475,18 +582,21 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
       Object.assign(base, s);
       sc?.setState(s);
       applyDemo();
+      updateEnclosure();
     },
     setView(v) {
       Object.assign(view, v);
       applyView();
+      updateEnclosure();
     },
     animate(t, d, progress) {
       demo = d;
-      demoP = Math.max(0, Math.min(1, progress));
+      demoP = clamp01(progress);
       demoT = t;
       applyDemo();
       flows.update(d, t);
       applyEngineDemo(t);
+      updateEnclosure();
       if (sc && (d === null || SPACECRAFT_DEMOS.has(d))) sc.animate(t, d, progress);
     },
     partBox(id, out) {
@@ -500,11 +610,16 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     dispose() {
       root.removeFromParent();
       const geos = new Set<THREE.BufferGeometry>();
-      for (const e of kit.registry) if (e.kind !== 'foreign') geos.add(e.mesh.geometry);
+      for (const e of kit.registry) {
+        if (e.kind === 'foreign' || e.kind === 'liquid') continue;
+        geos.add(e.mesh.geometry);
+        if ((e.mesh as THREE.InstancedMesh).isInstancedMesh) (e.mesh as THREE.InstancedMesh).dispose();
+      }
       for (const g of geos) g.dispose();
       for (const l of liquids) l.dispose();
       flows.dispose();
-      for (const m of ctx.movers.engines) m.engine.dispose();
+      coupon?.dispose();
+      for (const e of new Set(ctx.movers.engines.map((m) => m.engine))) e.dispose();
       sc?.dispose();
       mats.dispose();
       hookGeo.dispose();
@@ -517,6 +632,7 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   exA = 0;
   applyExplode(0);
   applyDemo();
+  updateEnclosure();
   lookKey = `${view.highlight}|${view.dimOthers}|${view.lens}|${view.material}`;
   return model;
 }

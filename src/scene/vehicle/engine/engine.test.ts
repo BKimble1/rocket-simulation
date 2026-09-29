@@ -130,6 +130,55 @@ describe('engine models', () => {
     }
   });
 
+  /** Visible draw calls and triangles of the main pass (instances counted), and the shadow casters. */
+  function budget(root: THREE.Object3D) {
+    let calls = 0;
+    let tris = 0;
+    let casters = 0;
+    let casterTris = 0;
+    root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      for (let p: THREE.Object3D | null = m; p; p = p.parent) if (!p.visible) return;
+      const g = m.geometry;
+      const t = ((g.index ? g.index.count : g.attributes.position.count) / 3) * ((m as THREE.InstancedMesh).isInstancedMesh ? (m as THREE.InstancedMesh).count : 1);
+      calls++;
+      tris += t;
+      // what a caller that switches shadows on for every mesh gets
+      m.castShadow = true;
+      if (m.castShadow) {
+        casters++;
+        casterTris += t;
+      }
+    });
+    return { calls, tris, casters, casterTris };
+  }
+
+  test('draw call and triangle budgets per engine (main pass and shadow pass)', () => {
+    for (const k of kinds) {
+      const h = buildEngineWith(k, 'hangar', plainMaterialSet());
+      const bh = budget(h.root);
+      // hangar: <= 160 calls and <= 450 k triangles including the shadow pass
+      expect(bh.calls + bh.casters).toBeLessThanOrEqual(160);
+      expect(bh.tris + bh.casterTris).toBeLessThanOrEqual(450_000);
+      // the detailed meshes never cast: only the shadow shells and the two actuators
+      expect(bh.casters).toBeLessThanOrEqual(4);
+      h.setCut(1);
+      h.setFlowOverlay(true);
+      h.setOperating({ flow: 1, gg: true, ignite: 1 });
+      const bc = budget(h.root);
+      expect(bc.calls + bc.casters).toBeLessThanOrEqual(160);
+      expect(bc.tris + bc.casterTris).toBeLessThanOrEqual(450_000);
+      h.dispose();
+      const f = budget(buildEngineWith(k, 'flight', plainMaterialSet()).root);
+      expect(f.calls).toBeLessThanOrEqual(30);
+      expect(f.tris).toBeLessThanOrEqual(60_000);
+      const c = budget(buildEngineWith(k, 'cluster', plainMaterialSet()).root);
+      expect(c.calls).toBeLessThanOrEqual(12);
+      expect(c.tris).toBeLessThanOrEqual(25_000);
+    }
+  });
+
   test('gimbal: actuators stay attached, lengths change with pitch', () => {
     const e = buildEngineWith('E-1', 'hangar', plainMaterialSet());
     const rods = [] as THREE.InstancedMesh[];

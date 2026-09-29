@@ -187,7 +187,7 @@ void main() {
   float a = abs(latD);
   float clim = 0.52
     + 0.20 * exp(-pow((latD - 6.0) / 7.0, 2.0))          // tropical convergence band
-    - 0.30 * exp(-pow((a - 22.0) / 8.0, 2.0))             // subtropical highs
+    - 0.17 * exp(-pow((a - 22.0) / 8.0, 2.0))             // subtropical highs (trade cumulus remain)
     + 0.18 * exp(-pow((a - 55.0) / 11.0, 2.0))            // storm tracks
     - 0.08 * smoothstep(70.0, 85.0, a);
   float midlat = exp(-pow((a - 50.0) / 14.0, 2.0));
@@ -203,7 +203,8 @@ void main() {
   float desert = (1.0 - water) * smoothstep(0.18, 0.4, day.r) * smoothstep(0.0, 0.08, day.r - day.b);
   c -= 0.35 * desert * (1.0 - midlat);
 
-  float cov = smoothstep(0.42, 0.78, c);
+  // fairly sharp edges: organised systems read as distinct cloud from orbit, not a grey veil
+  float cov = smoothstep(0.47, 0.7, c);
   // convective towers in the tropics, flatter decks elsewhere
   float tropic = exp(-pow(latD / 18.0, 2.0));
   float top = clamp(0.25 + 0.55 * cov * (0.5 + 0.5 * tropic) + 0.25 * meso, 0.0, 1.0);

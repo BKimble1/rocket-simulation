@@ -14,7 +14,7 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
     connections: ['s1-lox-tank', 'interstage', 'cold-gas-rcs', 'landing-legs', 's1-engine-cluster'],
     function: 'Control the booster\'s attitude and steer it toward the landing zone while it falls through the atmosphere, engines first.',
     how: `Air flows through the lattice cells; each cell wall acts as a small wing, so the fin produces a large force from a compact frame. Rotating a fin about its hinge (up to ${F.gridFinDeflection}) changes that force and turns the booster. Because the booster falls engines first, the fins are at its trailing end relative to the airflow, like the feathers of an arrow, which also makes the falling booster naturally more stable.`,
-    why: 'Grid fins stay effective from high supersonic speeds down to subsonic, where flat fins of the same size would either lose effectiveness or need large, heavy actuators. Their short chord keeps the force close to the hinge line, so the actuators can be small, and they fold flat against the body for the climb.',
+    why: 'The booster falls into the atmosphere at several times the speed of sound and must be steered all the way down to low subsonic speed. Grid fins work over that whole range (with a dip near Mach 1) and at high angles to the flow; their many short chords keep the force close to the hinge line, so small actuators can turn them where a flat fin of the same force would need large, heavy ones; and they fold flat against the body for the climb.',
     phases: [
       at('leo', 'booster-coast', 'Fold out after the boostback burn.'),
       at('leo', 'entry-burn', 'Hold attitude as the booster meets denser air.'),
@@ -50,25 +50,25 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
     where: `Along the aft section, hinged at ${F.legHinge} and lying flush against the body during the climb (${F.legLength} long when stowed). Deployed, the feet stand on a circle about ${F.legFootprint} in radius. Look for the telescoping deploy strut on each leg and the foot pad at its tip.`,
     connections: ['thrust-structure', 's1-fuel-tank', 'grid-fins', 's1-engine-cluster'],
     function: 'Support the booster upright on the pad, absorb the last of its vertical speed at touchdown, and resist tipping over.',
-    how: 'Pressurized gas drives the telescoping struts to swing the legs down and lock them. At touchdown, crushable aluminium honeycomb in the foot pads (and the struts) deforms, turning the remaining kinetic energy into heat by permanently crushing. The wide footprint puts the booster\'s centre of mass well inside the base, so it does not tip.',
-    why: `Every kilogram of leg rides the whole ascent and must also be decelerated and landed. The legs weigh ${F.legMass} (${F.legsFractionOfDry} of the booster's dry mass), so they must be light and stow flush to add little drag. In the ideal rocket-equation estimate for this vehicle, each 100 kg added to the booster costs about ${F.tradeS1} of LEO payload; the propellant reserve kept for the return costs far more.`,
+    how: 'Pressurized gas drives the telescoping struts to swing the legs down and lock them. At touchdown, crushable aluminium honeycomb in the foot pads deforms permanently, turning the last of the kinetic energy into the work of folding its cell walls. The wide footprint puts the booster\'s centre of mass well inside the base, so it does not tip.',
+    why: `Every kilogram of leg rides the whole ascent and must also be decelerated and landed. The set weighs ${F.legMass}, adding ${F.legsFractionOfDry} to the booster's ${F.s1Dry} dry mass, so the legs must be light and stow flush to add little drag. In the ideal rocket-equation estimate for this vehicle, each 100 kg added to the booster costs about ${F.tradeS1} of LEO payload; the propellant reserve kept for the return costs far more.`,
     phases: [
       at('leo', 'landing-burn', 'Deploy seconds before touchdown and take the landing load.'),
       at('suborbital', 'landing-burn', 'Deploy for the landing after the suborbital hop.'),
       at('station', 'landing-burn', 'The same landing on the station mission.'),
     ],
-    environment: 'Stowed in the airflow during the climb and the return, deployed into air moving at tens of metres per second, heated by the landing plume near the engines, then hit by the touchdown load. The landing zone is by the sea, so salt spray matters for reuse.',
+    environment: 'Stowed against the body in the airflow during the climb and the return, swung open into the airflow during the landing burn, heated by the plume reflected from the landing pad, then hit by the touchdown load. The landing zone is by the sea, so salt spray matters for reuse.',
     figures: [
       { label: 'Number', value: F.legCount },
       { label: 'Stowed length', value: F.legLength },
       { label: 'Footprint radius', value: F.legFootprint },
-      { label: 'Mass of the set', value: F.legMass, note: `${F.legsFractionOfDry} of booster dry mass (illustrative dataset)` },
+      { label: 'Mass of the set', value: F.legMass, note: `Adds ${F.legsFractionOfDry} to the booster's ${F.s1Dry} dry mass (illustrative dataset)` },
     ],
     materials: mats('landing-legs'),
     materialsWhy: 'Leg struts are carbon-fibre sandwich: very stiff and strong for their mass, which is what a long, lightly built strut needs. The foot pads use crushable aluminium honeycomb, which absorbs energy at a nearly constant force as its cells fold: a controlled, one-time crumple zone.',
     manufacturing: 'Composite struts laid up on mandrels and cured; metal fittings bonded and bolted at the ends; honeycomb crush cores cut to size and fitted in replaceable cartridges.',
     inspection: 'Ultrasonic scans of the composite for delamination after each landing, replacement of crushed cores, and deployment tests of the struts.',
-    misconception: '"The legs cushion a hard landing like springs." The engine does almost all of the braking. The legs only absorb the last few metres per second, and the crushable cores do it once, then are replaced.',
+    misconception: '"The legs cushion a hard landing like springs." The engine does almost all of the braking. The legs only absorb the last metre or two per second, and the crushable cores do it once, then are replaced.',
     ifAbsent: 'The booster would have to land on its engine bells, which would be damaged and could not keep it upright; or it would need to be caught by ground equipment.',
     depth: {
       quick: 'Four light legs fold out just before landing and the booster stands on them. A crushable pad in each foot soaks up the final bump.',
@@ -85,7 +85,7 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
     where: 'In pods on the booster\'s forward skirt near the grid fins, at the top of the booster: the farthest point from the centre of mass, so each small puff has the most leverage. Nitrogen bottles (COPVs) and valves sit inside the skirt.',
     connections: ['grid-fins', 'pressurization', 's1-lox-tank', 'interstage'],
     function: 'Rotate the booster (the flip after separation), aim it for the boostback and entry burns, damp rotations, and push propellant toward the tank outlets before a relight.',
-    how: 'High-pressure nitrogen is released through fast valves into small nozzles. There is no combustion: the gas simply expands and accelerates, so the thrust is small but instantly available, any number of times. Firing thrusters on opposite sides in opposite directions rotates the booster without pushing it sideways.',
+    how: 'High-pressure nitrogen is released through fast valves into small nozzles. There is no combustion: the gas simply expands and accelerates, so the thrust is small but instantly available, any number of times. A thruster at the top pushes that end sideways, which turns the whole booster about its centre of mass far below (with a small sideways drift as a side effect); pairs on opposite sides firing tangentially in opposite directions make a pure roll.',
     why: 'Right after separation the booster is above most of the atmosphere, its engines are off and its fins are folded, so thrust vector control and aerodynamics are both unavailable. Only reaction thrusters can turn it.',
     phases: [
       at('leo', 'flip', 'Turn the booster around so its engines face the direction of travel.'),
@@ -101,7 +101,7 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
     materialsWhy: 'Valves and lines are titanium: strong and light for high-pressure gas service. The nitrogen is stored in carbon-fibre overwrapped pressure vessels, which hold high pressure for a fraction of the mass of an all-metal bottle.',
     manufacturing: 'Machined valve bodies and small nozzles, welded titanium tubing, filament-wound bottles; the system is proof and leak tested as an assembly.',
     inspection: 'Leak checks, valve response tests, and thruster firing checks before flight; bottle cycle records for fatigue life.',
-    misconception: '"The white puffs are small rocket engines burning fuel." They are cold nitrogen. The gas cools as it expands, and the puff is visible because it is dense, cold gas lit by the Sun (and may condense moisture near the ground).',
+    misconception: '"The white puffs are small rocket engines burning fuel." They are cold nitrogen, nothing burns. The gas cools so much as it expands that traces of moisture in it (and in the air, low down) condense into tiny particles that scatter sunlight: that is the white puff.',
     ifAbsent: 'The booster could not flip for the boostback in near vacuum, and it would tumble on its way into the atmosphere.',
     depth: {
       quick: 'Small jets of compressed nitrogen at the top of the booster turn it around in space, where fins do not work.',
@@ -114,11 +114,11 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
 
   lesson({
     id: 'parachutes',
-    summary: `Two drogue parachutes and three large main parachutes that slow the capsule from high subsonic speed to a gentle splashdown.`,
-    where: `Packed tightly in bags in the capsule's forward bay, around the top of the pressure vessel. Deployed, the ${F.drogues} drogues (${F.drogueDiameter} across) stream above the capsule, then the ${F.mains} mains (${F.mainDiameter} across) open on long risers.`,
+    summary: `${F.droguesWordCap} drogue parachutes and ${F.mainsWord} large main parachutes that slow the capsule from its falling speed of more than a hundred metres per second to a gentle splashdown.`,
+    where: `Packed tightly in bags in the capsule's forward bay, around the top of the pressure vessel. Deployed, the ${F.droguesWord} drogues (${F.drogueDiameter} across) stream above the capsule, then the ${F.mainsWord} mains (${F.mainDiameter} across) open on long risers.`,
     connections: ['capsule', 'backshell-tps', 'heat-shield', 'docking-system'],
     function: 'Stabilize the capsule and slow it in stages to a splashdown speed its structure and crew can take.',
-    how: `The drogues are fired out by mortars at high altitude (several kilometres) and slow and steady the capsule. At lower altitude they are released and pilot chutes pull out the mains. The mains open first reefed: a line around the canopy's skirt holds it partly closed. After a few seconds cutters sever the reefing line and the canopies open fully (disreef).`,
+    how: `The drogues are fired out by mortars at about ${F.drogueAlt} (the mission target), where the capsule is falling at about ${F.drogueSpeed} (Mach ${F.drogueMach}, estimate), and slow and steady it. At about ${F.mainAlt} they are released and pilot chutes pull out the mains. The mains open first reefed: a line around the canopy's skirt holds it partly closed. After a few seconds cutters sever the reefing line and the canopies open fully (disreef).`,
     why: `Opening force is proportional to the canopy's drag area times the dynamic pressure at that moment. Reefing keeps the area small while the capsule is still fast, and only opens fully once it has slowed: two moderate jolts instead of one violent one. Three mains are sized so that two can still bring the capsule down at a survivable speed (estimated ${F.descentTwo} on two versus ${F.descentThree} on three), a documented practice for crewed capsules.`,
     phases: [
       at('return', 'drogues', 'Mortar-deployed drogues slow and stabilize the capsule.'),
@@ -130,7 +130,7 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
     figures: [
       { label: 'Drogues / mains', value: `${F.drogues} × ${F.drogueDiameter} / ${F.mains} × ${F.mainDiameter}` },
       { label: 'Area of one main canopy', value: F.mainArea, note: 'Nominal disk area' },
-      { label: 'Descent speed on three / two mains', value: `${F.descentThree} / ${F.descentTwo}`, note: `Estimate at sea level: ${F.capsuleMass}, drag coefficient 0.8 on nominal area` },
+      { label: 'Descent speed on three / two mains', value: `${F.descentThree} / ${F.descentTwo}`, note: `Estimate at sea level for the ${F.capsuleMass} entry mass, drag coefficient 0.8 on nominal area` },
       { label: 'Falling speed with no parachutes', value: `about ${F.noChuteSpeed}`, note: 'Estimate at sea level, drag coefficient 1.3 on the base area' },
     ],
     materials: mats('parachutes'),

@@ -9,7 +9,7 @@
  */
 import * as THREE from 'three';
 import type { Design } from './design';
-import { circle, clippedTube, hexBolt, merge, revolve, ringOf, roundPoly, sweep, type Frame, type V2 } from './geo';
+import { clippedTube, hexBolt, merge, revolve, ringOf, roundPoly, sweep, type Frame, type V2 } from './geo';
 import type { Kit, Tag } from './kit';
 import { TP } from './layout';
 import { lathe } from './tca';
@@ -97,8 +97,8 @@ export function sheet(P: THREE.Vector3[][], N: THREE.Vector3[][], th: number): T
 /** Helical inducer blades (count, wrap in rad) between hub and tip radii, y0 (top) to y1. */
 function inducer(c: THREE.Vector3, rHub: number, rTip: number, y0: number, y1: number, wrap: number, count: number, th: number): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  const nr = 4;
-  const nt = 28;
+  const nr = 3;
+  const nt = 20;
   for (let b = 0; b < count; b++) {
     const ph = (b * TAU) / count;
     const P: THREE.Vector3[][] = [];
@@ -131,7 +131,7 @@ function inducer(c: THREE.Vector3, rHub: number, rTip: number, y0: number, y1: n
 /** Backswept impeller vanes standing on the hub surface. */
 function vanes(c: THREE.Vector3, rIn: number, rOut: number, yHub: (r: number) => number, yTop: (r: number) => number, count: number, sweepRad: number, th: number, phase = 0): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  const nr = 12;
+  const nr = 9;
   for (let b = 0; b < count; b++) {
     const ph = phase + (b * TAU) / count;
     const P: THREE.Vector3[][] = [];
@@ -186,7 +186,7 @@ function voluteFrames(c: THREE.Vector3, y: number, segs: number): { frames: Fram
   const vo = TP.volute;
   const rho = (t: number) => vo.rho0 + (vo.rho1 - vo.rho0) * t;
   const frames: Frame[] = [];
-  const n = Math.max(24, segs);
+  const n = Math.max(24, Math.round(segs * 0.85));
   for (let i = 0; i <= n; i++) {
     const t = i / n;
     const a = Math.PI + 0.12 + (TAU - 0.12) * t;
@@ -197,12 +197,12 @@ function voluteFrames(c: THREE.Vector3, y: number, segs: number): { frames: Fram
   return { frames, rho };
 }
 
-export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, segs: number) {
+export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, _segs: number) {
   const c = V(d.tpX, 0, 0);
-  const s = detail === 'hangar' ? Math.max(72, Math.round(segs * 0.75)) : detail === 'flight' ? 28 : 16;
+  const s = detail === 'hangar' ? 48 : detail === 'flight' ? 20 : 14;
   const tp = (mat: Tag['mat']): Tag => ({ part: 'turbopump', mat });
   const gg = (mat: Tag['mat']): Tag => ({ part: 'gas-generator', mat });
-  const L = (pts: V2[], t: Tag, r = 0.0025, holes: V2[][] = []) => lathe(k, [{ pts: roundPoly(pts, r, 2) }, ...holes.map((h) => ({ pts: h, hole: true }))], t, s, { centre: c });
+  const L = (pts: V2[], t: Tag, r = 0.0025, holes: V2[][] = []) => lathe(k, [{ pts: detail === 'hangar' ? roundPoly(pts, r, 1) : pts }, ...holes.map((h) => ({ pts: h, hole: true }))], t, s, { centre: c });
 
   if (detail === 'cluster') {
     // one simplified powerhead silhouette: pump casings, turbine and gas generator
@@ -413,7 +413,7 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, seg
   // ── volutes (scrolls) and the fuel side inlet ──
   const vol = (y: number, mat: Tag['mat']) => {
     const { frames, rho } = voluteFrames(c, y, s);
-    const res = clippedTube(frames, { ro: rho, ri: detail === 'hangar' ? (t) => rho(t) - 0.005 : undefined, segs: detail === 'hangar' ? 22 : 12, clipZ: k.section ? 0 : undefined, endCaps: true });
+    const res = clippedTube(frames, { ro: rho, ri: detail === 'hangar' ? (t) => rho(t) - 0.005 : undefined, segs: detail === 'hangar' ? 20 : 10, clipZ: k.section ? 0 : undefined, endCaps: true });
     k.tube(res, tp(mat));
   };
   vol(TP.loxVoluteY, 'aluminum');
@@ -490,7 +490,7 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, seg
 
   // ── rotor: shaft, sleeves, inducers, impellers, turbine, bearing inner races, seal teeth ──
   const R: Tag = { part: 'turbopump', mat: 'machined', node: 'rotor' };
-  const full = (pts: V2[], t: Tag, r = 0.0015) => k.add(revolve([{ pts: roundPoly(pts, r, 2) }], 0, TAU, 48, { centre: c }).surf, t);
+  const full = (pts: V2[], t: Tag, r = 0.0015) => k.add(revolve([{ pts: roundPoly(pts, r, 2) }], 0, TAU, 40, { centre: c }).surf, t);
   full(
     [
       [0.0005, -0.028],
@@ -633,7 +633,7 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, seg
       { ...R, mat: 'steel' },
       0.0012,
     );
-    const ball = new THREE.SphereGeometry(0.0047, 12, 8);
+    const ball = new THREE.SphereGeometry(0.0047, 8, 6);
     k.add(ringOf(ball, 12, 0.0305, { centre: c, y }), { ...R, mat: 'chrome' });
     ball.dispose();
   }
@@ -696,5 +696,4 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, seg
     g.translate(c.x, TP.ggBottom - 0.006, c.z);
     k.add(g, { part: 'igniter', mat: 'steel' });
   }
-  void circle;
 }

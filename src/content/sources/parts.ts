@@ -98,6 +98,14 @@ export const PART_SOURCES: Source[] = [
     accessed: 'reference',
   },
   {
+    id: 'nasa-sp4206',
+    title: 'Stages to Saturn: A Technological History of the Apollo/Saturn Launch Vehicles, NASA SP-4206 (R. E. Bilstein, 1980)',
+    publisher: 'NASA History Office',
+    url: 'https://history.nasa.gov/SP-4206/sp4206.htm',
+    used: 'Documented history of building an insulated common bulkhead for a large upper stage and the difficulty of fabricating and bonding it',
+    accessed: 'reference',
+  },
+  {
     id: 'nasa-copv',
     title: 'Composite Overwrapped Pressure Vessels, A Primer (NASA/SP-2011-573)',
     publisher: 'NASA Technical Reports Server',

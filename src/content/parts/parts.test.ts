@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PART_IDS, PARTS, isPartId, type BodyId, type PartId, type Variant } from '../../vehicle/parts';
 import type { MissionId } from '../../timeline/types';
 import { MISSION_ORDER, OUTLINES } from '../../timeline/missions/outline';
+import { phasesFrom } from '../../timeline/missions/common';
 import { ASSIGNMENTS } from '../materials/assignments';
 import { MATERIAL_IDS } from '../materials/ids';
 import { CORE_SOURCES } from '../sources/core';
@@ -210,6 +211,30 @@ describe('phase cards', () => {
     }
   });
 
+  it('list every part the timeline marks active in that phase (except documented timeline slips)', () => {
+    // Timeline activeParts that the cards deliberately leave out, because the part is not doing
+    // that work there (reported to the timeline owner):
+    //  - 'avionics' in the booster's return phases: the avionics ring flies away on the upper stage;
+    //  - 'main-valves' at max-q: throttling is done through the gas generator, the valves stay open;
+    //  - 'attitude-thrusters' on the suborbital capsule: the part is not carried in that configuration
+    //    (partFlies filters it out).
+    const branchIds = new Set(MISSION_ORDER.flatMap((m) => OUTLINES[m].branch?.phases.map((p) => `${m}:${p.id}`) ?? []));
+    const allowedMissing = (m: MissionId, phase: string, part: PartId) =>
+      (part === 'avionics' && branchIds.has(`${m}:${phase}`)) || (part === 'main-valves' && phase === 'maxq');
+    for (const m of MISSION_ORDER) {
+      const o = OUTLINES[m];
+      const all = [...o.phases, ...(o.branch?.phases ?? [])];
+      const times = Object.fromEntries(all.map((p) => [p.id, [0, 1] as [number, number]]));
+      for (const p of phasesFrom(m, all, times)) {
+        const card = phaseCard(m, p.id)!;
+        for (const part of p.activeParts) {
+          if (!partFlies(part, m) || allowedMissing(m, p.id, part)) continue;
+          expect(card.parts, `${m}:${p.id} card should list ${part}`).toContain(part);
+        }
+      }
+    }
+  });
+
   it('list active parts that exist and fly on that mission', () => {
     for (const c of cards as PhaseCard[]) {
       expect(c.parts.length, `${c.mission}:${c.phase}`).toBeGreaterThan(0);
@@ -232,6 +257,10 @@ describe('writing rules', () => {
       expect(s.text.includes('—'), `em dash in ${s.path}`).toBe(false);
       expect(s.text.includes('–'), `en dash in ${s.path}`).toBe(false);
     }
+  });
+
+  it('writes negative numbers with a true minus sign, not a hyphen', () => {
+    for (const s of all) expect(s.text, s.path).not.toMatch(/(^|[\s(])-\d/);
   });
 
   it('has no template slips (undefined, NaN, object dumps) or stray whitespace', () => {

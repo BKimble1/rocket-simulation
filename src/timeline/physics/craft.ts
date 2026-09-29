@@ -11,7 +11,7 @@
  * split a craft into two, each starting exactly at the parent's model-frame origin pose
  * (continuity), so attached bodies share one pose and never teleport.
  */
-import { EARTH_AXIS, MU_EARTH, MU_MOON, OMEGA_EARTH, R_EARTH, moonPosition } from '../../world/frames';
+import { EARTH_AXIS, MOON_DISTANCE, MOON_ORBIT_NORMAL, MOON_PERIOD, MU_EARTH, MU_MOON, OMEGA_EARTH, R_EARTH } from '../../world/frames';
 import type { BodyId } from '../../vehicle/parts';
 import { atmosphereInto, type AtmosphereSample } from './atmosphere';
 import { thrustOf, type EngineModel } from './vehicle';
@@ -21,6 +21,25 @@ export const OMEGA_VEC: V3 = { x: EARTH_AXIS.x * OMEGA_EARTH, y: EARTH_AXIS.y * 
 
 /** Air velocity of the co-rotating atmosphere at r. */
 export const airVelocity = (r: V3): V3 => vcross(OMEGA_VEC, r);
+
+/**
+ * The Moon's position (frame I) exactly as world/frames.ts moonPosition computes it (same
+ * operations in the same order, so the values are bit-identical), without allocating.
+ */
+const MOON_E1 = { x: 1, y: 0, z: 0 };
+const MOON_E2 = (() => {
+  const n = MOON_ORBIT_NORMAL;
+  const c = { x: n.y * MOON_E1.z - n.z * MOON_E1.y, y: n.z * MOON_E1.x - n.x * MOON_E1.z, z: n.x * MOON_E1.y - n.y * MOON_E1.x };
+  const l = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+  return { x: c.x / l, y: c.y / l, z: c.z / l };
+})();
+const MOON_N = (2 * Math.PI) / MOON_PERIOD;
+export function moonPos(t: number, phase0: number): V3 {
+  const a = phase0 + MOON_N * t;
+  const k1 = Math.cos(a) * MOON_DISTANCE;
+  const k2 = Math.sin(a) * MOON_DISTANCE;
+  return { x: MOON_E1.x * k1 + MOON_E2.x * k2, y: MOON_E1.y * k1 + MOON_E2.y * k2, z: MOON_E1.z * k1 + MOON_E2.z * k2 };
+}
 
 export type TankId = 's1' | 's2' | 'sm' | 'sat' | 'les' | 'rcs';
 
@@ -185,7 +204,7 @@ export class Craft {
     let ay = r.y * k;
     let az = r.z * k;
     if (this.env.moonPhase0 !== null) {
-      const mp = moonPosition(t, this.env.moonPhase0);
+      const mp = moonPos(t, this.env.moonPhase0);
       const dx = r.x - mp.x;
       const dy = r.y - mp.y;
       const dz = r.z - mp.z;
@@ -248,6 +267,15 @@ export class Craft {
     const extra = this.extra;
     const lift = this.lift;
     const self = this;
+    // thrust directions at the start, middle and end of the step (RK4 samples only these)
+    const dirs: V3[] = [];
+    if (groups.length) {
+      const qm = qslerp(q0, q1, 0.5);
+      for (const gr of groups) {
+        const db = gr.dirBody ?? { x: 0, y: 1, z: 0 };
+        dirs.push(qrot(q0, db), qrot(qm, db), qrot(q1, db));
+      }
+    }
     let lastQ = 0;
     let lastMach = 0;
     let lastP = 0;
@@ -287,12 +315,13 @@ export class Craft {
       lastP = p;
       lastAlt = alt;
       if (groups.length) {
-        const qq = u <= 0 ? q0 : u >= 1 ? q1 : qslerp(q0, q1, u);
-        for (const gr of groups) {
+        const k = u <= 0 ? 0 : u >= 1 ? 2 : 1;
+        for (let gi = 0; gi < groups.length; gi++) {
+          const gr = groups[gi];
           const th = gr.thr + (gr.next - gr.thr) * u;
           if (th <= 0) continue;
           const F = thrustOf(gr.eng, gr.n, th, p);
-          const d = qrot(qq, gr.dirBody ?? { x: 0, y: 1, z: 0 });
+          const d = dirs[gi * 3 + k];
           ax += (d.x * F) / m;
           ay += (d.y * F) / m;
           az += (d.z * F) / m;

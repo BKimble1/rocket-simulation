@@ -1,7 +1,8 @@
 /**
  * Flow overlays for the propellant demonstrations: animated chevron tubes along the real
  * routes (downcomer and feed lines, pressurant lines). Colours match the labelled legend:
- * LOX #8fc6ff, RP-1 #e0a24a, helium #b6f0c8. Each route is drawn twice: a solid pass that
+ * LOX #8fc6ff, RP-1 #e0a24a, helium #b6f0c8, guidance signals #c8bcff (gnc-loop: avionics to
+ * the engine actuators along the raceway). Each route is drawn twice: a solid pass that
  * respects depth, and a faint "x-ray" pass so the route stays readable through the skin.
  * The motion is schematic (slowed and not to scale), which the interface labels say.
  */
@@ -11,7 +12,7 @@ import { chevronTexture } from './textures';
 import type { FlowPath } from './ctx';
 import type { Kit } from './kit';
 
-export const FLOW_COLORS = { lox: '#8fc6ff', rp1: '#e0a24a', he: '#b6f0c8' } as const;
+export const FLOW_COLORS = { lox: '#8fc6ff', rp1: '#e0a24a', he: '#b6f0c8', sig: '#c8bcff' } as const;
 
 interface FlowMesh {
   demo: FlowPath['demo'];
@@ -55,7 +56,7 @@ export class FlowOverlays {
 
   /** Show the overlays of a demo (or none) and scroll them with stage time t (s). */
   update(demo: string | null, t: number, strength = 1) {
-    const want = demo === 'feed-flow' || demo === 'tank-pressure' ? demo : null;
+    const want = demo === 'feed-flow' || demo === 'tank-pressure' || demo === 'gnc-loop' ? demo : null;
     if (want !== this.active) {
       for (const it of this.items) for (const m of it.meshes) m.visible = it.demo === want;
       this.active = want;

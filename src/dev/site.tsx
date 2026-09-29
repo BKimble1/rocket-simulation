@@ -1,7 +1,7 @@
 /**
  * Dev harness for the launch site: the sky (SpaceWorld), the site and a stand-in vehicle
  * (radius 1.85 m, 67 m tall) on the mount. URL: hold=0..1, arms=0..1, deluge=0..1,
- * cfg=capsule, novehicle=1, plus the flight camera (?t=&cam=e,n,u,heading,pitch,fov).
+ * cfg=capsule, novehicle=1, clouds=0 (hide the cloud layer), plus the flight camera (?t=&cam=e,n,u,heading,pitch,fov).
  * While the sky module is still a stub (its Sun light casts no shadows) the harness makes that
  * light cast shadows over a box around the pad so structures can be judged; it leaves a real
  * shadow-casting sun alone.
@@ -123,7 +123,7 @@ function DevShadows() {
 export default function Dev() {
   return (
     <>
-      <SpaceWorld />
+      <SpaceWorld clouds={q.get('clouds') !== '0'} />
       <LaunchSite />
       {q.get('novehicle') === '1' ? null : <StandInVehicle />}
       <DevShadows />

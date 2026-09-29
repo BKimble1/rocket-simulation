@@ -16,11 +16,11 @@ export const CFRP_SANDWICH: MaterialDraft = {
   limits:
     'Weak across the fibres and between plies. An impact can crush the core or split plies inside the panel with little or no visible mark, and face sheets can disbond from the core. The epoxy matrix limits the service temperature to well below that of metals and absorbs some moisture, so composites near engines need thermal protection. Composites do not yield like metals: they fail with little warning, so joints, cut-outs and fittings need careful design and testing.',
   elsewhere: [
-    { text: 'NASA’s Composites for Exploration Upper Stage project designed and tested large composite dry structures (skirts and intertanks) for launch-vehicle upper stages.', source: 'nasa-ceus' },
+    { text: 'NASA’s Composites for Exploration Upper Stage project developed large composite sandwich dry structures (the unpressurized skirts and intertanks) for a launch-vehicle upper stage, to save mass over metal designs.', source: 'nasa-ceus' },
   ],
   compare: [
     { axis: 'Anisotropy', text: 'Along the fibres: stronger than steel per kilogram. Across the fibres and between plies: governed by the resin and many times weaker.' },
-    { axis: 'Stiffness per mass', text: 'Sandwich construction gives the highest bending stiffness per kilogram of any practical panel.' },
+    { axis: 'Stiffness per mass', text: 'Sandwich construction gives one of the highest bending stiffnesses per kilogram of any practical panel.' },
     { axis: 'Temperature', text: 'Limited by the epoxy matrix, far below metals.' },
     { axis: 'Inspectability', text: 'Harder than metals: damage can be internal and invisible, whereas a metal panel dents and yields visibly.' },
     { axis: 'Thermal expansion', text: 'Very low along the fibres, which keeps precision structures in shape as they heat and cool.' },
@@ -53,14 +53,16 @@ export const CFRP_COPV: MaterialDraft = {
   limits:
     'Under sustained high stress a composite overwrap can fail suddenly after a long time (stress rupture), so COPVs are derated and their pressure history is tracked. Impact damage can be invisible yet weaken the overwrap, and a liner flaw can leak. A COPV submerged in LOX needs special qualification: the oxygen compatibility of the overwrap, and the stresses of loading helium at cryogenic temperature.',
   elsewhere: [
-    { text: 'Space Shuttle orbiters used Kevlar-overwrapped, titanium-lined vessels for helium and nitrogen; NASA’s long-term stress-rupture work on those vessels shaped today’s COPV requirements.', source: 'nasa-copv-primer' },
+    { text: 'Space Shuttle orbiters used Kevlar-overwrapped, titanium-lined vessels for helium and nitrogen; NASA’s long-term stress-rupture work on those vessels shaped today’s COPV requirements.', source: 'nasa-copv' },
   ],
   compare: [
     { axis: 'Mass', text: 'Much lighter than an all-metal bottle of the same pressure and volume.' },
     { axis: 'Load sharing', text: 'Overwrap: hoop and axial tension. Liner: gas-tightness and a smaller share of the load.' },
     { axis: 'Failure modes', text: 'Stress rupture and hidden impact damage in the composite; fatigue cracks and leaks in the liner.' },
   ],
-  properties: [],
+  properties: [
+    { property: 'Fibre tensile strength', value: '4,900 MPa', condition: 'T700S carbon fibre alone (a standard-modulus fibre supplied for filament winding), room temperature; the wound laminate is weaker', source: 'toray-t700s' },
+  ],
   manufacturing:
     'The liner is spun, deep-drawn or machined and welded, then filament-wound: a machine lays resin-wetted carbon tow in hoop and helical patterns under controlled tension. After curing, each vessel is autofrettaged, proof-tested and leak-tested.',
   inspection:
@@ -69,28 +71,29 @@ export const CFRP_COPV: MaterialDraft = {
     q: 'In a COPV, which part holds the pressure: the metal liner or the composite?',
     a: 'Mostly the composite. The carbon fibres wound around the bottle carry the hoop tension, the largest stress in a pressurized cylinder, along their strong direction. The liner is thin; its main job is to seal the gas, which fibre and resin alone cannot do. That is why damage to the overwrap is serious even when the liner is perfect.',
   },
-  sources: ['nasa-copv-primer'],
+  sources: ['nasa-copv', 'toray-t700s'],
 };
 
 export const HONEYCOMB_CORE: MaterialDraft = {
   id: 'honeycomb-core',
-  name: 'Honeycomb core (aluminium and aramid)',
+  name: 'Honeycomb cores (aluminium and non-metallic)',
   family: 'Sandwich cores',
   focus:
-    'Hexagonal cells of thin aluminium foil (or aramid paper), mostly empty space. The core holds the face sheets of a sandwich apart and carries shear between them. In the K-1 it is the core of the fairing and the insulating core of the upper-stage common bulkhead.',
+    'Hexagonal cells of thin aluminium foil or resin-impregnated aramid or glass-fibre paper, mostly empty space. The core holds the face sheets of a sandwich apart and carries shear between them. In the K-1 it is the aluminium core of the fairing and the insulating core of the upper-stage common bulkhead.',
   suits:
-    'A core has to keep two stiff skins a fixed distance apart and pass shear between them while adding little mass: standard aluminium honeycomb starts at about 50 kg/m³ (3.1 lb/ft³). Because the bending stiffness of a sandwich grows with the square of the skin separation, a thick, light core gives an enormous stiffness gain (see the question). In a common bulkhead the honeycomb also insulates: its cells are mostly gas (or vacuum in flight), so it slows heat flow from the RP-1 side to the LOX side and keeps the RP-1 from getting too cold. Crushed on purpose, honeycomb also absorbs energy at a steady, predictable force, which is why it is used in landing-leg foot pads.',
+    'A core has to keep two stiff skins a fixed distance apart and pass shear between them while adding little mass: a common aerospace aluminium core (1/8 in cells of 0.0007 in 5052 foil) weighs about 50 kg/m³ (3.1 lb/ft³), about 2 % of solid aluminium, and lighter and heavier grades exist. Because the bending stiffness of a sandwich grows with the square of the skin separation, a thick, light core gives an enormous stiffness gain (see the question). In a common bulkhead the core must also insulate, so a non-metallic core (aramid or glass-fibre phenolic class, as in documented common bulkheads) is the plausible choice: its thin resin-paper walls conduct little heat and its cells are mostly gas, so it slows heat flow from the RP-1 side to the LOX side and keeps the RP-1 from getting too cold. An aluminium core would conduct far more. Crushed on purpose, honeycomb also absorbs energy at a steady, predictable force, which is why it is used in landing-leg foot pads.',
   limits:
     'Weak in the plane of the panel and under point loads: bolts need potted inserts. Face-to-core bonds can disbond, and aluminium cores corrode if moisture gets into the cells. Trapped air must be vented as the vehicle climbs. Damage and disbonds are hidden inside the panel.',
   elsewhere: [
     { text: 'The Apollo command modules and the first Orion heat shield used a fibreglass-phenolic honeycomb as a carrier, with each cell filled by hand with Avcoat ablator.', source: 'nasa-ablators' },
+    { text: 'The Saturn V second stage separated its liquid oxygen from its much colder liquid hydrogen with an insulated common bulkhead: aluminium skins on a fibreglass-phenolic honeycomb core.', source: 'saturn-v-flight-manual' },
   ],
   compare: [
     { axis: 'Stiffness per mass', text: 'Turns two thin skins into a stiff panel for very little added mass.' },
-    { axis: 'Insulation', text: 'Mostly gas: a useful insulator in a common bulkhead.' },
+    { axis: 'Insulation', text: 'A non-metallic core is mostly gas behind thin resin walls: a useful insulator in a common bulkhead. Aluminium foil cores conduct much more heat.' },
     { axis: 'Point loads', text: 'Weak; needs inserts wherever something is bolted on.' },
   ],
-  properties: [{ property: 'Density (lightest standard aluminium core)', value: 'about 50 kg/m³ (3.1 lb/ft³)', condition: '5052 aluminium honeycomb, nominal', source: 'hexcel-honeycomb' }],
+  properties: [{ property: 'Density', value: 'about 50 kg/m³ (3.1 lb/ft³)', condition: '5052 aluminium honeycomb, 1/8 in (3.2 mm) cells, 0.0007 in (18 µm) foil, nominal', source: 'hexcel-honeycomb' }],
   manufacturing:
     'Aluminium foil is printed with lines of adhesive, stacked and cured into a block, sliced to thickness, and pulled open like a paper lantern into hexagonal cells. The expanded core is machined to the panel shape and bonded between face sheets with film adhesive under heat and pressure.',
   inspection:
@@ -100,7 +103,7 @@ export const HONEYCOMB_CORE: MaterialDraft = {
     a: 'Because bending stiffness depends on how far the load-carrying material sits from the middle of the panel. Bending stretches one skin and compresses the other; the farther apart they are, the longer the lever arm, and the stiffness grows with the square of the separation. The K-1 fairing uses 1.2 mm carbon skins on a 25 mm core. With illustrative densities of 1,600 kg/m³ for the skins and 50 kg/m³ for the core, the panel weighs 5.09 kg/m², the same as a solid carbon laminate 3.18 mm thick, yet it is about 150 times stiffer in bending. The core only has to hold the skins apart and carry shear, which honeycomb does at very low density.',
   },
   closeup: 'fairing-sandwich',
-  sources: ['hexcel-honeycomb', 'nasa-ablators'],
+  sources: ['hexcel-honeycomb', 'nasa-ablators', 'saturn-v-flight-manual'],
 };
 
 export const TEXTILES: MaterialDraft = {

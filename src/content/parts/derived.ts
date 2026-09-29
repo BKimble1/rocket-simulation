@@ -6,19 +6,86 @@
  *
  * Every value is either a dataset value, a direct consequence of dataset values (sums,
  * products, the ideal rocket equation, two-body orbital mechanics, ideal isentropic nozzle
- * flow), or an estimate whose assumptions are stated where it is used. None of them is a
- * measured value of a real vehicle.
+ * flow), a mission-profile value (`PROFILE`: what the timeline flies or is built to, checked
+ * against the built timelines in the test), a sourced reference value (`REFERENCE`), or an
+ * estimate whose assumptions are stated where it is used. None of them is a measured value of
+ * a real vehicle.
  */
 import { ABORT_TOWER, BODY_DIAMETER, CAPSULE, DOME_HEIGHT, E1, E1V, FAIRING, G0, GRID_FINS, LEGS, PAYLOADS, PROPELLANTS, S1, S2, S1_ENGINE_LAYOUT, SERVICE_MODULE, STATIONS, tankVolume } from '../../vehicle/spec';
 import { MOON_DISTANCE, MOON_PERIOD, MU_EARTH, MU_MOON, OMEGA_EARTH, R_EARTH, SITE } from '../../world/frames';
 import { LANDING_ZONE, PAD } from '../../world/site';
+import { OUTLINES } from '../../timeline/missions/outline';
 
-/** Format a number with comma thousands separators and a fixed number of decimals. */
+/** Format a number with comma thousands separators and a fixed number of decimals (true minus sign). */
 export function fmt(n: number, digits = 0): string {
   const s = Math.abs(n).toFixed(digits);
   const [int, frac] = s.split('.');
   const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return (n < 0 && Number(s) !== 0 ? '-' : '') + grouped + (frac ? `.${frac}` : '');
+  return (n < 0 && Number(s) !== 0 ? '−' : '') + grouped + (frac ? `.${frac}` : '');
+}
+
+/**
+ * Mission-profile values that are not in spec.ts. Each is either what the built LEO timeline
+ * flies (src/timeline/missions/leo.ts, checked against the built timeline in derived.test.ts)
+ * or a target of the physics brief (docs/briefs/physics.md) that the other timelines are built
+ * to. The text words them as approximate; if a timeline settles elsewhere, change it here once.
+ */
+export const PROFILE = {
+  /** LEO satellite orbit and station orbit: circular, km above the spherical Earth (m). */
+  leoAlt: 400e3,
+  /** LEO timeline: insertion into a 200 x 400 km orbit, then a short circularization burn at apogee. */
+  leoInsertion: { rp: 200e3, ra: 400e3 },
+  /** GTO and lunar parking orbit (physics brief: about 200 km). */
+  parkingAlt: 200e3,
+  /** Capsule insertion below the station (physics brief: about 200 x 250 km). */
+  stationInsertion: { rp: 200e3, ra: 250e3 },
+  /** Laps the capsule coasts in the insertion orbit before the two raising burns (station.ts). */
+  phasingRevs: 4,
+  /** Fairing released above this altitude once heating is low (flight.ts / physics brief). */
+  fairingAlt: 110e3,
+  /** Booster throttle setting through the transonic, high-q region (flight.ts). */
+  throttleBucket: 0.7,
+  /** Relative push-off speed of the pneumatic stage-separation pushers (ascent.ts), m/s. */
+  stageSepSpeed: 1.0,
+  /** Payload separation spring speed (leo.ts), m/s. */
+  payloadSepSpeed: 0.4,
+  /** Retrograde deorbit burn (physics brief), m/s. */
+  deorbitDv: 100,
+  /** Capsule entry interface altitude (physics brief), m. */
+  entryInterface: 120e3,
+  /** Drogue and main parachute deployment altitudes (physics brief), m. */
+  drogueAlt: 7e3,
+  mainAlt: 2e3,
+  /** Rendezvous hold points below the station (m) and the maximum closing speed at contact (m/s). */
+  holdPoints: [400, 150, 20],
+  closingSpeed: 0.1,
+  /** Suborbital hop: planned high point (middle of the 110 to 120 km target) and the free-fall floor. */
+  suborbitalApogee: 115e3,
+  freeFallFloor: 80e3,
+  /** Suborbital hop: engines lit (suborbital.ts: the centre engine and two opposite outer engines). */
+  suborbitalEngines: 3,
+  /** Altitude by which drag starts to matter for the falling research capsule (estimate), m. */
+  suborbitalDragAlt: 50e3,
+} as const;
+
+/**
+ * Sourced reference values (not in spec.ts): LOX/RP-1 theoretical chamber temperature near this
+ * mixture ratio (Sutton & Biblarz, table of theoretical performance: about 3,570 to 3,680 K) and
+ * the total solar irradiance above the atmosphere (Kopp and Lean, 2011).
+ */
+export const REFERENCE = {
+  flameTemperature: 3600,
+  solarIrradiance: 1361,
+  /** US Standard Atmosphere 1976 at 7 km: density (kg/m^3) and speed of sound (m/s). */
+  density7km: 0.59,
+  sound7km: 312.3,
+} as const;
+
+const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+/** A small count as a word, for prose ("two drogues"); larger counts as digits. */
+export function countWord(n: number, capital = false): string {
+  const w = Number.isInteger(n) && n >= 0 && n < WORDS.length ? WORDS[n] : fmt(n);
+  return capital ? w.charAt(0).toUpperCase() + w.slice(1) : w;
 }
 
 /** Round to a number of significant figures (for estimates that should not look precise). */
@@ -89,30 +156,41 @@ const e1ChamberDiameter = 1.7 * E1.throatDiameter;
 const LOX_PUMP_RISE = 12e6;
 const FUEL_PUMP_RISE = 14e6;
 const PUMP_EFFICIENCY = 0.7;
+/** Tank pressure a pressure-fed E-1 would need (chamber pressure plus injector and line losses) and a typical pump-fed tank pressure (both illustrative). */
+const PRESSURE_FED_TANK = 10e6;
+const PUMP_FED_TANK = 0.3e6;
 const pumpPower = ((e1Lox / PROPELLANTS.lox.density) * LOX_PUMP_RISE + (e1Fuel / PROPELLANTS.rp1.density) * FUEL_PUMP_RISE) / PUMP_EFFICIENCY;
 
 // ---- masses (kg) ----
-const s1Gross = S1.dry + S1.propellant;
+/**
+ * Empty booster mass. S1.dry covers the stage with its engines; the recovery configuration adds
+ * the landing legs (LEGS.mass), as the trajectory model does (timeline/physics/vehicle.ts).
+ */
+const s1Empty = (recovery: boolean) => S1.dry + (recovery ? LEGS.mass : 0);
+const s1EmptyRecovery = s1Empty(true);
 const s2Gross = S2.dry + S2.propellant;
+const stackMass = (mission: 'leo' | 'gto' | 'lunar' | 'station', payload: number) => s1Empty(OUTLINES[mission].recovery) + S1.propellant + s2Gross + payload;
+/** Fully fuelled on the pad, before ignition (the engines burn a few tonnes before release). */
 const liftoffMass = {
-  leo: s1Gross + s2Gross + PAYLOADS.leoSat.mass + FAIRING.mass,
-  gto: s1Gross + s2Gross + PAYLOADS.gtoSat.mass + FAIRING.mass,
-  lunar: s1Gross + s2Gross + PAYLOADS.lunarProbe.mass + FAIRING.mass,
-  station: s1Gross + s2Gross + PAYLOADS.capsule.mass + ABORT_TOWER.mass,
+  leo: stackMass('leo', PAYLOADS.leoSat.mass + FAIRING.mass),
+  gto: stackMass('gto', PAYLOADS.gtoSat.mass + FAIRING.mass),
+  lunar: stackMass('lunar', PAYLOADS.lunarProbe.mass + FAIRING.mass),
+  station: stackMass('station', PAYLOADS.capsule.mass + ABORT_TOWER.mass),
 };
 const s1ThrustSL = S1.engineCount * (E1.thrustSL ?? 0);
 const s1ThrustVac = S1.engineCount * E1.thrustVac;
 const s1Mdot = S1.engineCount * e1Mdot;
 
 // ---- ideal velocity changes, LEO configuration (fairing dropped at staging for simplicity) ----
+/** First stage with vacuum Isp and no gravity or drag losses: an upper bound, not a flight value. */
 const leoS1 = idealDv(E1.ispVac, liftoffMass.leo, liftoffMass.leo - S1.propellant);
 const leoS2 = idealDv(E1V.ispVac, s2Gross + PAYLOADS.leoSat.mass, S2.dry + PAYLOADS.leoSat.mass);
 const leoS2WithE1 = idealDv(E1.ispVac, s2Gross + PAYLOADS.leoSat.mass, S2.dry + PAYLOADS.leoSat.mass);
-const leoS2CarryingBooster = idealDv(E1V.ispVac, s2Gross + PAYLOADS.leoSat.mass + S1.dry, S2.dry + PAYLOADS.leoSat.mass + S1.dry);
+const leoS2CarryingBooster = idealDv(E1V.ispVac, s2Gross + PAYLOADS.leoSat.mass + s1EmptyRecovery, S2.dry + PAYLOADS.leoSat.mass + s1EmptyRecovery);
 const leoS2CarryingFairing = idealDv(E1V.ispVac, s2Gross + PAYLOADS.leoSat.mass + FAIRING.mass, S2.dry + PAYLOADS.leoSat.mass + FAIRING.mass);
 /** Ideal velocity lost by the upper stage if it had to carry the empty booster (per payload stack). */
-const carryBoosterLoss = (payload: number) =>
-  idealDv(E1V.ispVac, s2Gross + payload, S2.dry + payload) - idealDv(E1V.ispVac, s2Gross + payload + S1.dry, S2.dry + payload + S1.dry);
+const carryBoosterLoss = (payload: number, recovery: boolean) =>
+  idealDv(E1V.ispVac, s2Gross + payload, S2.dry + payload) - idealDv(E1V.ispVac, s2Gross + payload + s1Empty(recovery), S2.dry + payload + s1Empty(recovery));
 const capS2 = idealDv(E1V.ispVac, s2Gross + PAYLOADS.capsule.mass, S2.dry + PAYLOADS.capsule.mass);
 const capS2WithTower = idealDv(E1V.ispVac, s2Gross + PAYLOADS.capsule.mass + ABORT_TOWER.mass, S2.dry + PAYLOADS.capsule.mass + ABORT_TOWER.mass);
 
@@ -122,12 +200,12 @@ function payloadTrade(stage: 's1' | 's2'): number {
     const m0 = s1dry + S1.propellant + s2dry + S2.propellant + p + FAIRING.mass;
     return idealDv(E1.ispVac, m0, m0 - S1.propellant) + idealDv(E1V.ispVac, s2dry + S2.propellant + p, s2dry + p);
   };
-  const base = total(PAYLOADS.leoSat.mass, S1.dry, S2.dry);
+  const base = total(PAYLOADS.leoSat.mass, s1EmptyRecovery, S2.dry);
   let lo = 0;
   let hi = PAYLOADS.leoSat.mass * 2;
   for (let i = 0; i < 100; i++) {
     const mid = (lo + hi) / 2;
-    const dv = stage === 's1' ? total(mid, S1.dry + 100, S2.dry) : total(mid, S1.dry, S2.dry + 100);
+    const dv = stage === 's1' ? total(mid, s1EmptyRecovery + 100, S2.dry) : total(mid, s1EmptyRecovery, S2.dry + 100);
     if (dv > base) lo = mid;
     else hi = mid;
   }
@@ -135,9 +213,13 @@ function payloadTrade(stage: 's1' | 's2'): number {
 }
 
 // ---- orbits ----
-const LEO_ALT = 400e3;
-const PARKING_ALT = 200e3;
+const LEO_ALT = PROFILE.leoAlt;
+const PARKING_ALT = PROFILE.parkingAlt;
 const GEO_ALT = 35_786e3;
+/** LEO insertion orbit as flown (perigee at cutoff, apogee half an orbit later). */
+const insA = R_EARTH + (PROFILE.leoInsertion.rp + PROFILE.leoInsertion.ra) / 2;
+const insPerigeeSpeed = visViva(R_EARTH + PROFILE.leoInsertion.rp, insA);
+const insApogeeSpeed = visViva(R_EARTH + PROFILE.leoInsertion.ra, insA);
 const leoSpeed = circularSpeed(LEO_ALT);
 const leoPeriod = period(R_EARTH + LEO_ALT);
 const parkingSpeed = circularSpeed(PARKING_ALT);
@@ -147,15 +229,26 @@ const gtoApogeeSpeed = visViva(R_EARTH + GEO_ALT, gtoA);
 const geoSpeed = circularSpeed(GEO_ALT);
 const incl = SITE.lat * deg;
 const circPlane = Math.sqrt(gtoApogeeSpeed ** 2 + geoSpeed ** 2 - 2 * gtoApogeeSpeed * geoSpeed * Math.cos(incl));
-const phasingAlt = 225e3; // mean of the ~200 x 250 km insertion orbit
+/** Mean altitude of the capsule's insertion orbit below the station. */
+const phasingAlt = (PROFILE.stationInsertion.rp + PROFILE.stationInsertion.ra) / 2;
 const phasingPeriod = period(R_EARTH + phasingAlt);
-const deorbitDv = 100;
-const deorbitPerigee = (() => {
+const deorbitDv = PROFILE.deorbitDv;
+/** Semi-major axis of the orbit after the retrograde deorbit burn from the circular LEO orbit. */
+const deorbitA = (() => {
   const r = R_EARTH + LEO_ALT;
   const v = leoSpeed - deorbitDv;
+  return 1 / (2 / r - (v * v) / MU_EARTH);
+})();
+const deorbitPerigee = 2 * deorbitA - (R_EARTH + LEO_ALT) - R_EARTH;
+/** Far-side altitude after a retrograde burn of dv from the circular LEO orbit (two-body). */
+export function perigeeAfterRetroBurn(dv: number): number {
+  const r = R_EARTH + LEO_ALT;
+  const v = leoSpeed - dv;
   const a = 1 / (2 / r - (v * v) / MU_EARTH);
   return 2 * a - r - R_EARTH;
-})();
+}
+/** How much lower the far side goes for each extra m/s of deorbit burn, near the nominal burn (m per m/s). */
+const deorbitSensitivity = perigeeAfterRetroBurn(deorbitDv) - perigeeAfterRetroBurn(deorbitDv + 1);
 const tliA = (R_EARTH + PARKING_ALT + MOON_DISTANCE) / 2;
 const tliSpeed = visViva(R_EARTH + PARKING_ALT, tliA);
 const escapeSpeed = Math.sqrt((2 * MU_EARTH) / (R_EARTH + PARKING_ALT));
@@ -164,13 +257,36 @@ const soiRadius = MOON_DISTANCE * (MU_MOON / MU_EARTH) ** 0.4;
 const eclipseFraction = (2 * Math.asin(R_EARTH / (R_EARTH + LEO_ALT))) / (2 * Math.PI);
 
 // ---- capsule and recovery ----
-const ENTRY_SPEED = 7700; // m/s, near-orbital entry from a 400 km orbit (the timeline computes the actual value)
-const capsuleKE = 0.5 * CAPSULE.mass * ENTRY_SPEED ** 2;
+/**
+ * Entry speed at the entry interface on the orbit left by the deorbit burn (two-body), relative
+ * to Earth's centre, and relative to the air, which turns with Earth. For a prograde orbit of
+ * inclination i the air's velocity component along the track is omega * r * cos(i) at every
+ * point; the flight-path angle (about 1 degree) and the small cross-track air speed change the
+ * magnitude by only a few m/s.
+ */
+const rEntry = R_EARTH + PROFILE.entryInterface;
+const entryInertial = visViva(rEntry, deorbitA);
+const entryAir = entryInertial - OMEGA_EARTH * rEntry * Math.cos(incl);
+/** Kinetic energy the atmosphere has to remove: relative to the air. */
+const capsuleKE = 0.5 * CAPSULE.mass * entryAir ** 2;
 const MAIN_CD = 0.8; // drag coefficient on nominal canopy area (estimate)
 const mainArea = disk(CAPSULE.mainDiameter);
-const descentSpeed = (n: number) => Math.sqrt((2 * CAPSULE.mass * G0) / (SEA_LEVEL_DENSITY * MAIN_CD * n * mainArea));
-const CAPSULE_CD = 1.3; // blunt body, heat shield first
-const noChuteSpeed = Math.sqrt((2 * CAPSULE.mass * G0) / (SEA_LEVEL_DENSITY * CAPSULE_CD * disk(CAPSULE.baseDiameter)));
+const descentSpeedFor = (mass: number, n: number) => Math.sqrt((2 * mass * G0) / (SEA_LEVEL_DENSITY * MAIN_CD * n * mainArea));
+const descentSpeed = (n: number) => descentSpeedFor(CAPSULE.mass, n);
+const CAPSULE_CD = 1.3; // blunt body, heat shield first (the physics brief's value)
+const capsuleArea = disk(CAPSULE.baseDiameter);
+const fallSpeedAt = (rho: number) => Math.sqrt((2 * CAPSULE.mass * G0) / (rho * CAPSULE_CD * capsuleArea));
+const noChuteSpeed = fallSpeedAt(SEA_LEVEL_DENSITY);
+/** Steady falling speed of the capsule at the drogue altitude (US Standard Atmosphere 1976 density). */
+const drogueSpeed = fallSpeedAt(REFERENCE.density7km);
+/** Suborbital hop: speed after falling from the planned high point to where drag starts to matter. */
+const suborbitalFallSpeed = Math.sqrt(2 * MU_EARTH * (1 / (R_EARTH + PROFILE.suborbitalDragAlt) - 1 / (R_EARTH + PROFILE.suborbitalApogee)));
+/** Time above the free-fall floor for a vertical coast (uniform gravity at the mean height). */
+const suborbitalFreeFall = (() => {
+  const h = PROFILE.suborbitalApogee - PROFILE.freeFallFloor;
+  const g = MU_EARTH / (R_EARTH + (PROFILE.suborbitalApogee + PROFILE.freeFallFloor) / 2) ** 2;
+  return 2 * Math.sqrt((2 * h) / g);
+})();
 const smMdot = SERVICE_MODULE.engineThrust / (SERVICE_MODULE.ispVac * G0);
 const smDeorbitProp = PAYLOADS.capsule.mass * (1 - Math.exp(-deorbitDv / (SERVICE_MODULE.ispVac * G0)));
 
@@ -214,8 +330,12 @@ export const D = {
   nozzleLipGap: neighbourSpacing - E1.exitDiameter,
   ringRadius,
   landingThrustMin: E1.minThrottle * (E1.thrustSL ?? 0),
-  landingTWDry: (E1.minThrottle * (E1.thrustSL ?? 0)) / (S1.dry * G0),
-  boosterDryWeight: S1.dry * G0,
+  /** Minimum single-engine thrust over the weight of the empty recovery booster (with legs). */
+  landingTWDry: (E1.minThrottle * (E1.thrustSL ?? 0)) / (s1EmptyRecovery * G0),
+  boosterEmptyMass: s1EmptyRecovery,
+  boosterDryWeight: s1EmptyRecovery * G0,
+  /** Throttle a single engine as big as the whole cluster would need to match the empty booster's weight. */
+  singleEngineHoverThrottle: (s1EmptyRecovery * G0) / s1ThrustSL,
   radiatedAt1500K: STEFAN_BOLTZMANN * 1500 ** 4,
   // masses and ratios
   liftoffMass,
@@ -230,14 +350,15 @@ export const D = {
         holdDown: s1ThrustSL - liftoffMass[k] * G0,
         accel: (s1ThrustSL - liftoffMass[k] * G0) / liftoffMass[k],
         tw: s1ThrustSL / (liftoffMass[k] * G0),
+        boosterEmpty: s1Empty(OUTLINES[k].recovery),
       },
     ]),
-  ) as Record<keyof typeof liftoffMass, { mass: number; weight: number; holdDown: number; accel: number; tw: number }>,
+  ) as Record<keyof typeof liftoffMass, { mass: number; weight: number; holdDown: number; accel: number; tw: number; boosterEmpty: number }>,
   carryBoosterLoss: {
-    leo: carryBoosterLoss(PAYLOADS.leoSat.mass),
-    gto: carryBoosterLoss(PAYLOADS.gtoSat.mass),
-    lunar: carryBoosterLoss(PAYLOADS.lunarProbe.mass),
-    station: carryBoosterLoss(PAYLOADS.capsule.mass + ABORT_TOWER.mass),
+    leo: carryBoosterLoss(PAYLOADS.leoSat.mass, OUTLINES.leo.recovery),
+    gto: carryBoosterLoss(PAYLOADS.gtoSat.mass, OUTLINES.gto.recovery),
+    lunar: carryBoosterLoss(PAYLOADS.lunarProbe.mass, OUTLINES.lunar.recovery),
+    station: carryBoosterLoss(PAYLOADS.capsule.mass + ABORT_TOWER.mass, OUTLINES.station.recovery),
   },
   holdDownNet: s1ThrustSL - liftoffMass.leo * G0,
   liftoffAccel: (s1ThrustSL - liftoffMass.leo * G0) / liftoffMass.leo,
@@ -253,7 +374,7 @@ export const D = {
   s2LoxVolume: tankVolume(S2.lox, 'lox'),
   s2Rp1Volume: tankVolume(S2.rp1, 'rp1'),
   heliumDensityRatio: 293 / PROPELLANTS.lox.boilK,
-  pressureFedRatio: 10e6 / 0.3e6,
+  pressureFedRatio: PRESSURE_FED_TANK / PUMP_FED_TANK,
   sandwichStiffnessRatio: (3 * (FAIRING.core + FAIRING.faceSheet) ** 2) / (4 * FAIRING.faceSheet ** 2),
   // lengths from the stations
   s1FuelTankLength: STATIONS.s1FuelFwdApex - STATIONS.s1FuelAftApex,
@@ -281,9 +402,14 @@ export const D = {
   // orbits
   leoSpeed,
   leoPeriodMin: leoPeriod / 60,
+  insPerigeeSpeed,
+  insApogeeSpeed,
+  insCoastMin: period(insA) / 2 / 60,
+  leoCircDv: leoSpeed - insApogeeSpeed,
   orbitsPerDay: 86400 / leoPeriod,
   eclipseMin: (eclipseFraction * leoPeriod) / 60,
   gravityAt400: (R_EARTH / (R_EARTH + LEO_ALT)) ** 2,
+  gravityAt200: (R_EARTH / (R_EARTH + PROFILE.leoInsertion.rp)) ** 2,
   gravityAt100: (R_EARTH / (R_EARTH + 100e3)) ** 2,
   earthRotationSpeed: OMEGA_EARTH * R_EARTH * Math.cos(incl),
   parkingSpeed,
@@ -298,29 +424,39 @@ export const D = {
   phasingGainDeg: 360 * (1 - phasingPeriod / leoPeriod),
   deorbitDv,
   deorbitPerigee,
+  deorbitSensitivity,
   tliSpeed,
   tliDv: tliSpeed - parkingSpeed,
   escapeSpeed,
   moonSpeed,
   soiRadius,
   // capsule
-  entrySpeed: ENTRY_SPEED,
+  entryInertial,
+  entryAir,
   capsuleKE,
-  capsuleKEperKg: 0.5 * ENTRY_SPEED ** 2,
+  capsuleKEperKg: 0.5 * entryAir ** 2,
   capsuleTNT: capsuleKE / 4.184e9,
   mainArea,
   mainsTotalArea: CAPSULE.mains * mainArea,
   descentThree: descentSpeed(CAPSULE.mains),
   descentTwo: descentSpeed(CAPSULE.mains - 1),
+  /** The research capsule has the crew capsule's shape and parachutes but a lower mass. */
+  descentResearch: descentSpeedFor(PAYLOADS.researchCapsule.mass, CAPSULE.mains),
   noChuteSpeed,
+  drogueSpeed,
+  drogueMach: drogueSpeed / REFERENCE.sound7km,
+  suborbitalFallSpeed,
+  /** Kinetic energy per kilogram: orbital entry (relative to the air) over the suborbital fall. */
+  suborbitalEnergyRatio: entryAir ** 2 / suborbitalFallSpeed ** 2,
   smMdot,
   smDeorbitProp,
   smDeorbitBurn: smDeorbitProp / smMdot,
   lesTW: ABORT_TOWER.motorThrust / ((CAPSULE.mass + ABORT_TOWER.mass) * G0),
+  /** Crew hatch sill: 58.3 m above the nozzle exit plane in the capsule stack, the level of the tower's crew access arm (scene/environment/tower.ts). */
   crewHatchHeight: PAD.nozzleExitHeight + 58.3,
   landingZoneDistance: Math.hypot(LANDING_ZONE.x, LANDING_ZONE.z),
   xBandWavelength: 299_792_458 / 8.4e9,
-  suborbitalFreeFall: 2 * Math.sqrt((2 * 35e3) / (G0 * (R_EARTH / (R_EARTH + 100e3)) ** 2)),
+  suborbitalFreeFall,
   gridFinArea: GRID_FINS.width * GRID_FINS.height,
   legsFractionOfDry: LEGS.mass / S1.dry,
 };
@@ -333,6 +469,7 @@ const stationM = (v: number) => {
   return `${fmt(v, tenths || !hundredths ? 1 : 2)} m`;
 };
 const kms = (n: number, d = 2) => `${fmt(n / 1e3, d)} km/s`;
+const km = (m: number) => `${fmt(m / 1e3)} km`;
 
 /** Formatted strings with units, used verbatim in the text. */
 export const F = {
@@ -349,6 +486,9 @@ export const F = {
   e1Length: `${fmt(E1.length, 2)} m`,
   e1Mass: `${fmt(E1.mass)} kg`,
   e1Gimbal: `±${fmt(E1.gimbalRangeDeg)}°`,
+  e1GimbalDeg: `${fmt(E1.gimbalRangeDeg)}°`,
+  flameT: `${fmt(REFERENCE.flameTemperature)} K`,
+  solarIrradiance: `${fmt(REFERENCE.solarIrradiance)} W/m²`,
   e1MinThrottle: `${fmt(E1.minThrottle * 100)} %`,
   rpm: `${fmt(E1.pumpRpm)} rpm`,
   rps: `${fmt(D.e1Rps)} revolutions per second`,
@@ -365,9 +505,17 @@ export const F = {
   e1VeVac: `${fmt(sig(D.e1VeVac, 3))} m/s`,
   e1TW: fmt(D.e1ThrustToWeight),
   pumpPower: `${fmt(D.pumpPower / 1e6)} MW`,
+  loxPumpRise: `${fmt(LOX_PUMP_RISE / 1e6)} MPa`,
+  fuelPumpRise: `${fmt(FUEL_PUMP_RISE / 1e6)} MPa`,
+  pumpEfficiency: `${fmt(PUMP_EFFICIENCY * 100)} %`,
+  e1LoxVolumeFlow: `${fmt(D.e1Lox / PROPELLANTS.lox.density, 2)} m³/s`,
+  loxPumpHydraulic: `${fmt(((D.e1Lox / PROPELLANTS.lox.density) * LOX_PUMP_RISE) / 1e6, 1)} MW`,
   e1ExitPressure: `${fmt(sig(D.e1ExitPressure / 1e3, 1))} kPa`,
   e1SeaLevelPressureTerm: kN(sig(SEA_LEVEL_PRESSURE * D.e1ExitArea, 2)),
+  e1ThrustSLFromPressure: kN(E1.thrustVac - SEA_LEVEL_PRESSURE * D.e1ExitArea),
+  e1ThrustSLMismatch: `${fmt((100 * ((E1.thrustSL ?? 0) - (E1.thrustVac - SEA_LEVEL_PRESSURE * D.e1ExitArea))) / (E1.thrustSL ?? 1))} %`,
   e1vExitPressure: `${fmt(sig(D.e1vExitPressure / 1e3, 1))} kPa`,
+  e1vSeaLevelRatio: fmt(sig(SEA_LEVEL_PRESSURE / D.e1vExitPressure, 2)),
   noDivergingLossSL: `${fmt(sig(D.noDivergingLossSL * 100, 2))} %`,
   noDivergingLossVac: `${fmt(sig(D.noDivergingLossVac * 100, 2))} %`,
   e1vThrust: kN(E1V.thrustVac),
@@ -385,6 +533,10 @@ export const F = {
   // first stage
   engines: fmt(S1.engineCount),
   s1ThrustSL: kN(D.s1ThrustSL),
+  hopEngines: countWord(PROFILE.suborbitalEngines),
+  hopEnginesCap: countWord(PROFILE.suborbitalEngines, true),
+  hopThrustSL: kN(PROFILE.suborbitalEngines * (E1.thrustSL ?? 0)),
+  hopMdot: `${fmt(PROFILE.suborbitalEngines * D.e1Mdot)} kg/s`,
   s1ThrustVac: kN(D.s1ThrustVac),
   s1Mdot: `${fmt(D.s1Mdot)} kg/s`,
   s1LoxFlow: `${fmt(D.s1LoxFlow)} kg/s`,
@@ -407,6 +559,8 @@ export const F = {
   rp1Density: `${fmt(PROPELLANTS.rp1.density)} kg/m³`,
   loxBoil: `${fmt(PROPELLANTS.lox.boilK, 1)} K (${fmt(PROPELLANTS.lox.boilK - 273.15)} °C)`,
   loxShare: `${fmt((S1.lox / S1.propellant) * 100)} %`,
+  /** LOX boiling point to room temperature (293 K). */
+  loxToAmbient: `${fmt(sig(293 - PROPELLANTS.lox.boilK, 1))} K`,
   diameter: `${fmt(BODY_DIAMETER, 1)} m`,
   ringRadius: `${fmt(D.ringRadius, 1)} m`,
   nozzleLipGap: `${fmt(D.nozzleLipGap * 100)} cm`,
@@ -429,9 +583,10 @@ export const F = {
         accel: `${fmt(v.accel, 1)} m/s²`,
         tw: fmt(v.tw, 2),
         carryBoosterLoss: kms(D.carryBoosterLoss[k as keyof typeof D.carryBoosterLoss], 1),
+        boosterEmpty: `${fmt(v.boosterEmpty)} kg`,
       },
     ]),
-  ) as Record<keyof typeof D.stack, { mass: string; weight: string; holdDown: string; accel: string; tw: string; carryBoosterLoss: string }>,
+  ) as Record<keyof typeof D.stack, { mass: string; weight: string; holdDown: string; accel: string; tw: string; carryBoosterLoss: string; boosterEmpty: string }>,
   liftoffTWLeo: fmt(D.liftoffTW.leo, 2),
   liftoffTWStation: fmt(D.liftoffTW.station, 2),
   holdDownNet: kN(sig(D.holdDownNet, 2)),
@@ -443,9 +598,13 @@ export const F = {
   s2EndAccelLeo: `${fmt(D.s2EndAccelLeo / G0, 1)} g`,
   landingThrustMin: kN(D.landingThrustMin),
   landingTWDry: fmt(D.landingTWDry, 1),
+  boosterEmptyMass: `${fmt(D.boosterEmptyMass)} kg`,
   boosterDryWeight: kN(sig(D.boosterDryWeight, 2)),
+  singleEngineHoverThrottle: `${fmt(D.singleEngineHoverThrottle * 100)} %`,
   heliumDensityRatio: fmt(D.heliumDensityRatio, 1),
   pressureFedRatio: fmt(sig(D.pressureFedRatio, 2)),
+  pressureFedTank: `${fmt(PRESSURE_FED_TANK / 1e6)} MPa`,
+  pumpFedTank: `${fmt(PUMP_FED_TANK / 1e6, 1)} MPa`,
   sandwichStiffnessRatio: fmt(sig(D.sandwichStiffnessRatio, 2)),
   radiatedAt1500K: `${fmt(D.radiatedAt1500K / 1e6, 2)} MW/m²`,
   // geometry
@@ -478,6 +637,30 @@ export const F = {
   towerCarriedLoss: kms(D.towerCarriedLoss, 1),
   tradeS1: `${fmt(D.tradeS1)} kg`,
   tradeS2: `${fmt(D.tradeS2)} kg`,
+  // mission-profile values (see PROFILE)
+  parkingAlt: km(PARKING_ALT),
+  leoInsertion: `${fmt(PROFILE.leoInsertion.rp / 1e3)} × ${fmt(PROFILE.leoInsertion.ra / 1e3)} km`,
+  leoInsPerigeeAlt: km(PROFILE.leoInsertion.rp),
+  leoInsApogeeAlt: km(PROFILE.leoInsertion.ra),
+  insPerigeeSpeed: kms(D.insPerigeeSpeed),
+  insApogeeSpeed: kms(D.insApogeeSpeed),
+  insCoast: `${fmt(D.insCoastMin)} min`,
+  leoCircDv: `${fmt(sig(D.leoCircDv, 2))} m/s`,
+  stationInsertion: `${fmt(PROFILE.stationInsertion.rp / 1e3)} × ${fmt(PROFILE.stationInsertion.ra / 1e3)} km`,
+  phasingAlt: km(phasingAlt),
+  fairingAlt: km(PROFILE.fairingAlt),
+  throttleBucket: `${fmt(PROFILE.throttleBucket * 100)} %`,
+  stageSepSpeed: `${fmt(PROFILE.stageSepSpeed, 1)} m/s`,
+  payloadSepSpeed: `${fmt(PROFILE.payloadSepSpeed, 1)} m/s`,
+  entryInterface: km(PROFILE.entryInterface),
+  drogueAlt: km(PROFILE.drogueAlt),
+  mainAlt: km(PROFILE.mainAlt),
+  holdPoints: `${PROFILE.holdPoints.slice(0, -1).map((h) => `${fmt(h)} m`).join(', ')} and ${fmt(PROFILE.holdPoints[PROFILE.holdPoints.length - 1])} m`,
+  closingSpeed: `${fmt(PROFILE.closingSpeed, 1)} m/s`,
+  firstHold: `${fmt(PROFILE.holdPoints[0])} m`,
+  suborbitalApogee: km(PROFILE.suborbitalApogee),
+  freeFallFloor: km(PROFILE.freeFallFloor),
+  suborbitalDragAlt: km(PROFILE.suborbitalDragAlt),
   // orbits
   leoAlt: `${fmt(LEO_ALT / 1e3)} km`,
   leoSpeed: kms(D.leoSpeed),
@@ -485,6 +668,7 @@ export const F = {
   orbitsPerDay: fmt(D.orbitsPerDay, 1),
   eclipseMin: `${fmt(D.eclipseMin)} min`,
   gravityAt400: `${fmt(D.gravityAt400 * 100)} %`,
+  gravityAt200: `${fmt(D.gravityAt200 * 100)} %`,
   gravityAt100: `${fmt(D.gravityAt100 * 100)} %`,
   earthRotationSpeed: `${fmt(D.earthRotationSpeed)} m/s`,
   siteLat: `${fmt(SITE.lat, 1)}° N`,
@@ -500,6 +684,9 @@ export const F = {
   phasingPeriod: `${fmt(D.phasingPeriodMin, 1)} min`,
   phasingGain: `${fmt(D.phasingGainDeg)}°`,
   deorbitPerigee: `${fmt(sig(D.deorbitPerigee / 1e3, 2))} km`,
+  deorbitSensitivity: `${fmt(D.deorbitSensitivity / 1e3)} km`,
+  phasingRevs: countWord(PROFILE.phasingRevs),
+  phasingHours: `${fmt((PROFILE.phasingRevs * D.phasingPeriodMin) / 60)} hours`,
   tliSpeed: kms(D.tliSpeed, 1),
   tliDv: kms(D.tliDv, 1),
   escapeSpeed: kms(D.escapeSpeed, 1),
@@ -512,12 +699,16 @@ export const F = {
   capsuleSidewall: `${fmt(CAPSULE.sidewallDeg)}°`,
   heatShieldThickness: `${fmt(CAPSULE.heatShieldThickness * 1000)} mm`,
   heatShieldRadius: `${fmt(CAPSULE.heatShieldRadius, 1)} m`,
-  entrySpeed: kms(D.entrySpeed, 1),
+  entryInertial: kms(D.entryInertial, 1),
+  entryAir: kms(D.entryAir, 1),
   capsuleKE: `${fmt(sig(D.capsuleKE / 1e9, 2))} GJ`,
   capsuleKEperKg: `${fmt(D.capsuleKEperKg / 1e6)} MJ/kg`,
-  capsuleTNT: `${fmt(sig(D.capsuleTNT, 1))} tonnes of TNT`,
+  capsuleTNT: `${fmt(sig(D.capsuleTNT, 2))} tonnes of TNT`,
   drogues: fmt(CAPSULE.drogues),
   mains: fmt(CAPSULE.mains),
+  droguesWord: countWord(CAPSULE.drogues),
+  mainsWord: countWord(CAPSULE.mains),
+  droguesWordCap: countWord(CAPSULE.drogues, true),
   mainDiameter: `${fmt(CAPSULE.mainDiameter)} m`,
   drogueDiameter: `${fmt(CAPSULE.drogueDiameter)} m`,
   mainArea: `${fmt(sig(D.mainArea, 2))} m²`,
@@ -525,6 +716,10 @@ export const F = {
   descentThree: `${fmt(D.descentThree, 1)} m/s`,
   descentTwo: `${fmt(D.descentTwo, 1)} m/s`,
   noChuteSpeed: `${fmt(sig(D.noChuteSpeed, 1))} m/s`,
+  drogueSpeed: `${fmt(sig(D.drogueSpeed, 2))} m/s`,
+  drogueMach: fmt(D.drogueMach, 1),
+  suborbitalFallSpeed: kms(D.suborbitalFallSpeed, 1),
+  suborbitalEnergyRatio: fmt(sig(D.suborbitalEnergyRatio, 2)),
   smDiameter: `${fmt(SERVICE_MODULE.diameter, 1)} m`,
   smLength: `${fmt(SERVICE_MODULE.length, 1)} m`,
   smMass: `${fmt(SERVICE_MODULE.mass)} kg`,

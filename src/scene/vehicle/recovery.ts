@@ -9,6 +9,7 @@ import type { Ctx } from './ctx';
 import type { Section } from './kit';
 import { AZ } from './layout';
 import { radialFrame, loft, bevelBox, rod, mergeAll, lathe, polar, type P2 } from './geom';
+import { RigInstances, azimuthCopies } from './instancing';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
@@ -51,7 +52,8 @@ function legs(ctx: Ctx, s: Section) {
   const { kit } = ctx;
   const L = LEGS.stowedLength;
   const n = kit.hangar ? 14 : 8;
-  for (const phi of AZ.legs) {
+  // one posable template leg at the first azimuth; the other three are instances of it
+  for (const phi of AZ.legs.slice(0, 1)) {
     const hinge = new THREE.Group();
     hinge.name = 'leg-hinge';
     radialFrame(HINGE_R, phi, LEGS.hingeY).decompose(hinge.position, hinge.quaternion, hinge.scale);
@@ -128,25 +130,31 @@ function legs(ctx: Ctx, s: Section) {
     const ie = new THREE.SphereGeometry(0.065, 12, 8);
     kit.add(inner, mergeAll([ic, ie]), { part: 'landing-legs', mat: 'stainless', look: 'stainless', cut: true });
     ctx.movers.legs.push({ hinge, leg, pad, strutOuter: outer, strutInner: inner, B, P });
+    ctx.movers.inst.legs = new RigInstances(kit, s.group, [hinge], azimuthCopies(AZ.legs));
   }
 }
 
-/** Pose the legs for deployment fraction u (0 stowed, 1 deployed). */
+const _up = new THREE.Vector3(0, 1, 0);
+const _x = new THREE.Vector3(1, 0, 0);
+const _p = new THREE.Vector3();
+const _d = new THREE.Vector3();
+
+/** Pose the legs for deployment fraction u (0 stowed, 1 deployed). No allocations. */
 export function poseLegs(ctx: Ctx, u: number) {
   const th = (u * LEGS.deployedAngleDeg * Math.PI) / 180;
-  const up = V(0, 1, 0);
   for (const g of ctx.movers.legs) {
     g.leg.rotation.x = th;
     // the pad counter-rotates so it lands flat
     g.pad.rotation.x = (u * (180 - LEGS.deployedAngleDeg) * Math.PI) / 180;
-    const P = g.P.clone().applyAxisAngle(V(1, 0, 0), th);
-    const d = P.clone().sub(g.B);
-    const q = new THREE.Quaternion().setFromUnitVectors(up, d.clone().normalize());
+    // telescoping strut: outer cylinder anchored on the body at B, rod anchored on the leg at P
+    _p.copy(g.P).applyAxisAngle(_x, th);
+    _d.copy(_p).sub(g.B).normalize();
     g.strutOuter.position.copy(g.B);
-    g.strutOuter.quaternion.copy(q);
-    g.strutInner.position.copy(P);
-    g.strutInner.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(up, d.clone().normalize().negate()));
+    g.strutOuter.quaternion.setFromUnitVectors(_up, _d);
+    g.strutInner.position.copy(_p);
+    g.strutInner.quaternion.setFromUnitVectors(_up, _d.negate());
   }
+  ctx.movers.inst.legs?.update();
 }
 
 // ───────────────────────────── grid fins ─────────────────────────────
@@ -207,7 +215,14 @@ function fins(ctx: Ctx, s: Section) {
   const { kit } = ctx;
   const hr = R + 0.125;
   const panel = finPanel(kit);
-  for (const phi of AZ.fins) {
+  if (kit.hangar)
+    for (const phi of AZ.fins) {
+      // hydraulic actuator unit inside the skirt
+      const act = bevelBox(0.3, 0.26, 0.18, 0.02);
+      kit.add(s.group, act, { part: 'grid-fins', mat: 'titanium', look: 'aluDark', internal: true, cut: true }, radialFrame(R - 0.16, phi, 37.0));
+    }
+  // one posable template fin at the first azimuth; the other three are instances of it
+  for (const phi of AZ.fins.slice(0, 1)) {
     const hinge = new THREE.Group();
     radialFrame(hr, phi, GRID_FINS.hingeY).decompose(hinge.position, hinge.quaternion, hinge.scale);
     s.group.add(hinge);
@@ -235,11 +250,7 @@ function fins(ctx: Ctx, s: Section) {
     shaft.rotateZ(Math.PI / 2);
     kit.add(hinge, shaft, { ...hs, look: 'stainless', mat: 'titanium' });
     ctx.movers.fins.push({ fold, deflect });
-    if (kit.hangar) {
-      // hydraulic actuator unit inside the skirt
-      const act = bevelBox(0.3, 0.26, 0.18, 0.02);
-      kit.add(s.group, act, { part: 'grid-fins', mat: 'titanium', look: 'aluDark', internal: true, cut: true }, radialFrame(R - 0.16, phi, 37.0));
-    }
+    ctx.movers.inst.fins = new RigInstances(kit, s.group, [hinge], azimuthCopies(AZ.fins));
   }
   panel.dispose();
 }
@@ -251,6 +262,7 @@ export function poseFins(ctx: Ctx, deploy: number, deflectDeg: number) {
     g.fold.rotation.x = (f * Math.PI) / 2;
     g.deflect.rotation.y = d * f;
   }
+  ctx.movers.inst.fins?.update();
 }
 
 // ───────────────────────────── cold-gas RCS ─────────────────────────────

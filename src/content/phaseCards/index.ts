@@ -2,7 +2,8 @@
  * Mission phase cards: one card per phase of every mission and of every branch in `OUTLINES`,
  * answering What is happening? Why now? Which parts are active? What forces or environment
  * matter? What enables the next phase? Keys are `${mission}:${phase}`; branch phases use the
- * mission id too (e.g. `leo:boostback`). `phaseCards.test.ts` checks the coverage.
+ * mission id too (e.g. `leo:boostback`). `src/content/parts/parts.test.ts` checks the coverage, the
+ * listed parts against each phase's timeline `activeParts`, and the writing rules.
  */
 import type { MissionId } from '../../timeline/types';
 import type { PhaseCard } from '../types';

@@ -14,7 +14,7 @@ import { cdFreeMolecular } from '../physics/aero';
 import { Ctx } from '../physics/context';
 import { Craft } from '../physics/craft';
 import { elements, timeToAnomaly } from '../physics/kepler';
-import { ORBIT_RATE, apsidesKm, coastKepler, coastStep, horizontal, orbitBurn, progradeAttitude } from '../physics/orbit';
+import { ORBIT_RATE, apsidesKm, coastKepler, coastStep, horizontal, incToEquator, orbitBurn, progradeAttitude } from '../physics/orbit';
 import { PAYLOAD_COM, boosterDry, sumMass } from '../physics/vehicle';
 import { comFrom } from '../physics/ascent';
 import { DEG, qaxisY, qdelta, v3, vlen, vscale, vadd } from '../physics/vec';
@@ -33,9 +33,11 @@ export function buildLeo(): MissionTimeline {
   const a = flyOrbitalAscent(ctx, {
     spec: { payload: 'leoSat', recovery: true, crew: false, boosterOnly: false },
     gammaMeco: 36,
-    rtls: { reserve0: 49_000, bias0: { e: -5100, n: -270 }, margin: 700 },
+    rtls: { reserve0: 50_279, bias0: { e: -6287, n: -298 }, margin: 700 },
     insertion: { rp: 200e3, ra: 400e3 },
-    ltg0: { A: 0.45, B: -0.0018 },
+    // warm starts: the converged values of the deterministic searches (they re-converge in a pass or two)
+    ltg0: { A: 0.90456, B: -0.0027625 },
+    kick0: 0.96222,
     gLimitS1: 4.5 * 9.80665,
     gLimitS2: 4.5 * 9.80665,
     s2Keep: 450,
@@ -205,7 +207,7 @@ export function buildLeo(): MissionTimeline {
   ctx.fact('circ.dv', circDv);
   ctx.fact('orbit.periKm', fin.peri);
   ctx.fact('orbit.apoKm', fin.apo);
-  ctx.fact('orbit.incDeg', fin.incDeg);
+  ctx.fact('orbit.incDeg', incToEquator(up.r, up.v));
   ctx.fact('orbit.s2PropLeftKg', up.tanks.s2 ?? 0);
   ctx.fact('payloadSep.t', tSep);
   ctx.fact('orbit.periodMin', elements(sat.r, sat.v, MU_EARTH).period / 60);

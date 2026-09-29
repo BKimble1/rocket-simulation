@@ -15,6 +15,7 @@ import { WALL } from './tanks';
 import { wall, dome, jointBand, solidRing, sandwich } from './structures';
 import { lathe, pipe, rod, radialFrame, bevelBox, platePlan, boltRing, rectPoly, mergeAll, loft, polar, type P2 } from './geom';
 import { makeDecal, wordWidth } from './decals';
+import { RigInstances, azimuthCopies, bakeModel } from './instancing';
 import { GRAPHITE, WHITE } from './mats';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -244,77 +245,127 @@ function heatShield(ctx: Ctx) {
 function engines(ctx: Ctx, hs: Section) {
   const s = sec(ctx, 'engines');
   const detail = s1EngineDetail(ctx.hangar);
+  // The engine facing the pad cameras is a full engine model (its sub-parts can be selected and
+  // it runs the engine demonstrations); the other six are instances of one baked engine model
+  // (one draw call per material for all six), gimballed rigidly per instance.
+  const primary = ENGINES.reduce((a, b) => (b.z > a.z ? b : a)).id;
+  const others = ENGINES.filter((e) => e.id !== primary);
+  const template = buildEngine('E-1', detail);
+  const baked = bakeModel(template.root);
+  const meshes = baked.map((b) => {
+    const im = new THREE.InstancedMesh(b.geometry, b.material, others.length);
+    im.name = `engine-cluster:${b.part ?? 'engine'}`;
+    im.castShadow = true;
+    im.receiveShadow = true;
+    im.userData.subPart = b.part;
+    s.group.add(im);
+    ctx.kit.register(im, { kind: 'solid', part: 's1-engine-cluster', mat: b.mat ?? 'stainless', body: 'booster' });
+    return im;
+  });
+  ctx.movers.cluster = {
+    meshes,
+    set(i, m) {
+      for (const im of meshes) im.setMatrixAt(i, m);
+    },
+    commit() {
+      for (const im of meshes) {
+        im.instanceMatrix.needsUpdate = true;
+        im.boundingSphere = null;
+        im.boundingBox = null;
+      }
+    },
+  };
   for (const e of ENGINES) {
-    const m = mountEngine(ctx, s.group, e.id, 'E-1', detail, V(e.x, S.s1Gimbal, e.z), e.yaw, e.centre);
-    ctx.movers.engines.push(m);
+    const pivot = V(e.x, S.s1Gimbal, e.z);
+    if (e.id === primary) {
+      ctx.movers.engines.push(mountEngine(ctx, s.group, e.id, 'E-1', detail, pivot, e.yaw, e.centre));
+      continue;
+    }
+    const k = others.indexOf(e);
+    const mount = new THREE.Group();
+    mount.name = `engine-pose:${e.id}`;
+    mount.position.copy(pivot);
+    mount.rotation.y = e.yaw;
+    mount.updateMatrix();
+    ctx.movers.cluster.set(k, mount.matrix);
+    ctx.movers.engines.push({ id: e.id, kind: 'E-1', centre: e.centre, mount, engine: template, yaw: e.yaw, selfGimbal: false, pivot, instance: k });
   }
-  // flexible thermal boots between the plate cut-outs and each nozzle (live geometry follows the gimbal)
+  ctx.movers.cluster.commit();
+
+  // flexible thermal boots between the plate cut-outs and each nozzle (live geometry follows the
+  // gimbal): all seven in one mesh
   const yBot = S.s1HeatShield - 0.24;
-  for (const m of ctx.movers.engines) {
-    const yEng = yBot - S.s1Gimbal;
-    let rb = engineRadiusAt(m, yEng);
-    if (rb < 0.12 || rb > 0.45) rb = 0.24;
-    const folds = 5;
-    const segs = ctx.kit.seg.small * 2;
-    const rows = folds * 4 + 1;
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array((segs + 1) * rows * 3), 3));
-    g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array((segs + 1) * rows * 3), 3));
-    const uv = new Float32Array((segs + 1) * rows * 2);
-    for (let j = 0; j < rows; j++) for (let i = 0; i <= segs; i++) uv.set([(i / segs) * 12, (j / (rows - 1)) * 2], (j * (segs + 1) + i) * 2);
-    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-    const idx: number[] = [];
+  const yEng = yBot - S.s1Gimbal;
+  const live = ctx.movers.engines.find((m) => m.instance === undefined)!;
+  let rb = engineRadiusAt(live, yEng);
+  if (rb < 0.12 || rb > 0.45) rb = 0.24;
+  const folds = 5;
+  const segs = ctx.kit.seg.small * 2;
+  const rows = folds * 4 + 1;
+  const per = (segs + 1) * rows;
+  const count = ctx.movers.engines.length;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(per * count * 3), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(per * count * 3), 3));
+  const uv = new Float32Array(per * count * 2);
+  const idx: number[] = [];
+  for (let k = 0; k < count; k++) {
+    const o = k * per;
+    for (let j = 0; j < rows; j++) for (let i = 0; i <= segs; i++) uv.set([(i / segs) * 12, (j / (rows - 1)) * 2], (o + j * (segs + 1) + i) * 2);
     for (let j = 0; j < rows - 1; j++)
       for (let i = 0; i < segs; i++) {
-        const a = j * (segs + 1) + i;
+        const a = o + j * (segs + 1) + i;
         const b = a + segs + 1;
         idx.push(a, b, a + 1, a + 1, b, b + 1);
       }
-    g.setIndex(idx);
-    const mesh = new THREE.Mesh(g, ctx.mats.get('boot'));
-    mesh.name = `boot:${m.id}`;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.frustumCulled = false;
-    hs.group.add(mesh);
-    ctx.kit.register(mesh, { kind: 'solid', part: 'base-heat-shield', mat: 'ceramic-tiles', body: 'booster' });
-    ctx.movers.boots.push({ mesh, engine: m, rTop: 0.47, yTop: S.s1HeatShield - 0.015, rBot: rb + 0.012, yBotEngine: yEng, folds });
   }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  const mesh = new THREE.Mesh(g, ctx.mats.get('boot'));
+  mesh.name = 'engine-boots';
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.frustumCulled = false;
+  hs.group.add(mesh);
+  ctx.kit.register(mesh, { kind: 'solid', part: 'base-heat-shield', mat: 'ceramic-tiles', body: 'booster' });
+  ctx.movers.engines.forEach((m, k) => ctx.movers.boots.push({ mesh, offset: k * per, segs, engine: m, rTop: 0.47, yTop: S.s1HeatShield - 0.015, rBot: rb + 0.012, yBotEngine: yEng, folds }));
 }
 
-/** Update the boot shapes for the current engine gimbal rotations. */
-export function updateBoots(ctx: Ctx, rot: (m: EngineMount) => THREE.Quaternion) {
-  const p = new THREE.Vector3();
-  const n = new THREE.Vector3();
-  for (const b of ctx.movers.boots) {
-    const q = rot(b.engine);
-    const pos = b.mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
-    const nor = b.mesh.geometry.getAttribute('normal') as THREE.BufferAttribute;
-    const segs = Math.round(pos.count / (b.folds * 4 + 1)) - 1;
+const _bp = new THREE.Vector3();
+const _bt = new THREE.Vector3();
+const _bb = new THREE.Vector3();
+const _bq = new THREE.Quaternion();
+
+/** Update the boot shapes for the current engine gimbal rotations (no allocations). */
+export function updateBoots(ctx: Ctx, rot: (m: EngineMount, out: THREE.Quaternion) => THREE.Quaternion) {
+  const boots = ctx.movers.boots;
+  if (!boots.length) return;
+  const pos = boots[0].mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+  for (const b of boots) {
+    const q = rot(b.engine, _bq);
+    const segs = b.segs;
     const rows = b.folds * 4 + 1;
     const piv = b.engine.pivot;
     for (let j = 0; j < rows; j++) {
       const t = j / (rows - 1);
       const bulge = Math.sin(t * Math.PI) * 0.035 + (j % 4 === 1 ? 0.018 : j % 4 === 3 ? -0.008 : 0.006);
+      const w = t * t * (3 - 2 * t) * 0.35 + t * 0.65;
       for (let i = 0; i <= segs; i++) {
         const phi = (i / segs) * Math.PI * 2;
-        const s = Math.sin(phi);
+        const sn = Math.sin(phi);
         const c = Math.cos(phi);
         // top ring fixed on the plate; bottom ring on the nozzle (rotates with the engine)
-        const top = new THREE.Vector3(piv.x + b.rTop * s, b.yTop, piv.z + b.rTop * c);
-        const bot = new THREE.Vector3(b.rBot * s, b.yBotEngine, b.rBot * c).applyQuaternion(q).add(piv);
-        p.lerpVectors(top, bot, t * t * (3 - 2 * t) * 0.35 + t * 0.65);
-        const rad = new THREE.Vector3(s, 0, c);
-        p.addScaledVector(rad, bulge);
-        n.copy(rad).multiplyScalar(0.7).add(new THREE.Vector3(0, -0.7, 0)).normalize();
-        pos.setXYZ(j * (segs + 1) + i, p.x, p.y, p.z);
-        nor.setXYZ(j * (segs + 1) + i, n.x, n.y, n.z);
+        _bt.set(piv.x + b.rTop * sn, b.yTop, piv.z + b.rTop * c);
+        _bb.set(b.rBot * sn, b.yBotEngine, b.rBot * c).applyQuaternion(q).add(piv);
+        _bp.lerpVectors(_bt, _bb, w);
+        _bp.x += sn * bulge;
+        _bp.z += c * bulge;
+        pos.setXYZ(b.offset + j * (segs + 1) + i, _bp.x, _bp.y, _bp.z);
       }
     }
-    pos.needsUpdate = true;
-    b.mesh.geometry.computeVertexNormals();
-    b.mesh.geometry.computeBoundingSphere();
   }
+  pos.needsUpdate = true;
+  boots[0].mesh.geometry.computeVertexNormals();
 }
 
 // ───────────────────────────── tanks ─────────────────────────────
@@ -753,11 +804,11 @@ function interstage(ctx: Ctx) {
   if (!kit.hangar) return s;
   // stage separation: release collets around the ring, pneumatic pushers
   const cSpec = { part: 'stage-separation' as const, mat: 'al-2219' as const, look: 'aluMilled', cut: true };
-  for (let i = 0; i < AZ.collets; i++) {
-    const phi = ((i + 0.5) / AZ.collets) * Math.PI * 2;
-    const baseM = radialFrame(ri - 0.1, phi, y1 - 0.2);
-    kit.add(s.group, bevelBox(0.13, 0.12, 0.08, 0.01), cSpec, baseM);
-    // finger on a hinge (animated in the staging demo)
+  const colletPhis: number[] = [];
+  for (let i = 0; i < AZ.collets; i++) colletPhis.push(((i + 0.5) / AZ.collets) * Math.PI * 2);
+  for (const phi of colletPhis) kit.add(s.group, bevelBox(0.13, 0.12, 0.08, 0.01), cSpec, radialFrame(ri - 0.1, phi, y1 - 0.2));
+  // one finger on a hinge (animated in the staging demo); the others are instances of it
+  for (const phi of colletPhis.slice(0, 1)) {
     const hinge = new THREE.Group();
     hinge.matrixAutoUpdate = true;
     const hm = radialFrame(ri - 0.12, phi, y1 - 0.15);
@@ -770,6 +821,7 @@ function interstage(ctx: Ctx) {
     hook.translate(0, 0.25, 0.024);
     kit.add(hinge, mergeAll([finger, hook]), { ...cSpec, look: 'stainless', mat: 'stainless' });
     ctx.movers.collets.push(hinge);
+    ctx.movers.inst.collets = new RigInstances(kit, s.group, [hinge], azimuthCopies(colletPhis));
   }
   const pSpec = { part: 'stage-separation' as const, mat: 'al-2219' as const, look: 'aluMilled', cut: true };
   for (const phi of AZ.pushers) {
@@ -777,6 +829,9 @@ function interstage(ctx: Ctx) {
     const housing = lathe(rectPoly(0, 0.055, y1 - 0.75, y1 - 0.16, 0.008), { seg: 20, closed: true, smooth: 50 });
     kit.add(s.group, housing, pSpec, new THREE.Matrix4().makeTranslation(c.x, 0, c.z));
     kit.add(s.group, bevelBox(0.12, 0.3, 0.2, 0.01), pSpec, radialFrame(1.7, phi, y1 - 0.5));
+  }
+  for (const phi of AZ.pushers.slice(0, 1)) {
+    const c = polar(1.62, phi, 0);
     const rodG = new THREE.Group();
     rodG.position.set(c.x, y1 - 0.16, c.z);
     s.group.add(rodG);
@@ -787,6 +842,7 @@ function interstage(ctx: Ctx) {
     pad.translate(0, 0.17, 0);
     kit.add(rodG, mergeAll([r1, pad]), { ...pSpec, look: 'stainless', mat: 'stainless' });
     ctx.movers.pusherRods.push(rodG);
+    ctx.movers.inst.pushers = new RigInstances(kit, s.group, [rodG], azimuthCopies(AZ.pushers));
   }
   return s;
 }
@@ -899,6 +955,15 @@ export function buildBooster(ctx: Ctx) {
     [lox, S.s1LoxAftEquator + 0.06, S.s1LoxFwdEquator - 0.2],
   ]);
   feedLines(ctx, thrust);
+  // guidance loop (gnc-loop demonstration, schematic): actuator commands down the raceway to the
+  // engine section (the centre engine is the landing engine)
+  ctx.flows.push({
+    kind: 'sig',
+    demo: 'gnc-loop',
+    points: [polar(R + 0.06, AZ.raceway, ctx.config.stack === 'full' ? S.interstageTop - 0.04 : S.s1ForwardSkirtTop - 0.1), polar(R + 0.06, AZ.raceway, S.s1ThrustSectionTop + 0.3), polar(R - 0.2, AZ.raceway, S.s1ThrustSectionTop - 0.5), polar(0.5, AZ.raceway, S.s1Gimbal + 0.9), V(0, S.s1Gimbal + 0.5, 0)],
+    radius: 0.028,
+    section: thrust,
+  });
   if (ctx.config.stack === 'full') interstage(ctx);
   else capsuleAdapter(ctx);
   return { thrust, hs, rp1, it, lox, fs };

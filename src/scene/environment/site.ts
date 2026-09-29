@@ -14,6 +14,7 @@ import { buildPad } from './pad';
 import { buildTower } from './tower';
 import { buildFacilities } from './facilities';
 import { buildLandingZone } from './lz';
+import { buildVegetation } from './vegetation';
 import { updateHaze } from './haze';
 import { SM } from './mats';
 import { siteState } from './state';
@@ -40,7 +41,8 @@ export function buildSite(maps: SiteMaps): Site {
   const tower = buildTower(detail);
   const facilities = buildFacilities(maps, detail);
   const lz = buildLandingZone();
-  root.add(terrain.group, roads, pad.group, tower.group, facilities.group, lz.group);
+  const vegetation = buildVegetation(maps, overlay);
+  root.add(terrain.group, roads, pad.group, tower.group, facilities.group, lz.group, vegetation.group);
 
   // the deck and trench darken and turn glossy under the sound-suppression water
   const wetMats = (['hardstand', 'concreteDark', 'refractory'] as const).map((k) => {
@@ -69,6 +71,7 @@ export function buildSite(maps: SiteMaps): Site {
     dispose() {
       terrain.dispose();
       lz.dispose();
+      vegetation.dispose();
       root.traverse((o) => {
         const mesh = o as THREE.Mesh;
         if (mesh.isMesh && mesh.geometry) mesh.geometry.dispose();

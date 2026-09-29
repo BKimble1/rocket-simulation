@@ -31,7 +31,7 @@ function tag(m: THREE.Mesh, part: Tag['part'], mat: Tag['mat']) {
 }
 
 /** A lug plate with a rounded end around a pin (in a plane), extruded along `thickAxis`. */
-function lug(width: number, len: number, th: number, pinR: number): THREE.BufferGeometry {
+function lug(width: number, len: number, th: number, pinR: number, fine = true): THREE.BufferGeometry {
   const s = new THREE.Shape();
   s.moveTo(-width / 2, len);
   s.lineTo(width / 2, len);
@@ -41,7 +41,7 @@ function lug(width: number, len: number, th: number, pinR: number): THREE.Buffer
   const hole = new THREE.Path();
   hole.absarc(0, 0, pinR, 0, Math.PI * 2, false);
   s.holes.push(hole);
-  const g = new THREE.ExtrudeGeometry(s, { depth: th, bevelEnabled: true, bevelSize: 0.002, bevelThickness: 0.002, bevelSegments: 2, curveSegments: 16 });
+  const g = new THREE.ExtrudeGeometry(s, { depth: th, bevelEnabled: true, bevelSize: 0.002, bevelThickness: 0.002, bevelSegments: fine ? 2 : 1, curveSegments: fine ? 10 : 5 });
   g.translate(0, 0, -th / 2);
   return g;
 }
@@ -70,11 +70,11 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
       k.add(bolt.clone().translate(px, 0.13, pz), { ...G, mat: 'steel', node: 'fixed', front: k.section && pz > 0 });
     bolt.dispose();
     for (const sx of [-1, 1]) {
-      const l = lug(0.095, 0.1, 0.022, 0.0225);
+      const l = lug(0.095, 0.1, 0.022, 0.0225, hangar);
       l.rotateY(Math.PI / 2);
       l.translate(sx * 0.068, 0, 0);
       k.add(l, { ...G, node: 'fixed' });
-      const l2 = lug(0.095, 0.08, 0.022, 0.0225);
+      const l2 = lug(0.095, 0.08, 0.022, 0.0225, hangar);
       l2.rotateZ(Math.PI);
       l2.translate(0, 0, sx * 0.068);
       k.add(l2, { ...G, node: 'gimbal' });
@@ -128,7 +128,7 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
     k.add(arm, { ...G, node: 'fixed', front });
     if (detail !== 'cluster')
       for (const sgn of [-1, 1]) {
-        const l = lug(0.05, 0.045, 0.012, 0.012);
+        const l = lug(0.05, 0.045, 0.012, 0.012, hangar);
         // plate normal along the pin axis t
         l.lookAt(a.t);
         l.translate(a.A.x + a.t.x * sgn * 0.024, a.A.y, a.A.z + a.t.z * sgn * 0.024);
@@ -161,7 +161,7 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
   const restLen = acts[0].A.distanceTo(acts[0].B);
   const barrelLen = restLen * 0.62;
   const rodLen = restLen * 0.64;
-  const sAct = hangar ? 32 : 14;
+  const sAct = hangar ? 24 : 12;
   const lathe = (pts: V2[]) => revolve([{ pts: roundPoly(pts, 0.002, 2) }], FULL[0], FULL[1], sAct).surf!;
   // barrel assembly: eye, end cap, cylinder, gland; servo valve block and position sensor
   const barrelParts: THREE.BufferGeometry[] = [
@@ -232,10 +232,10 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
     { x: d.tpX, z: TP.fuelDuctZ, r: TP.fuelDuctR },
   ];
   const [b0, b1] = TP.bellowsY;
-  const unitLoop = bellowsLoop(1, 1, 9, 0.16, 0.035, 8);
-  const bellowsBack = hangar ? merge([revolve([unitLoop], BACK[0], BACK[1], 48, { caps: true }).surf]) : null;
-  const bellowsFront = hangar ? merge([revolve([unitLoop], FRONT[0], FRONT[1], 48, { caps: true }).surf]) : null;
-  const bellowsFull = !hangar && detail !== 'cluster' ? merge([revolve([unitLoop], FULL[0], FULL[1], 20).surf]) : null;
+  const unitLoop = bellowsLoop(1, 1, 9, 0.16, 0.035, hangar ? 6 : 3);
+  const bellowsBack = hangar ? merge([revolve([unitLoop], BACK[0], BACK[1], 40, { caps: true }).surf]) : null;
+  const bellowsFront = hangar ? merge([revolve([unitLoop], FRONT[0], FRONT[1], 40, { caps: true }).surf]) : null;
+  const bellowsFull = !hangar && detail !== 'cluster' ? merge([revolve([unitLoop], FULL[0], FULL[1], 16).surf]) : null;
   /** Instanced bellows: which duct each instance shows and whether it leaves with the front half. */
   const bellowMeshes: { mesh: THREE.InstancedMesh; ids: number[]; slides: boolean }[] = [];
   if (bellowsBack && bellowsFront) {
@@ -297,27 +297,33 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
     if (hangar) {
       const bolt = hexBolt(0.012, 0.011);
       k.add(ringOf(bolt, 12, b.r + 0.012, { centre: V(b.x, b1 + 0.012, b.z) }), t);
-      k.add(ringOf(bolt, 12, b.r + 0.012, { centre: V(b.x, d.topY, b.z) }), t);
+      // interface flange: the nuts sit under it (the bolt heads are on the stage side)
+      k.add(ringOf(bolt.clone().rotateX(Math.PI), 12, b.r + 0.014, { centre: V(b.x, d.topY - 0.018, b.z), phase: Math.PI / 12 }), t);
       bolt.dispose();
     }
   }
 
-  // ── runtime ──
+  // ── runtime (no allocation: runs every frame while a demonstration plays) ──
   const tmp = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const one = V(1, 1, 1);
   const B = new THREE.Vector3();
+  const P = new THREE.Vector3();
   const dir = new THREE.Vector3();
   const basisX = new THREE.Vector3();
   const basisY = new THREE.Vector3();
   const basisZ = new THREE.Vector3();
   const rot = new THREE.Matrix4();
+  const yawM = new THREE.Matrix4();
+  const up = V(0, 1, 0);
   let slide = 0;
   const engineMatrix = new THREE.Matrix4();
+  const inst = bel.map(() => ({ lo: new THREE.Vector3(), q: new THREE.Quaternion(), scale: new THREE.Vector3() }));
   const update = (cross: THREE.Object3D, gimbal: THREE.Object3D) => {
     // engine pose relative to root: cross (pitch) * gimbal (yaw)
-    engineMatrix.makeRotationFromEuler(cross.rotation).multiply(new THREE.Matrix4().makeRotationFromEuler(gimbal.rotation));
-    for (const [i, a] of acts.entries()) {
+    engineMatrix.makeRotationFromEuler(cross.rotation).multiply(yawM.makeRotationFromEuler(gimbal.rotation));
+    for (let i = 0; i < acts.length; i++) {
+      const a = acts[i];
       B.copy(a.B).applyMatrix4(engineMatrix);
       dir.copy(B).sub(a.A).normalize();
       // basis: local Y = from B to A (rod direction), local X = clevis pin axis
@@ -326,27 +332,29 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
       basisZ.crossVectors(basisX, basisY);
       rot.makeBasis(basisX, basisY, basisZ);
       q.setFromRotationMatrix(rot);
-      tmp.compose(V(a.A.x, a.A.y, a.A.z + slide), q, one);
+      tmp.compose(P.set(a.A.x, a.A.y, a.A.z + slide), q, one);
       barrels.setMatrixAt(i, tmp);
-      tmp.compose(V(B.x, B.y, B.z + slide), q, one);
+      tmp.compose(P.set(B.x, B.y, B.z + slide), q, one);
       rods.setMatrixAt(i, tmp);
     }
     barrels.instanceMatrix.needsUpdate = true;
     rods.instanceMatrix.needsUpdate = true;
     // bellows: from the engine-side flange (moves) to the stage-side flange (fixed)
-    const inst = bel.map((b) => {
-      const lo = V(b.x, b0, b.z).applyMatrix4(engineMatrix);
-      const hi = V(b.x, b1, b.z);
-      const dv = hi.clone().sub(lo);
-      const len = dv.length();
-      return { lo, q: new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), dv.normalize()), scale: V(b.r, len, b.r) };
-    });
+    for (let i = 0; i < bel.length; i++) {
+      const b = bel[i];
+      const it = inst[i];
+      it.lo.set(b.x, b0, b.z).applyMatrix4(engineMatrix);
+      dir.set(b.x, b1, b.z).sub(it.lo);
+      const len = dir.length();
+      it.q.setFromUnitVectors(up, dir.multiplyScalar(1 / len));
+      it.scale.set(b.r, len, b.r);
+    }
     for (const bm of bellowMeshes) {
-      bm.ids.forEach((id, j) => {
-        const it = inst[id];
-        tmp.compose(V(it.lo.x, it.lo.y, it.lo.z + (bm.slides ? slide : 0)), it.q, it.scale);
+      for (let j = 0; j < bm.ids.length; j++) {
+        const it = inst[bm.ids[j]];
+        tmp.compose(P.set(it.lo.x, it.lo.y, it.lo.z + (bm.slides ? slide : 0)), it.q, it.scale);
         bm.mesh.setMatrixAt(j, tmp);
-      });
+      }
       bm.mesh.instanceMatrix.needsUpdate = true;
     }
   };

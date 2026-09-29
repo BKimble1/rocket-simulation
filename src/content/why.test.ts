@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { WHY_DEMOS, whyDemoById, whyVisual } from './why';
 import { sourceById } from './sources';
 import type { DemoId, WhyDemo } from './types';
-import { BODY_RADIUS, E1, E1V, FAIRING, G0, PAYLOADS, PROPELLANTS, S1, S2, STATIONS, tankVolume } from '../vehicle/spec';
+import { BODY_RADIUS, E1, E1V, FAIRING, G0, LEGS, PAYLOADS, PROPELLANTS, S1, S2, STATIONS, tankVolume } from '../vehicle/spec';
 import { MU_EARTH, OMEGA_EARTH, R_EARTH, SITE } from '../world/frames';
 
 const DEMOS: Record<DemoId, true> = {
@@ -158,7 +158,7 @@ describe('why-demos: numbers recomputed', () => {
     const mox = (mdot * E1.mixtureRatio) / (1 + E1.mixtureRatio);
     const mfu = mdot / (1 + E1.mixtureRatio);
     const P = (mox * pc) / PROPELLANTS.lox.density + (mfu * pc) / PROPELLANTS.rp1.density;
-    expect(t).toContain(`at least ${fmt(P / 1e6, 1)} MW of hydraulic power per engine`);
+    expect(t).toContain(`by ${fmt(pc / 1e6, 1)} MPa takes about ${fmt(P / 1e6, 1)} MW of hydraulic power per engine`);
     expect(t).toContain(`about ${fmt((S1.engineCount * P) / 1e6)} MW for the seven`);
     expect(t).toContain(`about ${fmt(E1.ggFlowFraction * 100)} %`);
   });
@@ -170,6 +170,13 @@ describe('why-demos: numbers recomputed', () => {
     expect(t).toContain(`expansion ratio ${fmt(E1.expansionRatio)}, ${fmt(E1.exitDiameter, 2)} m exit`);
     expect(t).toContain(`expansion ratio ${fmt(E1V.expansionRatio)}, ${fmt(E1V.exitDiameter, 2)} m exit`);
     expect(t).toContain(`roughly ${fmt(pe1 / 1e3)} kPa`);
+    // altitude where the U.S. Standard Atmosphere 1976 (troposphere) pressure equals pe1
+    const Rstar = 8.31446261815324;
+    const M = 0.0289644;
+    const H = (288.15 / 0.0065) * (1 - (pe1 / P_SEA) ** ((Rstar * 0.0065) / (G0 * M)));
+    expect(H).toBeGreaterThan(5000);
+    expect(H).toBeLessThan(6500);
+    expect(t).toContain(`about ${fmt(H / 1000)} km altitude`);
     expect(pe1).toBeLessThan(P_SEA);
     expect(pe1 / P_SEA).toBeGreaterThan(0.4); // no separation expected at sea level
     expect(t).toContain(`about ${fmt(pe2 / 1e3)} kPa`);
@@ -187,7 +194,9 @@ describe('why-demos: numbers recomputed', () => {
     expect(t).toContain(`${fmt(1085 + 273.15)} K (1,085 °C)`);
     expect(t).toContain(`${fmt(1260 + 273.15)} K (1,260 °C)`);
     const mdot = E1.thrustVac / (E1.ispVac * G0);
-    expect(t).toContain(`about ${fmt(mdot / (1 + E1.mixtureRatio))} kg/s per E-1`);
+    expect(t).toContain(`E-1’s ${fmt(mdot / (1 + E1.mixtureRatio))} kg/s of RP-1`);
+    expect(E1.ggFlowFraction).toBeLessThan(0.1); // "the small share the gas generator takes"
+    expect(t).not.toContain('all of the RP-1');
     const q = 30e6;
     const th = 0.001;
     expect(t).toContain(`about ${fmt((q * th) / 344)} K`);
@@ -209,8 +218,18 @@ describe('why-demos: numbers recomputed', () => {
     expect(t).toContain(`${fmt(T / m0 - G0, 1)} m/s²`);
     expect(t).toContain(`m = ${fmt(m0)} kg`);
     expect(t).toContain(`= ${fmt(G0 * Math.sin(Math.PI / 6), 1)} m/s per second`);
-    const v = Math.sqrt(MU_EARTH / (R_EARTH + 400e3));
+    expect(t).toContain(`${fmt(LEGS.mass)} kg landing legs`);
+    expect(t).toContain(`about ${fmt((LEGS.mass / m0) * 100, 1)} %`);
+    const r = R_EARTH + 400e3;
+    const v = Math.sqrt(MU_EARTH / r);
     expect(t).toContain(`${fmt(v)} m/s`);
+    // energy per kilogram: climbing to 400 km against moving at orbital speed there
+    const pe = MU_EARTH * (1 / R_EARTH - 1 / r);
+    const ke = 0.5 * v * v;
+    expect(t).toContain(`about ${fmt(pe / 1e6, 1)} MJ`);
+    expect(t).toContain(`about ${fmt(ke / 1e6, 1)} MJ`);
+    expect(Math.round(ke / pe)).toBe(8);
+    expect(t).toContain('eight times as much');
   });
 
   it('sideways: gravity at 400 km, fall versus curvature in one second, rotation boost', () => {

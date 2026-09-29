@@ -77,7 +77,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'thrust-to-weight',
     term: 'Thrust-to-weight ratio',
-    definition: 'Thrust divided by the vehicle’s weight. It must exceed 1 for a rocket to leave the pad; the K-1 lifts off at about 1.22, so most of its early thrust only holds it up.',
+    definition: 'Thrust divided by the vehicle’s weight. It must exceed 1 for a rocket to leave the pad; the K-1 lifts off at about 1.2, so more than four fifths of its early thrust only holds it up.',
     see: [{ mission: 'leo', phase: 'liftoff' }],
     aliases: ['T/W'],
   },
@@ -159,7 +159,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'ullage',
     term: 'Ullage',
     definition:
-      'The gas-filled space above the liquid in a tank (3 % of the K-1 tank volume at loading). In free fall, liquid floats away from the tank outlets, so before restarting in orbit a stage fires small thrusters (an ullage or settling burn) to push the propellant back to the bottom.',
+      'The gas-filled space above the liquid in a tank (the K-1 tanks are sized with 3 % extra volume for it). In free fall the liquid can drift away from the tank outlets, so before restarting in orbit a stage fires small thrusters (an ullage or settling burn) to push the propellant back to the bottom.',
     see: [{ part: 's2-rcs' }, { mission: 'gto', phase: 'restart' }],
     aliases: ['settling burn', 'ullage burn'],
   },
@@ -268,7 +268,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     definition:
       'Gyroscopes and accelerometers that measure the vehicle’s rotation and acceleration hundreds of times a second, independent of any outside signal. The flight computer integrates them to know attitude, velocity and position, and corrects slow drift with satellite navigation.',
     see: [{ part: 'avionics' }, { demo: 'gnc-loop' }],
-    aliases: ['IMU', 'GNSS', 'inertial navigation'],
+    aliases: ['IMU', 'inertial navigation', 'gyroscope', 'accelerometer'],
   },
   {
     id: 'gravity-turn',
@@ -281,7 +281,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'dynamic-pressure',
     term: 'Dynamic pressure',
-    definition: 'q = ½ρv²: how hard the oncoming air pushes on the vehicle, in pascals. Aerodynamic forces and heating scale with it.',
+    definition: 'q = ½ρv²: how hard the oncoming air pushes on the vehicle, in pascals, where ρ is the air density and v the speed relative to the air. Aerodynamic forces are proportional to it (force = q × area × a coefficient).',
     see: [{ mission: 'leo', phase: 'maxq' }, { mission: 'station', phase: 'maxq' }],
     aliases: ['q'],
   },
@@ -318,7 +318,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'seco',
     term: 'SECO',
-    definition: 'Second-stage engine cutoff. On the LEO mission, SECO is the moment the upper stage reaches orbital speed and stops its engine.',
+    definition: 'Second-stage engine cutoff: the end of an upper-stage burn. On the LEO mission it comes about 8.5 minutes after liftoff, once the stage is in orbit.',
     see: [{ mission: 'leo', phase: 'seco' }],
     aliases: ['second engine cutoff'],
   },
@@ -408,15 +408,15 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'geostationary-orbit',
     term: 'Geostationary orbit',
-    definition: 'A circular orbit 35,786 km above the equator whose period equals one rotation of the Earth, so a satellite there appears fixed in the sky. Communications satellites use it.',
+    definition: 'A circular orbit 35,786 km above the equator whose period equals one rotation of the Earth (a special case of a geosynchronous orbit), so a satellite there appears fixed in the sky. Communications satellites use it.',
     see: [{ mission: 'gto', phase: 'circularize' }],
     aliases: ['GEO', 'geosynchronous'],
   },
   {
     id: 'circularization',
     term: 'Circularization',
-    definition: 'A burn at apoapsis that raises periapsis until the orbit is round. In the GTO mission the satellite’s own apogee engine does it (shown explanatorily as one long burn).',
-    see: [{ mission: 'gto', phase: 'circularize' }, { part: 'apogee-engine' }],
+    definition: 'A burn at apoapsis that raises periapsis until the orbit is round. On the LEO mission the upper stage makes a short one at 400 km; in the GTO mission the satellite’s own apogee engine does it (shown explanatorily as one long burn).',
+    see: [{ mission: 'gto', phase: 'circularize' }, { mission: 'leo', phase: 'coast' }, { part: 'apogee-engine' }],
   },
   {
     id: 'inclination',
@@ -467,7 +467,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     definition:
       'Joining two spacecraft. Soft capture latches them together gently while the mechanism absorbs the remaining motion; hard capture then pulls the rings together with structural latches and seals the interface so the hatch can open.',
     see: [{ part: 'docking-system' }, { mission: 'station', phase: 'docking' }],
-    aliases: ['soft capture', 'hard capture', 'berthing'],
+    aliases: ['soft capture', 'hard capture'],
   },
   {
     id: 'r-bar',

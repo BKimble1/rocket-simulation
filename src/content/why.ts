@@ -18,7 +18,7 @@ export const WHY_DEMOS: WhyDemo[] = [
         visual: 'staging-sequence:full-stack-mass-bars',
       },
       {
-        text: 'Imagine the K-1 as a single stage: the same hardware and the same 405,000 kg of propellant, with 8,000 kg of satellite and fairing carried all the way (a simplification). It starts at 443,100 kg and ends at 38,100 kg, still pushing 25,500 kg of empty booster. At 312 s that gives 7,507 m/s: not enough for orbit, which takes roughly 9.4 km/s once gravity and drag losses are included.',
+        text: 'Imagine the K-1 (expendable, without landing legs) as a single stage: the same hardware and the same 405,000 kg of propellant, with 8,000 kg of satellite and fairing carried all the way (a simplification). It starts at 443,100 kg and ends at 38,100 kg, still pushing 25,500 kg of empty booster. At 312 s that gives 7,507 m/s: not enough for orbit, which takes roughly 9.4 km/s once gravity and drag losses are included.',
         visual: 'staging-sequence:single-stage-empty-tanks',
       },
       {
@@ -41,7 +41,7 @@ export const WHY_DEMOS: WhyDemo[] = [
         { symbol: 'mf_i', meaning: 'Mass when stage i burns out, before it is dropped', unit: 'kg' },
       ],
       caveat:
-        'Ideal velocity only: no gravity or drag losses, no recovery reserve, one Isp per stage. The comparison deliberately uses 312 s for both stages and carries the fairing to the end, so the only difference between the cases is staging itself.',
+        'Ideal velocity only: no gravity or drag losses, no landing legs or recovery reserve, one Isp per stage. The comparison deliberately uses 312 s for both stages and carries the fairing to the end, so the only difference between the cases is staging itself.',
       example:
         'Single stage: 312 s × 9.80665 m/s² × ln(443,100 / 38,100) = 7,507 m/s. Two stages: 312 s × 9.80665 m/s² × ln(443,100 / 113,100) = 4,178 m/s, plus 312 s × 9.80665 m/s² × ln(87,600 / 12,600) = 5,933 m/s, total 10,111 m/s.',
     },
@@ -71,7 +71,7 @@ export const WHY_DEMOS: WhyDemo[] = [
         visual: 'tank-pressure:common-bulkhead-cutaway',
       },
       {
-        text: 'In the booster the denser LOX sits on top. That moves the centre of mass forward, which makes the vehicle easier to steer. The price is the downcomer, a LOX feed line that runs down through the middle of the RP-1 tank.',
+        text: 'In the booster the LOX, 2.3 times the mass of the RP-1, sits on top. That moves the centre of mass forward, away from the engines and toward the centre of pressure where the air pushes, so the gimbaled engines have a longer lever arm and less aerodynamic turning moment to fight. The price is the downcomer, a LOX feed line that runs down through the middle of the RP-1 tank.',
         visual: 'feed-flow:downcomer-highlight',
       },
     ],
@@ -103,11 +103,11 @@ export const WHY_DEMOS: WhyDemo[] = [
         visual: 'turbopump:chamber-pressure-gauge',
       },
       {
-        text: 'The pressure-fed option: pressurize the tanks above 8.5 MPa. A cylindrical wall needs a thickness t = p·r/σ; for the booster’s 1.85 m radius and an illustrative allowable stress of 300 MPa, that is at least 52 mm. The 17.6 m barrel of the LOX tank alone would weigh at least 30 t in 2219 aluminium, more than the whole 25.5 t booster.',
+        text: 'The pressure-fed option: pressurize the tanks above 8.5 MPa. A cylindrical wall needs a thickness t = p·r/σ; for the booster’s 1.85 m radius and an illustrative allowable stress of 300 MPa, that is at least 52 mm. The 17.6 m barrel of the LOX tank alone would weigh at least 30 t in 2219 aluminium, more than the whole 25.5 t booster. Real pressure-fed engines avoid this by running at a much lower chamber pressure, which makes them bigger and less efficient for the same thrust.',
         visual: 'tank-pressure:thick-wall-comparison',
       },
       {
-        text: 'The pump-fed option: keep the tanks at a few bar (illustratively 0.3 MPa, needing only 1.85 mm of wall for pressure; flight loads and buckling set the real thickness) and raise the pressure just before the engine. Raising the E-1’s LOX and RP-1 flows by at least 8.5 MPa takes at least 2.3 MW of hydraulic power per engine, about 16 MW for the seven booster engines.',
+        text: 'The pump-fed option: keep the tanks at a few bar (illustratively 0.3 MPa, needing only 1.85 mm of wall for pressure; flight loads and buckling set the real thickness) and raise the pressure just before the engine. Raising the E-1’s LOX and RP-1 flows by 8.5 MPa takes about 2.3 MW of hydraulic power per engine (volume flow times pressure rise), about 16 MW for the seven booster engines. The real pumps must also cover the injector and cooling-channel pressure drops and their own losses, so each turbine delivers more.',
         visual: 'turbopump:shaft-spinning',
       },
       {
@@ -131,7 +131,7 @@ export const WHY_DEMOS: WhyDemo[] = [
     },
     takeaway:
       'Pumps let big tanks stay thin and light; the price is turbomachinery and, in a gas-generator cycle, a few percent of the propellant. Small spacecraft engines, with small tanks, are often pressure-fed instead.',
-    sources: ['nasa-sp125', 'sutton-rpe', 'asm-handbook-v2'],
+    sources: ['huzel-huang-sp125', 'sutton-rpe', 'asm-handbook-v2'],
   },
   {
     id: 'why-nozzle-size',
@@ -143,7 +143,7 @@ export const WHY_DEMOS: WhyDemo[] = [
         visual: 'nozzle-pressure:expansion-gradient',
       },
       {
-        text: 'The E-1 (expansion ratio 18, 1.06 m exit) releases its exhaust at roughly 49 kPa (an estimate assuming a constant ratio of specific heats of 1.2). That is below sea-level pressure but not far enough to make the flow separate, and it suits the lower atmosphere, where the booster works.',
+        text: 'The E-1 (expansion ratio 18, 1.06 m exit) releases its exhaust at roughly 49 kPa (an estimate assuming a constant ratio of specific heats of 1.2). That matches the outside air at about 6 km altitude: a compromise for an engine that fires from sea level into near vacuum. At sea level the exhaust is overexpanded, but not far enough to make the flow separate from the wall.',
         visual: 'nozzle-pressure:e1-sea-level',
       },
       {
@@ -189,7 +189,7 @@ export const WHY_DEMOS: WhyDemo[] = [
         visual: 'regen-cooling:heat-flux-at-throat',
       },
       {
-        text: 'Regenerative cooling: all of the RP-1, about 83 kg/s per E-1, flows through channels milled into the liner just behind the hot surface before it is injected and burned. The fuel is the heat sink, and the heat it picks up returns to the chamber instead of being thrown away.',
+        text: 'Regenerative cooling: most of the E-1’s 83 kg/s of RP-1 (all but the small share the gas generator takes straight from the pump) flows through channels milled into the liner just behind the hot surface before it is injected and burned. The fuel is the heat sink, and the heat it picks up returns to the chamber instead of being thrown away.',
         visual: 'regen-cooling:coolant-flow',
       },
       {
@@ -225,15 +225,15 @@ export const WHY_DEMOS: WhyDemo[] = [
     question: 'If space is up, why does the rocket tip over toward the horizon?',
     beats: [
       {
-        text: 'Reaching orbit is mostly about going sideways: 7,673 m/s along the orbit at 400 km, while the climb itself is only 400 km. A rocket that only went up would fall straight back down.',
+        text: 'Reaching orbit is mostly about going sideways. Lifting each kilogram to 400 km takes about 3.7 MJ of energy; moving it at the 7,673 m/s of a circular orbit there takes about 29.4 MJ, eight times as much. A rocket that only went up would fall straight back down.',
         visual: 'gnc-loop:trajectory-arc',
       },
       {
-        text: 'At liftoff the seven E-1 engines give 5,320 kN (rated sea-level thrust) against a weight of about 4,345 kN: a thrust-to-weight ratio of 1.22. Of the 12.0 m/s² that thrust provides, gravity cancels 9.81, leaving 2.2 m/s² upward. Every second spent climbing vertically loses 9.81 m/s of velocity to gravity.',
+        text: 'At liftoff (443,100 kg with the LEO satellite, not counting landing legs) the seven E-1 engines give 5,320 kN (rated sea-level thrust) against a weight of about 4,345 kN: a thrust-to-weight ratio of 1.22. Of the 12.0 m/s² that thrust provides, gravity cancels 9.81, leaving 2.2 m/s² upward. Every second spent climbing vertically loses 9.81 m/s of velocity to gravity.',
         visual: 'gnc-loop:force-arrows-liftoff',
       },
       {
-        text: 'So the vehicle rises vertically only until it clears the tower, then tilts a degree or two toward the east (the pitch kick). From then on guidance keeps the nose pointed along the air-relative velocity and lets gravity bend the path over: the gravity turn.',
+        text: 'So the vehicle rises vertically only until it clears the tower, then tilts about a degree toward its launch direction, east on the LEO mission (the pitch kick). From then on guidance keeps the nose pointed along the air-relative velocity and lets gravity bend the path over: the gravity turn.',
         visual: 'tvc:pitch-kick-gimbal',
       },
       {
@@ -254,13 +254,13 @@ export const WHY_DEMOS: WhyDemo[] = [
         { symbol: 'γ', meaning: 'Flight-path angle above the local horizontal', unit: 'deg' },
       ],
       caveat:
-        'A point mass flying along its path: it leaves out lift, thrust misalignment, and the curvature and rotation of the Earth. Thrust is taken at its rated sea-level value; it rises as the air thins.',
+        'A point mass flying along its path: it leaves out lift, thrust misalignment, and the curvature and rotation of the Earth. Thrust is taken at its rated sea-level value; it rises as the air thins. The 2,100 kg landing legs of the recovery missions add about 0.5 % to the mass and lower these accelerations slightly.',
       example:
         'At liftoff (γ = 90°, D = 0): T = 7 × 760 kN = 5,320 kN and m = 443,100 kg, so T/m = 12.0 m/s² and dv/dt = 12.0 − 9.81 = 2.2 m/s². Once γ has fallen to 30°, gravity costs only 9.81 × sin 30° = 4.9 m/s per second.',
     },
     takeaway:
       'Turning early and gradually trades a little extra time in the air for much less velocity lost to gravity, while keeping aerodynamic loads low. The ascent is a curve because orbit is a speed, not a height.',
-    sources: ['nasa-bsf-14', 'nasa-grc-dynamic-pressure', 'sutton-rpe'],
+    sources: ['nasa-bsf-14', 'nasa-grc-dynpress', 'sutton-rpe'],
   },
   {
     id: 'why-sideways',

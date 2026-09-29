@@ -82,7 +82,7 @@ export function buildFlowOverlay(d: Design, mats: MaterialSet) {
     return frames(out, 0);
   };
   function frames(pts: THREE.Vector3[], bend: number): Frame[] {
-    const path = bend > 0 ? filletPath(pts, bend, 0.02) : { p: pts, t: pts.map((_p, i) => pts[Math.min(pts.length - 1, i + 1)].clone().sub(pts[Math.max(0, i - 1)]).normalize()), len: pts.map(() => 0) };
+    const path = bend > 0 ? filletPath(pts, bend, 0.04, 10) : { p: pts, t: pts.map((_p, i) => pts[Math.min(pts.length - 1, i + 1)].clone().sub(pts[Math.max(0, i - 1)]).normalize()), len: pts.map(() => 0) };
     if (bend <= 0) for (let i = 1; i < path.p.length; i++) path.len[i] = path.len[i - 1] + path.p[i].distanceTo(path.p[i - 1]);
     return transportFrames(path);
   }
@@ -125,7 +125,7 @@ export function buildFlowOverlay(d: Design, mats: MaterialSet) {
   for (const side of [1, -1]) {
     const up: THREE.Vector3[] = [];
     const xs: number[] = [];
-    for (let xx = xm; xx > d.contour.xInj + 0.01; xx -= 0.02) xs.push(xx);
+    for (let xx = xm; xx > d.contour.xInj + 0.01; xx -= 0.03) xs.push(xx);
     for (const xx of xs) {
       const off = xx > d.xChamberEnd ? d.tube / 2 : d.tw + d.hc / 2;
       const [r, y] = wallPt(d, xx, off);
@@ -156,7 +156,7 @@ export function buildFlowOverlay(d: Design, mats: MaterialSet) {
       const base = fr[0].u;
       for (const f of fr) f.u = f.u - base + offset;
       offset = fr[fr.length - 1].u;
-      const g = clippedTube(fr, { ro: leg.r, segs: leg.r > 0.03 ? 24 : 10 }).back.surf;
+      const g = clippedTube(fr, { ro: leg.r, segs: leg.r > 0.03 ? 16 : 8 }).back.surf;
       if (g) parts.push(g);
     }
     if (!parts.length) continue;

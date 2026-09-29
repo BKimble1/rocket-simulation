@@ -194,6 +194,11 @@ export class Instances {
   push(m: THREE.Matrix4) {
     this.mats.push(m.clone());
   }
+  /** Merge every instance into a batch instead (for small counts inside a moving sub-assembly). */
+  mergeInto(b: Batch | BatchView, mat: THREE.Material = this.mat, opts?: MeshOpts) {
+    for (const m of this.mats) b.add(this.geo.clone(), mat, m, opts);
+    this.mats = [];
+  }
   build(parent: THREE.Object3D, name: string, opts: MeshOpts = { cast: true, receive: true }): THREE.InstancedMesh | null {
     if (!this.mats.length) return null;
     const im = new THREE.InstancedMesh(this.geo, this.mat, this.mats.length);

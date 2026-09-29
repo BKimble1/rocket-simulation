@@ -25,8 +25,30 @@ export function wallPt(d: Design, x: number, off: number): V2 {
   return [r + off * nr, d.y(x + off * nx)];
 }
 
+/** Largest turn of the wall between two samples (set per build from the detail level). */
+let sampleTurn = (3 * Math.PI) / 180;
+
+/**
+ * Axial stations of the wall between x0 and x1: the dense design contour thinned so that the
+ * wall turns at most `sampleTurn` between samples (a straight cylinder needs two, the throat
+ * arcs and the bell get what their curvature needs; normals stay smooth across the joints).
+ */
 function xs(d: Design, x0: number, x1: number): number[] {
-  return contourSlice(d.contour, x0, x1).map((p) => p[0]);
+  const p = contourSlice(d.contour, x0, x1);
+  if (p.length <= 2) return p.map((q) => q[0]);
+  const dir = (a: [number, number], b: [number, number]) => Math.atan2(b[1] - a[1], b[0] - a[0]);
+  const out = [p[0][0]];
+  let last = 0;
+  for (let i = 1; i < p.length - 1; i++) {
+    const turn = Math.abs(dir(p[last], p[i + 1]) - dir(p[last], p[last + 1]));
+    const far = p[i + 1][0] - p[last][0] > 0.35;
+    if (turn > sampleTurn || far) {
+      out.push(p[i][0]);
+      last = i;
+    }
+  }
+  out.push(p[p.length - 1][0]);
+  return out;
 }
 
 /** Closed wall profile between offsets dIn and dOut, from x0 (top) to x1 (bottom). */
@@ -126,7 +148,7 @@ function domeAndInjector(k: Kit, d: Design, segs: number, detail: EngineDetail) 
   const ell = (r: number, sa: number, sb: number) => yb + sb * Math.sqrt(Math.max(0, 1 - (r / sa) ** 2));
   // dome shell with the gimbal boss and base flange
   const outer: V2[] = [];
-  const n = 18;
+  const n = detail === 'hangar' ? 16 : 8;
   for (let i = 0; i <= n; i++) {
     const t = i / n;
     const ang = Math.asin(bossR / a) + (Math.PI / 2 - Math.asin(bossR / a)) * t;
@@ -141,7 +163,8 @@ function domeAndInjector(k: Kit, d: Design, segs: number, detail: EngineDetail) 
   const domeLoop: V2[] = [[0.0005, bossTop], [bossR, bossTop], ...outer, [a + 0.022, yb + 0.018], [a + 0.022, yb], [a - td, yb], ...inner.slice(1, inner.length - 1), [0.0005, yb + b - td]];
   if (detail === 'cluster') {
     lathe(k, [{ pts: [[0.0005, bossTop], [bossR, bossTop], ...outer, [a + 0.012, yb], [0.0005, yb]] }], { part: 'injector', mat: 'jacket' }, segs);
-  } else lathe(k, [{ pts: roundPoly(domeLoop, (i) => (i === 1 || i >= outer.length + 2 ? 0.003 : 0), 2) }], inj, segs);
+  } else if (detail === 'flight') lathe(k, [{ pts: domeLoop }], inj, segs);
+  else lathe(k, [{ pts: roundPoly(domeLoop, (i) => (i === 1 || (i >= outer.length + 2 && i <= outer.length + 4) ? 0.003 : 0), 2) }], inj, segs);
 
   // injector body: top flange, fuel manifold bulge, bottom flange; internal fuel manifold cavity
   const yF = d.injY;
@@ -159,7 +182,7 @@ function domeAndInjector(k: Kit, d: Design, segs: number, detail: EngineDetail) 
     [a + 0.022, yF + 0.0012],
     [0.0005, yF + 0.0012],
   ];
-  const bodyR = roundPoly(body, (i) => (i === 0 || i === body.length - 1 ? 0 : i === 5 || i === 6 ? 0.01 : 0.0025), 3);
+  const bodyR = detail === 'hangar' ? roundPoly(body, (i) => (i === 0 || i === body.length - 1 ? 0 : i === 5 || i === 6 ? 0.01 : 0.0025), 2) : body;
   if (detail === 'cluster') {
     lathe(k, [{ pts: [[0.0005, yb], [a + 0.016, yb], [a + 0.016, yF], [0.0005, yF]] }], { part: 'injector', mat: 'jacket' }, segs);
     return;
@@ -270,8 +293,8 @@ function domeAndInjector(k: Kit, d: Design, segs: number, detail: EngineDetail) 
   }
   strips.push(planeStrip([[d.rc + 0.014, -0.309], [d.rc - 0.02, -0.309]], 0.003));
   const one = merge(strips);
-  k.detail(one, soot);
-  k.detail(mirrorX(one), soot);
+  k.detail_(one, soot);
+  k.detail_(mirrorX(one), soot);
 }
 
 // ───────────────────────────── chamber ─────────────────────────────
@@ -473,8 +496,8 @@ function nozzle(k: Kit, d: Design, segs: number, detail: EngineDetail) {
       X.map((x) => wallPt(d, x, tube / 2)),
       tube - 0.003,
     );
-    k.detail(band, { part: 'nozzle', mat: 'soot' });
-    k.detail(mirrorX(band), { part: 'nozzle', mat: 'soot' });
+    k.detail_(band, { part: 'nozzle', mat: 'soot' });
+    k.detail_(mirrorX(band), { part: 'nozzle', mat: 'soot' });
   } else add(FULL, false);
 
   const hb: Tag = { part: 'nozzle', mat: 'inconel' };
@@ -494,7 +517,7 @@ function nozzle(k: Kit, d: Design, segs: number, detail: EngineDetail) {
         [-h / 2, th],
       ] as V2[]
     ).map(([sv, o]) => [r + s0[0] * sv + out[0] * o, y + s0[1] * sv + out[1] * o] as V2);
-    lathe(k, [{ pts: roundPoly(pts, (i) => (i >= 2 ? 0.002 : 0), 2) }], hb, segs);
+    lathe(k, [{ pts: detail === 'hangar' ? roundPoly(pts, (i) => (i >= 2 ? 0.002 : 0), 2) : pts }], hb, segs);
   };
   const L = x1 - x0;
   const bands = d.vac ? [0.35, 0.75] : [0.22, 0.47, 0.72];
@@ -505,13 +528,13 @@ function nozzle(k: Kit, d: Design, segs: number, detail: EngineDetail) {
   const [rm0, ym] = wallPt(d, xm, tube);
   const mr = 0.03;
   const centre = new THREE.Vector3(0, ym, 0);
-  const R = rm0 + mr - 0.006;
+  const R = d.manifoldR;
   const man: Tag = { part: 'nozzle', mat: 'inconelHot' };
-  const frames = circleFrames(centre, R, 0, TAU, segs);
+  const frames = circleFrames(centre, R, 0, TAU, detail === 'hangar' ? 96 : segs);
   if (detail === 'cluster') {
-    k.add(clippedTube(frames, { ro: mr, segs: 10 }).back.surf, man);
+    k.add(clippedTube(frames, { ro: mr, segs: 8 }).back.surf, man);
   } else {
-    const tt = clippedTube(frames, { ro: mr, ri: detail === 'hangar' ? mr - 0.004 : undefined, segs: detail === 'hangar' ? 24 : 12, clipZ: k.section ? 0 : undefined });
+    const tt = clippedTube(frames, { ro: mr, ri: detail === 'hangar' ? mr - 0.004 : undefined, segs: detail === 'hangar' ? 20 : 10, clipZ: k.section ? 0 : undefined });
     k.tube(tt, man);
     // saddle between manifold and tube wall
     const saddle: V2[] = [
@@ -551,7 +574,7 @@ function nozzle(k: Kit, d: Design, segs: number, detail: EngineDetail) {
     );
     lathe(k, [{ pts: fl }], hb, segs);
     if (detail !== 'cluster') {
-      const bolt = hexBolt(0.014, 0.012);
+      const bolt = hexBolt(0.014, 0.012, detail !== 'hangar');
       const tag: Tag = { part: 'nozzle-extension', mat: 'inconel' };
       if (k.section) {
         k.add(ringOf(bolt, 48, re + tube + 0.018, { y: ye + 0.012, filter: (p) => p.z <= 0 }), tag);
@@ -592,16 +615,13 @@ function extension(k: Kit, d: Design, segs: number, detail: EngineDetail) {
   // stiffener rings (hat sections) and the exit lip
   const ring = (x: number, h: number, dep: number) => {
     const [r, y] = wallPt(d, x, th);
-    const p: V2[] = roundPoly(
-      [
-        [r - 0.001, y + h / 2],
-        [r + dep, y + h / 2 - 0.004],
-        [r + dep, y - h / 2 + 0.004],
-        [r - 0.001, y - h / 2],
-      ],
-      (i) => (i === 1 || i === 2 ? 0.003 : 0),
-      2,
-    );
+    const hat: V2[] = [
+      [r - 0.001, y + h / 2],
+      [r + dep, y + h / 2 - 0.004],
+      [r + dep, y - h / 2 + 0.004],
+      [r - 0.001, y - h / 2],
+    ];
+    const p: V2[] = detail === 'hangar' ? roundPoly(hat, (i) => (i === 1 || i === 2 ? 0.003 : 0), 2) : hat;
     const res = (phi: [number, number], front: boolean) => {
       const rr = revolve([{ pts: p }], phi[0], phi[1], segsExt, { caps: k.section && phi !== FULL });
       uvAlong(rr.surf, yTop, yBot);
@@ -631,7 +651,9 @@ function revolveFramesRange(phi0: number, phi1: number, segsFull: number): Frame
 }
 
 export function buildTCA(k: Kit, d: Design, detail: EngineDetail, segs: number) {
-  domeAndInjector(k, d, segs, detail);
+  sampleTurn = k.contourTurn;
+  // the dome and injector (0.37 m radius) are smooth at 96 segments; the bell gets the full count
+  domeAndInjector(k, d, Math.min(segs, 96), detail);
   chamber(k, d, segs, detail);
   nozzle(k, d, segs, detail);
   extension(k, d, segs, detail);

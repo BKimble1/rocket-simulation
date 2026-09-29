@@ -8,7 +8,7 @@
  * LOCAL_TERRAIN.innerKm of the pad the globe writes no depth: the local terrain draws there.
  * The Moon mesh is drawn just before this pass; the pass blends the air in front of it.
  *
- * Output is premultiplied (ONE, ONE_MINUS_SRC_ALPHA). Radiance is in scene light units
+ * Output is premultiplied (opaque except over the Moon). Radiance is in scene light units
  * (tone mapped by the renderer like everything else).
  */
 import * as THREE from 'three';
@@ -123,7 +123,8 @@ vec3 earthSurface(vec3 p, vec3 n, vec3 d, out float padDist) {
     float hMid = ${((CLOUD_BASE + CLOUD_TOP) * 0.5).toFixed(1)};
     float ts = hMid / max(muS, 0.08);
     vec3 pc = uToEF * (uCamPos + p + uSun * ts);
-    shadow = 1.0 - 0.8 * cloudColumn(pc);
+    float lodS = smoothstep(150.0, 1500.0, length(p) * uPixel / max(-dot(n, d), 0.2));
+    shadow = 1.0 - 0.8 * cloudColumn(pc, lodS);
   }
   padDist = length(p - uPadRel);
   vec3 Esun = SUN_E * Ts * max(muS, 0.0);
@@ -206,6 +207,8 @@ void main() {
     col = sv.rgb;
     float Tavg = sv.a;
     if (hitM) {
+      // the Moon (drawn before this pass) shows through the air: the air's light adds to the
+      // attenuated Moon (premultiplied), so a new Moon vanishes into the daytime sky as it should
       alpha = 1.0 - Tavg;
       float w = max(iM.x, 0.0) * (-dvn.z);
 #if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
@@ -323,6 +326,8 @@ export function makeSkyMaterial(uniforms: SkyUniforms, env = false): THREE.Shade
     toneMapped: !env,
   });
   if (!env) {
+    // premultiplied: the sky is opaque (alpha 1) except over the Moon, where the air in front
+    // adds its light to the Moon attenuated by the air's transmittance
     m.blending = THREE.CustomBlending;
     m.blendEquation = THREE.AddEquation;
     m.blendSrc = THREE.OneFactor;

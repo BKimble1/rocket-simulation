@@ -44,8 +44,11 @@ export interface Design {
   tpX: number;
   /** Notch in the chamber section (comb view of the coolant channels). */
   notch: { phi0: number; phi1: number; yTop: number; yBot: number };
-  /** Coolant inlet manifold. */
+  /** Coolant inlet manifold: axial station and torus centre radius (fits the 0.575 m envelope). */
   manifoldX: number;
+  manifoldR: number;
+  /** Radius (from the engine axis) of the turbine exhaust duct run beside the bell. */
+  exhaustRunR: number;
   /** TVC actuator attach points: upper (fixed) radius/y, lower (chamber) radius/y, plan angles. */
   tvc: { rA: number; yA: number; rB: number; yB: number; phis: [number, number] };
   /** Turbine exhaust duct outlet (engine frame, for the effects: soot jet source). */
@@ -63,6 +66,10 @@ export interface Design {
 }
 
 const DEG = Math.PI / 180;
+/** Plan-view radius every E-1 part stays inside (exit radius 0.53 m plus a small margin). */
+export const ENVELOPE_R = 0.575;
+/** Axis distance of the turbine exhaust duct run (its heat-exchanger bulge and flanges fit the envelope). */
+export const EXHAUST_RUN_R = 0.486;
 
 export function engineDesign(kind: EngineKind): Design {
   const spec = kind === 'E-1' ? E1 : E1V;
@@ -98,18 +105,24 @@ export function engineDesign(kind: EngineKind): Design {
   };
   const domeR = rc + 0.03;
   const cylBottomY = y(contour.xCylEnd);
-  const manifoldX = vac ? xRegenEnd - 0.07 : contour.xExit - 0.1;
+  // Coolant inlet manifold: as low on the bell as the 0.575 m envelope allows (seven engines share
+  // the booster base). E-1: the torus (tube radius 0.03) and the fuel line that drops onto it must
+  // stay inside; the tube wall below it is a two-pass section (down and back up).
+  let manifoldX = vac ? xRegenEnd - 0.07 : contour.xExit - 0.1;
+  if (!vac) while (rOut(y(manifoldX)) > ENVELOPE_R - 0.089 && manifoldX > xChamberEnd + 0.3) manifoldX -= 0.005;
+  const manifoldR = Math.min(rOut(y(manifoldX)) + 0.024, ENVELOPE_R - 0.065);
 
-  // turbine exhaust duct end: outboard of the bell, inside the 0.57 m silhouette radius
+  // turbine exhaust duct end: outboard of the bell, inside the silhouette radius
   const ductR = 0.064;
+  const exhaustRunR = EXHAUST_RUN_R;
   let ggY = -0.9;
   for (let yy = -0.9; yy > exitY; yy -= 0.01) {
     // E-1 bell sets the limit for both engines (same core, same duct)
-    if (rOutE1(yy) + 0.02 + ductR * 2 > 0.565) break;
+    if (rOutE1(yy) + 0.012 > exhaustRunR - ductR) break;
     ggY = yy;
   }
   const ggPhi = 138 * DEG;
-  const ggR = 0.565 - ductR;
+  const ggR = exhaustRunR;
   return {
     kind,
     spec,
@@ -136,6 +149,8 @@ export function engineDesign(kind: EngineKind): Design {
     tpX: 0.41,
     notch: { phi0: 90 * DEG, phi1: 128 * DEG, yTop: injY - 0.045, yBot: cylBottomY - 0.005 },
     manifoldX,
+    manifoldR,
+    exhaustRunR,
     tvc: { rA: 0.4, yA: 0.085, rB: rc + tw + hc + tj + 0.048, yB: -0.56, phis: [45 * DEG, 315 * DEG] },
     ggExit: { x: ggR * Math.sin(ggPhi), y: ggY - 0.05, z: ggR * Math.cos(ggPhi) },
     mov: { x: -0.35, y: -0.19, z: 0 },

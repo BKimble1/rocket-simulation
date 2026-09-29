@@ -12,7 +12,7 @@ export const AL_LI: MaterialDraft = {
   focus:
     'The barrel material of the K-1 propellant tanks, also used for the intertank panels and the crew capsule pressure vessel. It shows the three things a cryogenic tank wall has to balance: low density, high strength and stiffness, and toughness at liquid-oxygen temperature, plus how a thin shell is kept from buckling.',
   suits:
-    'A tank barrel is sized by several requirements at once: hoop stress from internal pressure (wall thickness t = p·r/σ), axial compression and bending from thrust and wind in flight, and buckling of the thin shell. Adding a few percent of lithium, the lightest metal, makes aluminium lighter and stiffer. In the 2195 alloy it is about 5 % less dense and about 30 % stronger than the 2219 it replaced on the Space Shuttle super lightweight tank, so the same wall can be thinner. Like other aluminium alloys it has no ductile-to-brittle transition: at 90 K it is stronger and still tough, so a small crack does not run. The K-1 barrels are machined into an orthogrid (a thin skin with a square grid of integral ribs), which raises the bending stiffness of the wall many times for little extra mass, and the booster flies with its tanks pressurized, which puts the skin in tension and stabilizes it (pressure stabilization).',
+    'A tank barrel is sized by several requirements at once: hoop stress from internal pressure (wall thickness t = p·r/σ), axial compression and bending from thrust and wind in flight, and buckling of the thin shell. Lithium, the lightest metal, both lowers the density of aluminium and raises its stiffness; alloy 2195 contains only about 1 % of it by weight, alongside copper. It is about 5 % less dense and about 30 % stronger than the 2219 it replaced on the Space Shuttle super lightweight tank, so the same load can be carried by a thinner, lighter wall. Like other aluminium alloys (face-centred cubic metals) it has no ductile-to-brittle transition: at 90 K it is stronger and still tough, so a small crack does not suddenly run. The K-1 barrels are machined into an orthogrid (a thin skin with a square grid of integral ribs), which raises the bending stiffness of the wall many times for little extra mass, and the booster flies with its tanks pressurized, which puts the skin in tension and stabilizes it (pressure stabilization).',
   limits:
     'Harder to fusion weld than 2219 (porosity, hot cracking and weak heat-affected zones), which is why the seams are friction stir welded; more expensive per kilogram; its properties vary more with direction through thick plate. Like every aluminium alloy it loses strength quickly above roughly 150 °C, so it must be kept away from hot engine gas. And a thin barrel of even the best alloy buckles long before the metal is overstressed (see the question).',
   elsewhere: [
@@ -36,7 +36,7 @@ export const AL_LI: MaterialDraft = {
     'X-ray radiography and phased-array ultrasound of every weld, helium leak checks, and a proof-pressure test of each tank. The barrels are also scanned for roundness, because out-of-roundness lowers the buckling load.',
   question: {
     q: 'Why does a lightweight shell need reinforcement?',
-    a: 'Because a thin cylinder fails by buckling long before its metal is overstressed. For an unstiffened aluminium barrel with the K-1 radius of 1.85 m and a 2 mm wall (elastic modulus about 73 GPa), classical theory gives a buckling stress of 0.605·E·t/R ≈ 47.7 MPa. Real shells have small imperfections and buckle at only about 23 % of that (the NASA SP-8007 knockdown factor for this radius-to-thickness ratio of 925), about 11.2 MPa: under 3 % of the roughly 393 MPa yield strength of 2219-T87. Integral orthogrid ribs raise the bending stiffness of the wall, and internal pressure puts the skin in hoop tension and pulls out the imperfections, so a stiffened, pressurized wall carries thrust and bending without becoming heavy.',
+    a: 'Because a thin cylinder fails by buckling long before its metal is overstressed. For an unstiffened aluminium barrel with the K-1 radius of 1.85 m and a 2 mm wall (using 2219-T87 values: elastic modulus about 73 GPa), classical theory gives a buckling stress of 0.605·E·t/R ≈ 47.7 MPa. Real shells have small imperfections and buckle at only about 23 % of that (the NASA SP-8007 knockdown factor for this radius-to-thickness ratio of 925), about 11.2 MPa: under 3 % of the roughly 393 MPa yield strength of 2219-T87, and an even smaller fraction for stronger Al-Li. Integral orthogrid ribs raise the bending stiffness of the wall, and internal pressure puts the skin in hoop tension and pulls out the imperfections, so a stiffened, pressurized wall carries thrust and bending without becoming heavy.',
   },
   closeup: 'tank-wall',
   sources: ['nasa-slwt', 'nasa-al-li-crush', 'nasa-sp8007', 'nasa-isogrid', 'twi-fsw', 'asm-handbook-v2'],
@@ -51,10 +51,10 @@ export const AL_2219: MaterialDraft = {
   suits:
     '2219 is an aluminium-copper alloy that welds (by fusion or friction stir) with little cracking, keeps useful strength over a wide temperature range, and becomes both stronger and tougher when cold, which suits domes and rings with LOX at 90 K on one side. Domes are doubly curved: they are made from formed gores welded together, and 2219 accepts that forming and welding where higher-strength alloys crack. For machined frames, fittings and enclosures it is a well-understood, predictable structural alloy.',
   limits:
-    'Lower strength and slightly higher density than Al-Li, so it costs mass on the large barrel areas; that is why the K-1 uses Al-Li there. The copper that strengthens it lowers its corrosion resistance, so parts are anodized or primed. It loses strength above roughly 150 °C and must be shielded from engine heat. In this illustrative model the 2219 tag also stands for related aluminium hardware that in practice uses other alloys: cast aluminium for the LOX pump housing and thin 5052 foil for the crushable honeycomb in the leg foot pads.',
+    'Lower strength and slightly higher density than Al-Li, so it costs mass on the large barrel areas; that is why the K-1 uses Al-Li there. The copper that strengthens it lowers its corrosion resistance, so parts are anodized or primed. It loses strength above roughly 150 °C and must be shielded from engine heat. In this illustrative model the 2219 tag also stands for related aluminium hardware that in practice uses other alloys: cast aluminium for the LOX pump housing, thin 5052 foil for the crushable honeycomb in the leg foot pads, and alloys such as 7075, 6061 or 2024 for much spacecraft structure (the satellite cone, service-module structure and docking ring).',
   elsewhere: [
     { text: 'The original Space Shuttle external tank was built of 2219 before the super lightweight tank moved most of its structure to Al-Li 2195.', source: 'nasa-slwt' },
-    { text: 'The core stage of NASA’s Space Launch System is built from 2219 barrel panels joined by friction stir welding in a vertical weld centre at the Michoud Assembly Facility.', source: 'nasa-sls-fsw' },
+    { text: 'The core stage of NASA’s Space Launch System is built from 2219 barrel panels joined by friction stir welding in the Vertical Weld Center at the Michoud Assembly Facility.', source: 'nasa-sls-fsw' },
   ],
   compare: [
     { axis: 'Weldability', text: 'Among the best of the high-strength aluminium alloys: the reason it is chosen for welded domes and rings.' },
@@ -93,10 +93,11 @@ export const STAINLESS: MaterialDraft = {
     'Density is about 8,000 kg/m³, nearly three times aluminium, so a large steel tank wall must be much thinner to break even on mass, and a thin wall buckles unless it is pressurized. Thermal conductivity is low compared with copper, so steel is not used for the hottest chamber walls. Cold-worked grades gain strength that is partly lost again in weld zones.',
   elsewhere: [
     { text: 'The Atlas and Centaur stages used paper-thin stainless-steel balloon tanks that held their shape only while pressurized (pressure stabilization), among the lightest tanks of their era.', source: 'nasa-centaur' },
-    { text: 'Tube-wall nozzles brazed from hundreds of shaped tubes carrying fuel were standard on large kerosene engines of the 1960s.', source: 'nasa-sp125' },
+    { text: 'Tube-wall nozzles brazed from hundreds of shaped tubes carrying fuel were standard on large kerosene engines of the 1960s.', source: 'huzel-huang-sp125' },
   ],
   compare: [
     { axis: 'Cryogenic toughness', text: 'Excellent: no ductile-to-brittle transition, like aluminium and unlike ordinary carbon steels.' },
+    { axis: 'Cryogenic strength', text: 'Rises as the steel is cooled, most of all in cold-worked grades such as the hard-rolled type 301 used for thin balloon-tank skins.' },
     { axis: 'Elevated temperature', text: 'Keeps useful strength to several hundred °C, far beyond aluminium alloys.' },
     { axis: 'Mass', text: 'About 2.8 times the density of aluminium: it wins only where parts are small, or where heat and cold would force aluminium to be protected or thickened.' },
     { axis: 'Cost and fabrication', text: 'Cheap per kilogram and forgiving to weld and repair; a steel structure can be simpler to build even when it is heavier.' },
@@ -114,7 +115,7 @@ export const STAINLESS: MaterialDraft = {
     q: 'Steel is almost three times as dense as aluminium. Why would anyone build a rocket tank from it?',
     a: 'Because mass is only one requirement. Stainless steel stays tough when cryogenic, keeps its strength when hot (so less insulation or heat shielding is needed), is cheap and easy to weld and repair, and a thin steel skin can be stabilized by internal pressure, as the Atlas and Centaur balloon tanks were. Whether steel or aluminium gives the lighter vehicle depends on the temperatures the structure sees and on how much protection aluminium would need. The K-1 uses aluminium tanks and keeps steel for small parts where toughness, heat tolerance or fabrication matter most.',
   },
-  sources: ['ss-304-data', 'nasa-centaur', 'nasa-sp125', 'sutton-rpe'],
+  sources: ['ss-304-data', 'nasa-centaur', 'huzel-huang-sp125', 'sutton-rpe'],
 };
 
 export const GRCOP: MaterialDraft = {
@@ -124,12 +125,12 @@ export const GRCOP: MaterialDraft = {
   focus:
     'NASA-developed copper alloys strengthened by fine chromium-niobium (Cr₂Nb) particles. They line the K-1 combustion chambers because they conduct heat almost as well as pure copper yet keep their strength when hot. Key idea: in a cooled liner, conductivity is what protects the wall; it is not insulation.',
   suits:
-    'The liner faces gas at about 3,500 to 3,700 K and, near the throat, heat fluxes of tens of megawatts per square metre. No metal survives that uncooled. Regenerative cooling works only if the heat crosses the thin wall into the fuel with a small temperature drop, and the drop across a wall is ΔT = q·t/k, so a high conductivity k keeps the hot face cool. GRCop-42 conducts 344 W/(m·K) at room temperature, close to pure copper (about 396), while its Cr₂Nb particles stop the grain growth and softening that make pure copper too weak at liner temperatures. It also resists the thermal fatigue caused by every start and shutdown, and it can be 3D printed with the coolant channels already inside.',
+    'The liner faces gas at about 3,500 to 3,700 K and, near the throat, heat fluxes of tens of megawatts per square metre. No metal survives that uncooled. Regenerative cooling works only if the heat crosses the thin wall into the fuel with a small temperature drop, and the drop across a wall is ΔT = q·t/k, so a high conductivity k keeps the hot face cool. GRCop-42 conducts 344 W/(m·K) at room temperature, close to pure copper (about 396), while its Cr₂Nb particles stop the grain growth and softening that make pure copper too weak at liner temperatures. It resists creep and the thermal fatigue of every start and shutdown far better than pure copper, and it can be 3D printed with the coolant channels already inside.',
   limits:
     'Dense, like all copper alloys, and modest in strength compared with steels, so the liner is closed out by a structural jacket (a nickel superalloy in the K-1) that carries the pressure load. Its life is set by thermal fatigue and creep at the hot wall, and a loss of coolant flow melts it within moments. Hot oxygen-rich gas attacks copper (blanching), so the mixture next to the wall is kept fuel-rich.',
   elsewhere: [
     { text: 'NASA has printed and hot-fire tested copper-alloy combustion chambers with integral cooling channels, including GRCop chambers made by additive manufacturing.', source: 'nasa-am-chamber' },
-    { text: 'Large staged-combustion engines such as the Space Shuttle main engine used an earlier copper alloy (NARloy-Z, copper-silver-zirconium) for their chamber liners, for the same reason; GRCop-42 conducts heat better.', source: 'nasa-grcop42-ellis' },
+    { text: 'Large staged-combustion engines such as the Space Shuttle main engine used an earlier copper alloy (NARloy-Z, copper-silver-zirconium) for their chamber liners, for the same reason; at room temperature GRCop-42 conducts heat better (344 against 296 W/(m·K)).', source: 'nasa-grcop42-ellis' },
   ],
   compare: [
     { axis: 'Conductivity versus insulation', text: 'A cooled liner must conduct heat to the coolant, the opposite of a heat shield, which must block it. GRCop-42 conducts about 30 times better than Inconel 718 (344 versus about 11.4 W/(m·K)).' },
@@ -142,7 +143,7 @@ export const GRCOP: MaterialDraft = {
     { property: 'Thermal conductivity (reference)', value: 'about 396 W/(m·K)', condition: 'Pure copper, room temperature', source: 'nasa-grcop42-ellis' },
   ],
   manufacturing:
-    'Two routes. (1) The liner is turned from a forging, coolant channels are milled into its outer surface, and the channels are closed out by electroformed copper or a brazed jacket. (2) The liner is printed by laser powder-bed fusion with the channels inside, hot isostatically pressed to close porosity, and then jacketed with a superalloy.',
+    'Two routes. (1) The liner is turned from a forging, coolant channels are milled into its outer surface, and the channels are closed out by electroformed nickel or copper, or by a brazed superalloy jacket. (2) The liner is printed by laser powder-bed fusion with the channels inside, hot isostatically pressed to close porosity, and then jacketed with a superalloy.',
   inspection:
     'Flow tests of every coolant channel (each must pass its share of fuel), CT scanning or radiography of printed liners for trapped powder and porosity, proof pressure of the coolant circuit, and hot-fire acceptance tests. After firing, liners are checked for wall thinning and thermal-fatigue cracks.',
   question: {
@@ -162,7 +163,7 @@ export const NICKEL_SUPERALLOY: MaterialDraft = {
   suits:
     'The turbine is the hardest-working part of the engine: its blades spin at about 32,000 rpm (illustrative K-1 value) in hot gas-generator exhaust, under large centrifugal stress. Alloy 718 is precipitation hardened by nickel-niobium particles and keeps high strength and creep resistance from cryogenic temperature up to about 700 °C (1,300 °F), and its chromium forms a protective oxide. Alloy 625 is strengthened in solid solution instead, so it welds and brazes without cracking and resists oxidation and corrosion, which suits ducts, manifolds, bellows and heat-shield panels. The gas generator runs fuel-rich precisely so that its exhaust stays at a temperature these alloys can take.',
   limits:
-    'Dense (about 8,200 to 8,400 kg/m³), expensive, slow to machine, and poor conductors of heat, so they are not used for a regeneratively cooled liner. Alloy 718 loses strength above about 700 °C; hotter turbines need single-crystal alloys or cooling. Some nickel alloys can burn in hot, high-pressure oxygen, so oxygen-rich turbine drives need special alloys or coatings.',
+    'Dense (about 8,200 to 8,400 kg/m³), expensive, slow to machine, and poor conductors of heat, so they are not used for a regeneratively cooled liner. Alloy 718 loses strength above about 700 °C; hotter turbines need single-crystal alloys or cooling. Some nickel alloys can burn in hot, high-pressure oxygen, so oxygen-rich turbine drives need special alloys or coatings. In this model the tag on the abort motors covers their nozzle housings; the throats of solid rocket motors are usually graphite or carbon composite, which erode slowly instead of melting.',
   elsewhere: [
     { text: 'Nickel superalloys, alloy 718 above all, are the main materials of large liquid-engine turbopumps, hot-gas ducts and manifolds, including those of the Space Shuttle main engine.', source: 'sutton-rpe' },
     { text: 'Alloy 718 is also a classic material for aircraft gas-turbine discs and shafts, which need the same strength at temperature.', source: 'sm-inconel-718' },
@@ -189,7 +190,7 @@ export const NICKEL_SUPERALLOY: MaterialDraft = {
     a: 'Because they are loaded differently. The liner is cooled from behind and has to pass heat through quickly, so it needs conductivity: a copper alloy. The turbine blade has no coolant; it sits in gas-generator exhaust and is flung outward at tens of thousands of rpm, so it needs strength and creep resistance at high temperature, which nickel superalloys provide. The gas generator runs fuel-rich to keep its exhaust cool enough for them.',
   },
   closeup: 'turbopump-section',
-  sources: ['sm-inconel-718', 'sm-inconel-625', 'sutton-rpe', 'nasa-sp125'],
+  sources: ['sm-inconel-718', 'sm-inconel-625', 'sutton-rpe', 'huzel-huang-sp125'],
 };
 
 export const NIOBIUM_C103: MaterialDraft = {
@@ -224,7 +225,7 @@ export const NIOBIUM_C103: MaterialDraft = {
     q: 'Why can the upper-stage nozzle extension be cooled just by glowing, when the combustion chamber cannot?',
     a: 'Because the heat flux is very different. In the chamber and throat the gas is dense and hot, and the wall receives tens of megawatts per square metre. A surface can radiate away only q = ε·σ·T⁴: at 1,370 °C with an emissivity of 0.8 that is about 0.33 MW/m², roughly a hundred times too little, so the chamber needs fuel cooling. Far down the extension the gas has expanded to low pressure and temperature, the flux falls to what radiation can reject, and a thin coated niobium skin simply glows at equilibrium.',
   },
-  sources: ['c103-data', 'sutton-rpe', 'nasa-sp125'],
+  sources: ['c103-data', 'sutton-rpe', 'huzel-huang-sp125'],
 };
 
 export const TITANIUM: MaterialDraft = {
@@ -238,7 +239,7 @@ export const TITANIUM: MaterialDraft = {
   limits:
     'Expensive and slow to machine, and reactive when hot: it must be welded under inert gas, and it can ignite on impact in liquid or high-pressure oxygen, so it is kept out of LOX service. Its stiffness (about 114 GPa) is about 1.6 times that of aluminium for about 1.6 times the density, so for stiffness-limited panels it gains little. It oxidizes and weakens at the temperatures where nickel superalloys still work.',
   elsewhere: [
-    { text: 'Space Shuttle orbiters stored helium and nitrogen in Kevlar-overwrapped pressure vessels with titanium liners.', source: 'nasa-copv-primer' },
+    { text: 'Space Shuttle orbiters stored helium and nitrogen in Kevlar-overwrapped pressure vessels with titanium liners.', source: 'nasa-copv' },
     { text: 'Spacecraft tanks for hydrazine and nitrogen tetroxide are commonly titanium, for strength, low mass and propellant compatibility.', source: 'sutton-rpe' },
   ],
   compare: [
@@ -250,7 +251,7 @@ export const TITANIUM: MaterialDraft = {
   properties: [
     { property: 'Density', value: '4,430 kg/m³ (4.43 g/cm³)', condition: 'Ti-6Al-4V, room temperature', source: 'ati-ti64' },
     { property: 'Elastic modulus', value: 'about 114 GPa', condition: 'Ti-6Al-4V, room temperature', source: 'ati-ti64' },
-    { property: 'Yield strength (minimum)', value: '827 MPa (120 ksi)', condition: 'Ti-6Al-4V sheet and plate, annealed, room temperature', source: 'ams-4911' },
+    { property: 'Yield strength (minimum)', value: '827 MPa (120 ksi)', condition: 'Ti-6Al-4V plate, annealed, room temperature (the lowest value in the specification; thin sheet is specified higher)', source: 'ams-4911' },
   ],
   manufacturing:
     'Grid fins are cast or forged as one piece and machined; COPV liners are spun or deep-drawn and welded under inert gas, then overwrapped; spherical tanks are forged hemispheres welded at the equator; fittings are machined from forgings. Chemical milling removes the brittle oxygen-enriched surface layer (alpha case) left by hot working.',
@@ -261,5 +262,5 @@ export const TITANIUM: MaterialDraft = {
     a: 'During entry the fins sit in hot, fast flow, and their thin lattice members heat up quickly. Aluminium alloys lose much of their strength above roughly 150 °C, so aluminium fins would need an ablative coating that is consumed and must be reapplied after each flight. Titanium keeps its strength at several hundred °C and is strong for its weight, so a one-piece titanium fin survives entry uncoated and can be reused. The price is cost and a heavier fin than an aluminium one of the same size: mass and money traded for reusability.',
   },
   closeup: 'grid-fin-lattice',
-  sources: ['ati-ti64', 'ams-4911', 'nasa-copv-primer', 'sutton-rpe'],
+  sources: ['ati-ti64', 'ams-4911', 'nasa-copv', 'sutton-rpe'],
 };

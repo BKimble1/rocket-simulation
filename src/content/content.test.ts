@@ -18,7 +18,7 @@ import type { CheckKind, DemoId, LearningTopic } from './types';
 import { PART_IDS, type PartId } from '../vehicle/parts';
 import { OUTLINES } from '../timeline/missions/outline';
 import type { MissionId } from '../timeline/types';
-import { BODY_RADIUS, E1, E1V, FAIRING, G0, PROPELLANTS, S1, STATIONS } from '../vehicle/spec';
+import { BODY_RADIUS, E1, E1V, FAIRING, G0, LEGS, PROPELLANTS, S1, STATIONS } from '../vehicle/spec';
 import { MU_EARTH, R_EARTH } from '../world/frames';
 
 const DEMOS: Record<DemoId, true> = {
@@ -109,6 +109,16 @@ describe('sources', () => {
     for (const s of cited) expect(known.has(s), `cited source ${s}`).toBe(true);
     for (const s of MATERIAL_SOURCES) expect(cited.has(s.id), `material source ${s.id} is never cited`).toBe(true);
   });
+
+  it('no document is listed twice under different ids (the credits show every source once)', () => {
+    const key = (u: string) => u.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '').toLowerCase();
+    const shown = new Map<string, string>();
+    for (const s of allSources()) shown.set(key(s.url), s.id);
+    for (const s of MATERIAL_SOURCES) {
+      const other = shown.get(key(s.url));
+      if (other !== undefined) expect(other, `${s.id} duplicates ${other}`).toBe(s.id);
+    }
+  });
 });
 
 describe('glossary', () => {
@@ -188,6 +198,19 @@ describe('knowledge checks', () => {
     for (const n of counts.values()) expect(n / single.length).toBeLessThan(0.45);
   });
 
+  it('the correct choice cannot be spotted by its length', () => {
+    const single = CHECKS.filter((c) => c.kind !== 'order');
+    let longest = 0;
+    for (const c of single) {
+      const a = c.answer as number;
+      const lens = c.choices.map((x) => x.length);
+      const others = Math.max(...lens.filter((_, i) => i !== a));
+      if (lens[a] >= Math.max(...lens)) longest++;
+      expect(lens[a] / others, `${c.id}: the correct choice is much longer than every distractor`).toBeLessThan(1.45);
+    }
+    expect(longest / single.length, 'the correct choice is the longest too often').toBeLessThan(0.6);
+  });
+
   it('explanations are specific, "show me again" targets exist, and sources are cited', () => {
     for (const c of CHECKS) {
       expect(c.explain.length, c.id).toBeGreaterThan(200);
@@ -245,15 +268,17 @@ describe('knowledge checks', () => {
     expect(fall).toContain(`${fmt(0.5 * g, 2)} m`);
     expect(fall).toContain(`${fmt(v / 1000, 2)} km`);
     expect(fall).toContain(`${fmt(g, 2)} m/s²`);
-    // landing burn on one engine
+    // landing burn on one engine: the recovery booster carries its landing legs
     const land = text('return-landing-burn');
     const Tmin = E1.minThrottle * (E1.thrustSL ?? 0);
-    const W = S1.dry * G0;
+    const dryWithLegs = S1.dry + LEGS.mass;
+    const W = dryWithLegs * G0;
     expect(land).toContain(`${fmt(E1.minThrottle * 100)} % minimum throttle`);
     expect(land).toContain(`about ${fmt(Tmin / 1e3)} kN`);
     expect(land).toContain(`about ${fmt(W / 1e3)} kN`);
-    expect(land).toContain(`${fmt(S1.dry)} kg dry mass`);
+    expect(land).toContain(`${fmt(dryWithLegs)} kg dry mass with landing legs`);
     expect(land).toContain(`about ${fmt(Tmin / W, 2)}`);
+    expect(Tmin / W).toBeGreaterThan(1); // it cannot hover
     // gimbal range
     expect(text('gnc-tvc')).toContain(`up to ${fmt(E1.gimbalRangeDeg)}°`);
   });

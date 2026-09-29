@@ -50,6 +50,8 @@ export interface StackSpec {
   boosterOnly: boolean;
   /** First-stage propellant load (kg); defaults to full. */
   s1Load?: number;
+  /** Crew stack masses used by the trajectory model (kg); defaults to spec.ts. */
+  crewKg?: { capsule: number; smDry: number; smProp: number; les: number };
 }
 
 export const SATELLITE_PAYLOADS: PayloadId[] = ['leoSat', 'gtoSat', 'lunarProbe'];
@@ -66,10 +68,11 @@ export function stackItems(spec: StackSpec, payloadKg?: number): { items: MassIt
   items.push(...upperDry());
   bodies.push('upper');
   if (spec.crew) {
-    items.push(CAPSULE_ITEM, { m: SM_DRY, c: SM_COM }, LES_ITEM);
+    const k = spec.crewKg;
+    items.push(k ? { ...CAPSULE_ITEM, m: k.capsule } : CAPSULE_ITEM, { m: k ? k.smDry : SM_DRY, c: SM_COM, tag: 'service' }, k ? { ...LES_ITEM, m: k.les } : LES_ITEM);
     bodies.push('capsule', 'service', 'les');
   } else {
-    items.push(fairingHalf('A', 0), fairingHalf('B', 0), { m: payloadKg ?? PAYLOADS[spec.payload].mass, c: PAYLOAD_COM[spec.payload] });
+    items.push(fairingHalf('A', 0), fairingHalf('B', 0), { m: payloadKg ?? PAYLOADS[spec.payload].mass, c: PAYLOAD_COM[spec.payload], tag: 'satellite' });
     bodies.push('fairingA', 'fairingB', 'satellite');
   }
   return { items, bodies };
@@ -594,8 +597,7 @@ export function solveUpper(c: Craft, plan: UpperBurnPlan, opts: { A0: number; B0
     A += dA;
     B += dB;
   }
-  const fin = run(best.A, best.B);
-  return { A: best.A, B: best.B, res: fin, err: best.err };
+  return { A: best.A, B: best.B, res: best.res, err: best.err };
 }
 
 export function circularEnergy(r: number): number {
@@ -689,7 +691,7 @@ export function stackAtLiftoff(env: Craft['env'], spec: StackSpec, s1Prop: numbe
   const pp = padPose(0);
   const tanks: Craft['tanks'] = { s1: s1Prop };
   if (!spec.boosterOnly) tanks.s2 = s2Prop;
-  if (spec.crew) tanks.sm = SM_PROP_LAUNCH;
+  if (spec.crew) tanks.sm = spec.crewKg ? spec.crewKg.smProp : SM_PROP_LAUNCH;
   const c = new Craft({ bodies, t: 0, r: pp.p, v: pp.v, q: pp.q, fixedMass: sumMass(items).m, tanks, aero: aeroStack(spec.crew, spec.boosterOnly), comFn: comFrom(items), env });
   c.w = { ...OMEGA_VEC };
   c.rehome(pp.p, pp.v);
@@ -702,25 +704,34 @@ export function stackAtLiftoff(env: Craft['env'], spec: StackSpec, s1Prop: numbe
 
 /**
  * Find the pitch-kick angle that gives the wanted flight-path angle (air-relative) at first-
- * stage cutoff: bisection (larger kicks give flatter trajectories).
+ * stage cutoff: secant iteration from a stored warm start (larger kicks give flatter
+ * trajectories), with a bisection fallback inside [lo, hi]. Deterministic.
  */
-export function shootKick(make: () => Craft, p: Omit<S1Params, 'kickDeg' | 'record'>, gammaDeg: number, lo = 0.3, hi = 4): { kick: number; res: S1Result } {
+export function shootKick(make: () => Craft, p: Omit<S1Params, 'kickDeg' | 'record'>, gammaDeg: number, k0 = 1.0, lo = 0.3, hi = 4): { kick: number; res: S1Result } {
   const g = (k: number) => {
     const c = make();
     const r = flyFirstStage(null, c, { ...p, kickDeg: k, record: false });
-    return { r, gam: (r.mecoState.gamma * 180) / Math.PI - (r.mecoState.alt < 20_000 ? 90 : 0) };
+    return { k, r, e: (r.mecoState.gamma * 180) / Math.PI - (r.mecoState.alt < 20_000 ? 90 : 0) - gammaDeg };
   };
-  let a = lo;
-  let b = hi;
-  let best = { kick: a, res: g(a).r, err: Infinity };
-  for (let i = 0; i < 26; i++) {
-    const m = (a + b) / 2;
-    const { r, gam } = g(m);
-    const err = Math.abs(gam - gammaDeg);
-    if (err < best.err) best = { kick: m, res: r, err };
-    if (gam > gammaDeg) a = m;
-    else b = m;
-    if (b - a < 1e-4) break;
+  let a = g(clamp(k0, lo, hi));
+  if (Math.abs(a.e) < 0.02) return { kick: a.k, res: a.r };
+  let b = g(clamp(a.k + (a.e > 0 ? 0.04 : -0.04), lo, hi));
+  let best = Math.abs(a.e) < Math.abs(b.e) ? a : b;
+  let bl = lo;
+  let bh = hi;
+  for (const x of [a, b]) {
+    if (x.e > 0) bl = Math.max(bl, x.k);
+    else bh = Math.min(bh, x.k);
   }
-  return { kick: best.kick, res: best.res };
+  for (let i = 0; i < 12 && Math.abs(best.e) > 0.02; i++) {
+    let k = b.k - (b.e * (b.k - a.k)) / (b.e - a.e);
+    if (!Number.isFinite(k) || k <= bl || k >= bh) k = (bl + bh) / 2;
+    const c = g(k);
+    if (c.e > 0) bl = Math.max(bl, c.k);
+    else bh = Math.min(bh, c.k);
+    if (Math.abs(c.e) < Math.abs(best.e)) best = c;
+    a = b;
+    b = c;
+  }
+  return { kick: best.k, res: best.r };
 }

@@ -8,7 +8,7 @@
  */
 import * as THREE from 'three';
 import { PAD } from '../../world/site';
-import { Batch, bevelBox, box, cyl, pipe, rod, v3, extrude } from './geom';
+import { Batch, bevelBox, box, cyl, pipe, rod, v3, extrude, mergeParts } from './geom';
 import { SM } from './mats';
 import { HARDSTAND, EMBANK, RAMP, TRENCH, TU, TV, trenchXZ, trenchFloor, DEFLECTOR, MOUNT, GRADE } from './layout';
 import { PAD_TEX_EXT } from './textures';
@@ -143,7 +143,7 @@ export function buildPad(): Pad {
     const rq = facing(P(xa, 0, z0), P(xb, 0, z0), P(xb, GRADE, z1), P(xa, GRADE, z1), P(0, 1, 0));
     const rampPoly = new Poly();
     rampPoly.quad(rq[0], rq[1], rq[2], rq[3], rampUv);
-    B.add(rampPoly.geo(), SM('concreteRoad'), undefined, { cast: false, receive: true });
+    B.add(rampPoly.geo(), SM('concreteLight'), undefined, { cast: false, receive: true });
     for (const side of [1, -1]) {
       const xe = side > 0 ? xb : xa;
       const q = facing(P(xe, 0, z0), P(xe, GRADE, z1), P(xe + side * 1, drop, z1), P(xe + side * run, drop, z0 + run), P(side, 1, 0));
@@ -262,11 +262,8 @@ export function buildPad(): Pad {
   const deckTop = PAD.deckHeight;
   const deckBot = deckTop - MOUNT.thickness;
   const mountRot = -Math.atan2(TU.z, TU.x); // mount local +X along the trench
-  const mount = new THREE.Group();
-  mount.name = 'launch-mount';
-  mount.rotation.y = mountRot;
-  group.add(mount);
-  const MB = new Batch();
+  // the mount is static: its parts merge with the pad's (one draw call per material)
+  const MB = B.view(new THREE.Matrix4().makeRotationY(mountRot));
   {
     const hs = MOUNT.halfS;
     const hv = MOUNT.halfV;
@@ -364,123 +361,139 @@ export function buildPad(): Pad {
       const z = sv * MOUNT.legV;
       MB.add(pipe([v3(x, 0.4, z), v3(x, deckBot - 0.35, z), v3(-ringR * 0.7, deckBot - 0.35, z * 0.45)], 0.18, 0.6, 12), SM('galv'), undefined, { part: 'sound-suppression' });
     }
-    MB.build(mount, 'mount');
   }
 
   // ───────────── hold-down clamps (at the vehicle fittings: +X, +Z, -X, -Z) ─────────────
-  const jaws: THREE.Group[] = [];
-  {
-    const CB = new Batch();
-    for (const azDeg of MOUNT.clampAz) {
-      const a = (azDeg * Math.PI) / 180;
-      const frameG = new THREE.Group();
-      frameG.rotation.y = -a; // local +X = radial outward (from +x toward +z)
-      group.add(frameG);
-      const L = new Batch();
-      const rPin = MOUNT.gripR + 0.1; // vehicle's pin radius
-      const yPin = PAD.nozzleExitHeight + 1.46;
-      // pedestal on the deck (outside the flame hole) and the cantilevered saddle under the pin
-      L.at(bevelBox(1.15, 0.95, 1.0, 0.05), SM('steelDark'), 3.2, deckTop + 0.475, 0, 0, { part: 'launch-mount' });
-      L.at(bevelBox(0.5, 0.18, 1.3, 0.03), SM('steelDark'), 3.35, deckTop + 0.09, 0, 0);
-      for (const t of [-0.3, 0.3]) {
-        const cheek = extrude(
-          [
-            [rPin - 0.12, yPin - 0.02],
-            [rPin + 0.1, yPin - 0.02],
-            [rPin + 0.2, yPin - 0.14],
-            [2.75, yPin - 0.2],
-            [2.75, deckTop - 0.02],
-            [rPin + 0.05, deckTop + 0.02],
-          ],
-          0.14,
-          0.012,
-        );
-        cheek.translate(0, 0, t - 0.07);
-        L.add(cheek, SM('stainless'), undefined, { part: 'launch-mount', material: 'stainless' });
-      }
-      L.at(bevelBox(0.7, 0.14, 0.74, 0.02), SM('stainless'), 2.4, deckTop + 0.07, 0, 0, { part: 'launch-mount', material: 'stainless' });
-      // actuator body behind the pedestal
-      const act0 = v3(3.9, deckTop + 0.45, 0);
-      L.add(rod(act0, v3(3.35, deckTop + 1.2, 0), 0.13, 16), SM('stainless'));
-      L.at(bevelBox(0.5, 0.5, 0.6, 0.04), SM('steelDark'), 3.95, deckTop + 0.35, 0);
-      L.build(frameG, 'clamp-base');
-      // the jaw: pivots at the top of the pedestal about the tangential axis
-      const jaw = new THREE.Group();
-      jaw.position.set(2.95, deckTop + 1.05, 0);
-      frameG.add(jaw);
-      const J = new Batch();
-      for (const t of [-0.26, 0.26]) {
-        const plate = extrude(
-          [
-            [0.35, 0.22],
-            [-0.35, 0.22],
-            [rPin - 2.95 - 0.05, 0.05],
-            [rPin - 2.95 - 0.18, -0.02],
-            [rPin - 2.95 - 0.16, yPin - (deckTop + 1.05) + 0.1],
-            [rPin - 2.95 + 0.02, yPin - (deckTop + 1.05) + 0.02],
-            [rPin - 2.95 + 0.14, yPin - (deckTop + 1.05) + 0.12],
-            [rPin - 2.95 + 0.16, -0.18],
-            [0.35, -0.2],
-          ],
-          0.12,
-          0.01,
-        );
-        plate.translate(0, 0, t - 0.06);
-        J.add(plate, SM('stainless'), undefined, { part: 'launch-mount', material: 'stainless' });
-      }
-      J.at(bevelBox(0.9, 0.3, 0.64, 0.03), SM('stainless'), -0.35, 0.02, 0, 0);
-      J.add(rod(v3(0, 0, -0.42), v3(0, 0, 0.42), 0.1, 16), SM('steelDark'));
-      J.build(jaw, 'clamp-jaw');
-      jaws.push(jaw);
+  // static bases merge into the pad; the four jaws are one instanced mesh posed each frame
+  const rPin = MOUNT.gripR + 0.1; // vehicle's pin radius
+  const yPin = PAD.nozzleExitHeight + 1.46;
+  const jawPivot = v3(2.95, deckTop + 1.05, 0);
+  const jawBases: THREE.Matrix4[] = [];
+  for (const azDeg of MOUNT.clampAz) {
+    const a = (azDeg * Math.PI) / 180;
+    const frame = new THREE.Matrix4().makeRotationY(-a); // local +X = radial outward (from +x toward +z)
+    const L = B.view(frame);
+    // pedestal on the deck (outside the flame hole) and the cantilevered saddle under the pin
+    L.at(bevelBox(1.15, 0.95, 1.0, 0.05), SM('steelDark'), 3.2, deckTop + 0.475, 0, 0, { part: 'launch-mount' });
+    L.at(bevelBox(0.5, 0.18, 1.3, 0.03), SM('steelDark'), 3.35, deckTop + 0.09, 0, 0);
+    for (const t of [-0.3, 0.3]) {
+      const cheek = extrude(
+        [
+          [rPin - 0.12, yPin - 0.02],
+          [rPin + 0.1, yPin - 0.02],
+          [rPin + 0.2, yPin - 0.14],
+          [2.75, yPin - 0.2],
+          [2.75, deckTop - 0.02],
+          [rPin + 0.05, deckTop + 0.02],
+        ],
+        0.14,
+        0.012,
+      );
+      cheek.translate(0, 0, t - 0.07);
+      L.add(cheek, SM('stainless'), undefined, { part: 'launch-mount', material: 'stainless' });
     }
-    void CB;
+    L.at(bevelBox(0.7, 0.14, 0.74, 0.02), SM('stainless'), 2.4, deckTop + 0.07, 0, 0, { part: 'launch-mount', material: 'stainless' });
+    // actuator body behind the pedestal
+    L.add(rod(v3(3.9, deckTop + 0.45, 0), v3(3.35, deckTop + 1.2, 0), 0.13, 16), SM('stainless'));
+    L.at(bevelBox(0.5, 0.5, 0.6, 0.04), SM('steelDark'), 3.95, deckTop + 0.35, 0);
+    jawBases.push(frame.clone().multiply(new THREE.Matrix4().makeTranslation(jawPivot.x, jawPivot.y, jawPivot.z)));
   }
+  // the jaw: two side plates hooking over the pin, a bridge block and the hinge pin (tangential axis)
+  const jawParts: { g: THREE.BufferGeometry }[] = [];
+  const py = yPin - jawPivot.y;
+  const px = rPin - jawPivot.x;
+  for (const t of [-0.26, 0.26]) {
+    const plate = extrude(
+      [
+        [0.35, 0.22],
+        [-0.35, 0.22],
+        [px - 0.05, 0.05],
+        [px - 0.18, -0.02],
+        [px - 0.16, py + 0.1],
+        [px + 0.02, py + 0.02],
+        [px + 0.14, py + 0.12],
+        [px + 0.16, -0.18],
+        [0.35, -0.2],
+      ],
+      0.12,
+      0.01,
+    );
+    plate.translate(0, 0, t - 0.06);
+    jawParts.push({ g: plate });
+  }
+  jawParts.push({ g: bevelBox(0.9, 0.3, 0.64, 0.03).translate(-0.35, 0.02, 0) });
+  jawParts.push({ g: rod(v3(0, 0, -0.42), v3(0, 0, 0.42), 0.1, 16) });
+  const jaws = new THREE.InstancedMesh(mergeParts(jawParts), SM('stainless'), jawBases.length);
+  jaws.name = 'holddown-jaws';
+  jaws.castShadow = jaws.receiveShadow = true;
+  jaws.userData.part = 'launch-mount';
+  jaws.userData.material = 'stainless';
+  group.add(jaws);
 
   // ───────────── tail service masts (booster umbilicals), tower side ─────────────
-  const tsmPlates: THREE.Group[] = [];
-  {
-    for (const azDeg of [148, 212]) {
-      const a = (azDeg * Math.PI) / 180;
-      const g = new THREE.Group();
-      g.rotation.y = -a;
-      group.add(g);
-      const T = new Batch();
-      T.at(bevelBox(1.5, 4.2, 1.4, 0.06), SM('white'), 4.35, deckTop + 2.1, 0, 0, { part: 'launch-mount' });
-      T.at(bevelBox(1.7, 0.3, 1.6, 0.04), SM('steelDark'), 4.35, deckTop + 4.35, 0, 0);
-      T.at(bevelBox(1.6, 0.2, 1.5, 0.03), SM('steelDark'), 4.35, deckTop + 0.1, 0, 0);
-      // hoses from the mast into the tower-side lines
-      T.add(pipe([v3(4.9, deckTop + 0.3, 0.35), v3(5.6, deckTop + 0.3, 0.35), v3(5.9, deckTop - 0.6, 0.35)], 0.12, 0.3), SM('aluminum'));
-      T.build(g, 'tsm');
-      const plate = new THREE.Group();
-      plate.position.set(2.0, deckTop + 1.5, 0);
-      g.add(plate);
-      const Pp = new Batch();
-      Pp.at(bevelBox(0.18, 1.1, 0.9, 0.03), SM('steelDark'), 0, 0, 0);
-      Pp.add(pipe([v3(0.1, 0.25, 0.2), v3(1.0, 0.25, 0.2), v3(1.6, 0.9, 0.2), v3(2.0, 0.9, 0.2)], 0.09, 0.3), SM('rubber'));
-      Pp.add(pipe([v3(0.1, -0.2, -0.2), v3(1.0, -0.2, -0.2), v3(1.6, 0.5, -0.2), v3(2.0, 0.5, -0.2)], 0.11, 0.3), SM('aluminum'));
-      Pp.add(rod(v3(0.1, 0, 0), v3(2.3, 0.2, 0), 0.07, 10), SM('stainless'));
-      Pp.build(plate, 'tsm-plate');
-      tsmPlates.push(plate);
-    }
+  // static masts merge into the pad; the umbilical carrier plates (three instanced meshes, one per
+  // material) pull back and drop at release
+  const tsmBases: THREE.Matrix4[] = [];
+  for (const azDeg of [148, 212]) {
+    const a = (azDeg * Math.PI) / 180;
+    const frame = new THREE.Matrix4().makeRotationY(-a);
+    const T = B.view(frame);
+    T.at(bevelBox(1.5, 4.2, 1.4, 0.06), SM('white'), 4.35, deckTop + 2.1, 0, 0, { part: 'launch-mount' });
+    T.at(bevelBox(1.7, 0.3, 1.6, 0.04), SM('steelDark'), 4.35, deckTop + 4.35, 0, 0);
+    T.at(bevelBox(1.6, 0.2, 1.5, 0.03), SM('steelDark'), 4.35, deckTop + 0.1, 0, 0);
+    // hoses from the mast into the tower-side lines
+    T.add(pipe([v3(4.9, deckTop + 0.3, 0.35), v3(5.6, deckTop + 0.3, 0.35), v3(5.9, deckTop - 0.6, 0.35)], 0.12, 0.3), SM('aluminum'));
+    tsmBases.push(frame);
   }
+  const plateParts: [THREE.Material, THREE.BufferGeometry][] = [
+    [SM('steelDark'), mergeParts([{ g: bevelBox(0.18, 1.1, 0.9, 0.03) }, { g: rod(v3(0.1, 0, 0), v3(2.3, 0.2, 0), 0.07, 10) }])],
+    [SM('rubber'), mergeParts([{ g: pipe([v3(0.1, 0.25, 0.2), v3(1.0, 0.25, 0.2), v3(1.6, 0.9, 0.2), v3(2.0, 0.9, 0.2)], 0.09, 0.3) }])],
+    [SM('aluminum'), mergeParts([{ g: pipe([v3(0.1, -0.2, -0.2), v3(1.0, -0.2, -0.2), v3(1.6, 0.5, -0.2), v3(2.0, 0.5, -0.2)], 0.11, 0.3) }])],
+  ];
+  const tsmPlates = plateParts.map(([m, g]) => {
+    const im = new THREE.InstancedMesh(g, m, tsmBases.length);
+    im.name = 'tsm-plates';
+    im.castShadow = im.receiveShadow = true;
+    im.userData.part = 'launch-mount';
+    group.add(im);
+    return im;
+  });
 
   B.build(group, 'pad');
+
+  const _m = new THREE.Matrix4();
+  const _r = new THREE.Matrix4();
+  let last = -1;
+  const pose = (h: number) => {
+    jawBases.forEach((base, i) => {
+      // release is simultaneous in reality; the stagger of a few ms is invisible
+      const k = smooth(0.0 + i * 0.01, 0.55 + i * 0.01, h);
+      _m.copy(base).multiply(_r.makeRotationZ(-k * 1.35)); // swing up and out ~77 deg
+      jaws.setMatrixAt(i, _m);
+    });
+    jaws.instanceMatrix.needsUpdate = true;
+    jaws.computeBoundingSphere();
+    // tail service mast plates pull back and drop once the vehicle is released
+    const k = smooth(0.05, 0.6, h);
+    tsmBases.forEach((base, i) => {
+      _m.copy(base).multiply(_r.makeTranslation(2.0 + k * 1.3, deckTop + 1.5, 0)).multiply(new THREE.Matrix4().makeRotationZ(-k * 0.35));
+      for (const im of tsmPlates) im.setMatrixAt(i, _m);
+    });
+    for (const im of tsmPlates) {
+      im.instanceMatrix.needsUpdate = true;
+      im.computeBoundingSphere();
+    }
+  };
+  pose(0);
 
   return {
     group,
     update() {
       const h = siteState.holddown;
-      jaws.forEach((j, i) => {
-        // stagger slightly: release is simultaneous in reality, the stagger is a few ms (invisible)
-        const k = smooth(0.0 + i * 0.01, 0.55 + i * 0.01, h);
-        j.rotation.z = -k * 1.35; // swing up and out ~77 deg
-      });
-      // tail service mast plates pull back and drop once the vehicle is released
-      tsmPlates.forEach((p) => {
-        const k = smooth(0.05, 0.6, h);
-        p.position.x = 2.0 + k * 1.3;
-        p.rotation.z = -k * 0.35;
-      });
+      if (h !== last) {
+        last = h;
+        pose(h);
+      }
     },
   };
 }

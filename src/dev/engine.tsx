@@ -5,7 +5,8 @@
  *
  * URL: kind=E-1|E-1V|both, detail=hangar|flight|cluster, cut=0..1 (anim=1 loops the cut),
  * flow=0|1 (flow overlay), run=0..1 (propellant flow: valves, glow), spin=<rpm shown>,
- * pitch=, yaw= (deg; tvc=1 sweeps them), gg=1, ignite=0..1. Camera: see dev/index.tsx.
+ * pitch=, yaw= (deg; tvc=1 sweeps them), gg=1, ignite=0..1. Camera: see dev/index.tsx; without
+ * az / dist the harness frames the engines itself (the shared default frames a whole vehicle).
  */
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
@@ -17,10 +18,15 @@ import type { EngineDetail, EngineKind, EngineModel } from '../scene/vehicle/eng
 import { S1_ENGINE_LAYOUT, BODY_RADIUS } from '../vehicle/spec';
 import { frame } from '../scene/frame';
 import { M } from '../scene/materials';
+import { director } from '../director/director';
+import { engineDesign } from '../scene/vehicle/engine/design';
 
 const q = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
 const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d);
 const str = (k: string, d: string) => q.get(k) ?? d;
+
+/** Camera distance DevStage uses when the URL gives none (see DevStage.tsx). */
+const SHARED_DEFAULT_DIST = 110;
 
 /** Height of the nozzle exit above the floor on the display stands (m). */
 const CLEAR = 0.32;
@@ -77,6 +83,26 @@ export default function Dev() {
     };
   }, [gl, scene]);
 
+  // default framing for this harness (URL camera parameters still win). DevStage writes the
+  // shared defaults (dist 110, a whole vehicle) from its own effect, which can land after this
+  // component mounts (the canvas renders on its own schedule), so replace them whenever seen.
+  const framing = useMemo(() => {
+    if (q.has('az') || q.has('dist')) return null;
+    return detail === 'cluster' ? [30, 16, 8.5, 0, 1.9] : kind === 'both' ? [24, 7, 13.5, 0.4, 3.1] : kind === 'E-1V' ? [24, 6, 10, 0, 3.4] : [26, 8, 5.4, 0, 1.55];
+  }, [kind, detail]);
+  const applyFraming = () => {
+    if (!framing) return;
+    const g = director.hangarGoal;
+    const [az, el, dist, tx, ty] = framing;
+    g.az = az;
+    g.el = el;
+    g.dist = dist;
+    g.target.set(tx, ty, 0);
+    g.fov = num('fov', 36);
+    Object.assign(director.hangarShown, { ...g, target: g.target.clone() });
+  };
+  useEffect(applyFraming, [framing]);
+
   const setup = useMemo(() => {
     const group = new THREE.Group();
     const engines: EngineModel[] = [];
@@ -84,10 +110,11 @@ export default function Dev() {
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     group.add(floor);
-    const add = (k: EngineKind, x: number, z: number, withStand: boolean, pivotY?: number) => {
+    const add = (k: EngineKind, x: number, z: number, withStand: boolean, pivotY?: number, yaw = 0) => {
       const e = buildEngine(k, detail);
       const py = pivotY ?? CLEAR - e.exitY;
       e.root.position.set(x, py, z);
+      e.root.rotation.y = yaw;
       e.root.traverse((o) => {
         const m = o as THREE.Mesh;
         if (m.isMesh) m.castShadow = m.receiveShadow = true;
@@ -103,8 +130,9 @@ export default function Dev() {
     };
     if (detail === 'cluster') {
       // seven engines in the booster layout under a plain thrust plate
-      const py = CLEAR - buildEngineExitY();
-      for (const l of S1_ENGINE_LAYOUT) add('E-1', l.x, l.z, false, py);
+      const py = CLEAR - engineDesign('E-1').exitY;
+      // outer engines turn their powerheads (+X) outward, as on the booster
+      for (const l of S1_ENGINE_LAYOUT) add('E-1', l.x, l.z, false, py, l.centre ? 0 : -Math.atan2(l.z, l.x));
       const plate = new THREE.Mesh(new THREE.CylinderGeometry(BODY_RADIUS, BODY_RADIUS, 0.08, 128), M('paintGraphite'));
       plate.position.set(0, py + 0.29, 0);
       plate.castShadow = plate.receiveShadow = true;
@@ -130,6 +158,7 @@ export default function Dev() {
   }, [setup]);
 
   useFrame(() => {
+    if (framing && director.hangarGoal.dist === SHARED_DEFAULT_DIST) applyFraming();
     const t = frame.decor;
     const anim = q.get('anim') === '1';
     const cut = anim ? 0.5 - 0.5 * Math.cos(Math.min(1, t / 6) * Math.PI) : num('cut', 0);
@@ -174,9 +203,4 @@ export default function Dev() {
       <primitive object={setup.group} />
     </>
   );
-}
-
-function buildEngineExitY(): number {
-  // E-1 exit plane below the pivot (matches the vehicle stations)
-  return -2.3;
 }

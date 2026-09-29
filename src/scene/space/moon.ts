@@ -40,7 +40,7 @@ void main() {
   vec3 v = normalize(-vP);
   float a = texture2D(uMap, vUv).r;
   // mosaic grey levels to normal albedo (mean lunar albedo about 0.12)
-  float albedo = a * 0.24 + 0.01;
+  float albedo = a * 0.5 + 0.01; // the sRGB-decoded mosaic averages about 0.2: mean albedo about 0.11
   float mu0 = max(dot(n, uSun), 0.0);
   float mu = max(dot(n, v), 0.0);
   float ls = mu0 / max(mu0 + mu, 1e-4);

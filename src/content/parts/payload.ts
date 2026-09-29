@@ -25,8 +25,8 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
     environment: `Launch loads, vibration and noise inside the fairing, then vacuum, sunlight and shadow every ${F.leoPeriod} in low orbit, radiation, and in low orbit the erosion of atomic oxygen.`,
     figures: [
       { label: 'Masses in this simulator', value: `${F.leoSatMass} (Earth observation), ${F.gtoSatMass} (geostationary communications), ${F.lunarProbeMass} (lunar probe)` },
-      { label: 'Orbit period at 400 km', value: F.leoPeriod, note: `${F.orbitsPerDay} orbits per day, computed` },
-      { label: 'Gravity at 400 km', value: `${F.gravityAt400} of the surface value`, note: 'Inverse-square law, computed' },
+      { label: `Orbit period at ${F.leoAlt}`, value: F.leoPeriod, note: `${F.orbitsPerDay} orbits per day, computed` },
+      { label: `Gravity at ${F.leoAlt}`, value: `${F.gravityAt400} of the surface value`, note: 'Inverse-square law, computed' },
     ],
     materials: mats('satellite-bus'),
     materialsWhy: 'The primary cone is aluminium 2219: strong, easy to machine and join, and a good path for heat. Equipment panels are carbon-fibre sandwich for stiffness per kilogram and dimensional stability. MLI blankets wrap the bus to control radiation heat flow.',
@@ -50,7 +50,7 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
     connections: ['satellite-bus', 'service-module', 'attitude-thrusters', 'antenna'],
     function: 'Convert sunlight into electricity for the spacecraft and charge the batteries that carry it through Earth\'s shadow.',
     how: 'Photovoltaic cells (multi-junction cells on modern spacecraft) turn a fraction of the sunlight into electrical power. After separation, release mechanisms free the folded panels and spring-driven hinges with dampers unfold them in sequence: yoke first, then panels. A drive then turns the wing to track the Sun as the spacecraft orbits.',
-    why: `Sunlight above the atmosphere delivers about 1,361 W/m² and never runs out, so it is the natural energy source near Earth. Arrays must be folded for launch to fit inside the fairing and survive vibration, and deployed in orbit to present a large area. In a ${F.leoAlt} orbit up to about ${F.eclipseMin} of each ${F.leoPeriod} orbit is in shadow (computed), so batteries must carry the load then.`,
+    why: `Sunlight above the atmosphere delivers about ${F.solarIrradiance} and never runs out, so it is the natural energy source near Earth. Arrays must be folded for launch to fit inside the fairing and survive vibration, and deployed in orbit to present a large area. In a ${F.leoAlt} orbit up to about ${F.eclipseMin} of each ${F.leoPeriod} orbit is in shadow (computed), so batteries must carry the load then.`,
     phases: [
       at('leo', 'arrays', 'Unfold in sequence and turn toward the Sun.'),
       at('station', 'capsule-sep', 'The service module\'s wings deploy after separation.'),
@@ -58,8 +58,8 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
     ],
     environment: 'Launch vibration while folded, then vacuum, full sunlight and deep cold in Earth\'s shadow, cycling every orbit; radiation that slowly degrades the cells; and deployment shocks.',
     figures: [
-      { label: 'Sunlight above the atmosphere', value: 'about 1,361 W/m²', note: 'Total solar irradiance (Kopp and Lean, 2011)' },
-      { label: 'Shadow per orbit at 400 km', value: `up to about ${F.eclipseMin}`, note: 'Computed' },
+      { label: 'Sunlight above the atmosphere', value: `about ${F.solarIrradiance}`, note: 'Total solar irradiance (Kopp and Lean, 2011)' },
+      { label: `Shadow per orbit at ${F.leoAlt}`, value: `up to about ${F.eclipseMin}`, note: 'Orbit plane containing the Sun direction, computed' },
     ],
     materials: mats('solar-arrays'),
     materialsWhy: 'Substrate panels are carbon-fibre sandwich: very stiff and light, so the wing stays flat and its first vibration frequency stays high, and carbon fibre\'s near-zero thermal expansion limits warping between sunlight and shadow.',
@@ -159,7 +159,7 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
       at('return', 'splashdown', 'Lands in the sea under three parachutes.'),
       at('suborbital', 'apogee', 'The research capsule floats over the top in free fall.'),
     ],
-    environment: `Launch loads, abort accelerations, vacuum, entry heating and several g of deceleration, parachute opening shocks, and water impact. At entry it carries about ${F.capsuleKE} of kinetic energy (${F.capsuleMass} at ${F.entrySpeed}, computed).`,
+    environment: `Launch loads, abort accelerations, vacuum, entry heating and several g of deceleration, parachute opening shocks, and water impact. At entry it carries about ${F.capsuleKE} of kinetic energy relative to the air (${F.capsuleMass} at ${F.entryAir}, computed).`,
     figures: [
       { label: 'Base diameter / height', value: `${F.capsuleDiameter} / ${F.capsuleHeight}` },
       { label: 'Sidewall angle', value: F.capsuleSidewall },
@@ -188,7 +188,7 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
     connections: ['capsule', 'backshell-tps', 'attitude-thrusters', 'parachutes'],
     function: 'Join the capsule to the station structurally and airtight so the crew can open the hatches, and later release it for the trip home.',
     how: `Soft capture: a ring on the capsule, carried on dampers, meets the station's ring; guide petals align the two and capture latches catch. The dampers absorb the small remaining relative motion. Hard capture: the soft ring retracts, drawing the capsule in until structural hooks around both rings close and compress the seals. After leak checks, the hatches open.`,
-    why: `Docking must tolerate small misalignments and relative velocities without large loads on either vehicle. The final closing speed in this mission is about 0.1 m/s or less, slower than a slow walk.`,
+    why: `Docking must tolerate small misalignments and relative velocities without large loads on either vehicle. The final closing speed in this mission is ${F.closingSpeed} or less, slower than a slow walk.`,
     phases: [
       at('station', 'approach', 'The nose cone opens and the ring is extended for the approach.'),
       at('station', 'docking', 'Soft capture, then hard capture.'),
@@ -196,7 +196,7 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
     ],
     environment: 'Vacuum and thermal cycling, small but precise contact loads at capture, and the full structural loads of two joined spacecraft afterwards; seals must hold cabin pressure for months.',
     figures: [
-      { label: 'Final closing speed', value: 'about 0.1 m/s or less', note: 'Mission target in this simulator' },
+      { label: 'Final closing speed', value: `${F.closingSpeed} or less`, note: 'Mission target in this simulator' },
     ],
     materials: mats('docking-system'),
     materialsWhy: 'The docking ring and latches are aluminium 2219: light, machinable to precise interfaces and stiff. Hooks and springs are stainless steel, strong and wear resistant where parts slide, latch and carry concentrated load.',
@@ -214,7 +214,7 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
 
   note({
     id: 'station',
-    summary: 'The orbital station the capsule visits: pressurized modules joined at a node, with a truss carrying large solar-array wings and radiators, in a 400 km circular orbit.',
+    summary: `The orbital station the capsule visits: pressurized modules joined at a node, with a truss carrying large solar-array wings and radiators, in a ${F.leoAlt} circular orbit.`,
     function: `It is the docking target. The station orbits at ${F.leoAlt} in the launch plane (inclination ${F.inclination}; the launch is timed so the pad lies in its plane), at about ${F.leoSpeed}, once every ${F.leoPeriod}. Its docking port faces straight down toward Earth, for an approach from below along the radial line.`,
     why: 'Rendezvous means matching the station\'s orbit exactly: same plane, same altitude, same place at the same time. A capsule cannot simply point at it and fly straight there; it must catch up by orbital mechanics.',
     materials: mats('station'),

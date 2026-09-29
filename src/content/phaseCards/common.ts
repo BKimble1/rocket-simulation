@@ -35,7 +35,7 @@ export function ascentCards(a: AscentContext): PhaseCard[] {
     card(m, 'pad', {
       what: `The K-1 stands on the launch mount with the ${a.payload} inside its fairing. RP-1 is loaded first, then liquid oxygen, which boils at ${F.loxBoil} and streams from the vents as white vapour; it is topped up continuously. In the final minutes the helium bottles are charged, the tanks are raised to flight pressure, LOX is bled through the engines to chill their pumps, the tower's arms swing back and the flight computer takes over the count.`,
       whyNow: `LOX cannot wait: it boils away all the time, so it is loaded last and kept topped up until the final minutes. ${a.padWhy}`,
-      parts: ['service-tower', 'launch-mount', 's1-lox-tank', 's1-fuel-tank', 's2-tanks', 'pressurization', 'avionics', 'fairing'],
+      parts: ['service-tower', 'launch-mount', 's1-lox-tank', 's1-fuel-tank', 's2-tanks', 'pressurization', 'avionics', 'fairing', 'sound-suppression'],
       forces: `The fuelled vehicle (${s.mass}) rests its weight of ${s.weight} on the hold-downs, and wind pushes on a ${F.vehicleHeight} tall stack. The tanks shrink as they chill, and frost forms on the thin LOX-tank wall, which has no foam insulation.`,
       next: 'With the tanks at flight pressure, the arms retracted and every system reporting ready, the computer starts the deluge water and then the engine start sequence.',
     }),
@@ -50,40 +50,40 @@ export function ascentCards(a: AscentContext): PhaseCard[] {
     card(m, 'liftoff', {
       what: `The clamps open and the vehicle rises, slowly at first: thrust exceeds weight only by a factor of ${s.tw}, so the net acceleration starts at about ${s.accel}. It climbs straight up past the ${F.towerHeight} service tower while the engine gimbals hold it upright against the wind.`,
       whyNow: 'Rising vertically first gets the vehicle clear of the tower and the pad quickly, before any turn could bring the plume or the vehicle close to the structure.',
-      parts: ['s1-engine-cluster', 'tvc-actuators', 'launch-mount', 'service-tower', 'sound-suppression', 'avionics'],
+      parts: ['s1-engine-cluster', 'thrust-structure', 'tvc-actuators', 'launch-mount', 'service-tower', 'sound-suppression', 'avionics'],
       forces: `Weight and thrust nearly balance at first, but the engines consume ${F.s1Mdot} of propellant, so the vehicle lightens and accelerates harder every second. Sound reflected from the ground is most intense in these first seconds; the vehicle is too slow for aerodynamic forces to matter yet.`,
       next: 'Once clear of the tower, guidance can start the turn toward the east.',
     }),
     card(m, 'pitchover', {
       what: 'A small, deliberate tilt toward the east (a pitch kick of a degree or two) starts the turn. From then on guidance keeps the nose pointed along the direction the vehicle is moving through the air, and gravity slowly bends the path toward horizontal: the gravity turn.',
       whyNow: `The turn must start early, while speed is low and a small tilt costs little. Every second spent climbing vertically loses about 9.8 m/s of speed to gravity without adding any of the sideways speed an orbit needs (${F.leoSpeed} at ${F.leoAlt}).`,
-      parts: ['tvc-actuators', 'avionics', 's1-engine-cluster'],
+      parts: ['tvc-actuators', 'avionics', 's1-engine-cluster', 'nozzle'],
       forces: `With the nose along the airflow the angle of attack stays near zero, so the long, thin vehicle feels little sideways aerodynamic load; gravity does the turning for free. Launching east also borrows Earth's rotation: ${F.earthRotationSpeed} at ${F.siteLat} (computed).`,
       next: 'Speed now rises quickly while the air is still fairly dense, so the aerodynamic pressure on the vehicle climbs toward its maximum.',
     }),
     card(m, 'maxq', {
-      what: 'The dynamic pressure q = ½·ρ·v² reaches its peak: air density is falling with altitude while speed is rising fast, and their product passes through a maximum. The engines throttle down through this region and back up afterward. The vehicle also passes the speed of sound around here.',
-      whyNow: 'Before this point the air is dense but the vehicle is slow; after it the vehicle is fast but the air is thin. Throttling down briefly caps the peak load, instead of making the whole structure heavier to carry a higher one.',
-      parts: ['s1-engine-cluster', 'fairing', 'interstage', 's1-intertank', 's1-lox-tank', 'tvc-actuators', 'avionics'],
-      forces: 'Peak aerodynamic pressure on the fairing and body, bending loads from wind gusts that the gimbals steer against, buffeting as the flow goes transonic, and heating of the fairing nose. The telemetry shows the maximum computed for this flight.',
+      what: `The dynamic pressure q = ½·ρ·v², the pressure of the oncoming air, climbs to its peak: speed is rising fast while air density falls with altitude, and their product passes through a maximum shortly after the vehicle passes the speed of sound. The engines throttle down to about ${F.throttleBucket} while q climbs steeply through the transonic region, then back up.`,
+      whyNow: 'Before this point the air is dense but the vehicle is slow; after it the vehicle is fast but the air is thin. Throttling down for a few seconds slows the gain in speed while the air is still dense, which lowers the peak load, instead of making the whole structure heavier to carry a higher one.',
+      parts: ['s1-engine-cluster', 'gas-generator', 'fairing', 'interstage', 's1-intertank', 's1-lox-tank', 'thrust-structure', 'tvc-actuators', 'avionics'],
+      forces: 'Peak aerodynamic pressure on the fairing and body, bending loads from wind gusts that the gimbals steer against, buffeting as the flow goes transonic, and heating of the fairing nose. The throttle is set through the gas generators (turbine power), not the main valves. The telemetry shows the peak computed for this flight.',
       next: 'Past the peak the engines return to full thrust. The air thins quickly, the plumes begin to widen, and the booster burns on toward cutoff.',
       equation: 'dynamic-pressure',
     }),
     card(m, 'meco', {
       what: a.recovery
-        ? 'All seven engines shut down, LOX valves first, with a reserve of propellant left in the tanks for the booster\'s return. The vehicle is above most of the atmosphere, moving fast and mostly sideways.'
-        : 'All seven engines shut down, LOX valves first, after burning almost all of their propellant. The vehicle is above most of the atmosphere, moving fast and mostly sideways.',
+        ? 'All seven engines shut down, LOX valves first, with a reserve of propellant left in the tanks for the booster\'s return. The vehicle is above almost all of the atmosphere, moving at several times the speed of sound and already faster sideways than upward.'
+        : 'All seven engines shut down, LOX valves first, after burning almost all of their propellant. The vehicle is above almost all of the atmosphere, moving at several times the speed of sound and already faster sideways than upward.',
       whyNow: a.recovery
         ? 'Cutoff is set by the propellant that must remain: the booster keeps enough for its boostback, entry and landing burns, so it stops earlier (lower and slower) than an expendable booster would, and the upper stage makes up the difference.'
         : `Without recovery the booster uses nearly all of its ${F.s1Prop} of propellant: every extra second of first-stage burn is speed the upper stage does not have to supply.`,
-      parts: ['s1-engine-cluster', 'main-valves', 'avionics', 's1-lox-tank', 's1-fuel-tank', 'base-heat-shield'],
+      parts: ['s1-engine-cluster', 'main-valves', 'avionics', 's1-lox-tank', 'lox-downcomer', 's1-fuel-tank', 'base-heat-shield'],
       forces: 'The vehicle is now much lighter than at liftoff, so acceleration is at its highest of the first-stage burn (guidance throttles to limit it). With the ambient pressure near zero the plumes balloon outward and heat the base. At cutoff the thrust vanishes and the compressed structure springs back.',
       next: 'A few seconds of coasting let the engines\' thrust die away completely, so the stages can separate cleanly.',
       equation: 'rocket-equation',
     }),
     card(m, 'staging', {
-      what: `The collets at the top of the interstage release and pneumatic pushers push the upper stage away at about walking pace. The upper stage slides out of the interstage: its nozzle has ${F.nozzleInsideInterstage} to travel before it is clear.${a.recovery ? ' The booster\'s cold-gas thrusters start turning it around for the trip home.' : ' The spent booster falls away into the ocean downrange.'}`,
-      whyNow: `Staging drops ${F.s1Dry} of empty booster structure. The rocket equation rewards it: carrying that mass on would cost the upper stage about ${s.carryBoosterLoss} of ideal velocity change on this mission (computed).`,
+      what: `The collets at the top of the interstage release and pneumatic pushers push the stages apart at about ${F.stageSepSpeed}, walking pace. The upper stage slides out of the interstage: its nozzle has ${F.nozzleInsideInterstage} to travel before it is clear.${a.recovery ? ' The booster\'s cold-gas thrusters start turning it around for the trip home.' : ' The spent booster falls away into the ocean downrange.'}`,
+      whyNow: `Staging drops ${s.boosterEmpty} of empty booster structure. The rocket equation rewards it: carrying that mass on would cost the upper stage about ${s.carryBoosterLoss} of ideal velocity change on this mission (computed).`,
       parts: ['stage-separation', 'interstage', 'vacuum-engine', 'avionics', 's2-rcs', ...recoveryParts],
       forces: 'For these seconds both stages are in free fall, so the propellant in the tanks floats. The push-off and the upper stage\'s small thrusters keep the stage steady and the propellant near the outlets.',
       next: 'Once the E-1V nozzle is clear of the interstage, the upper-stage engine can start without blasting the booster.',

@@ -454,11 +454,16 @@ export function offsetPolyline(pts: V2[], d: number): V2[] {
 
 // ───────────────────────────── small parts ─────────────────────────────
 
-/** Hex bolt head with washer, +Y up, base at y = 0. */
-export function hexBolt(size: number, height: number): THREE.BufferGeometry {
-  const washer = new THREE.CylinderGeometry(size * 0.62, size * 0.62, height * 0.22, 12);
+/** Hex bolt head with washer, +Y up, base at y = 0 (`light`: the hex head alone). */
+export function hexBolt(size: number, height: number, light = false): THREE.BufferGeometry {
+  if (light) {
+    const h = new THREE.CylinderGeometry(size * 0.5, size * 0.5, height * 0.8, 6, 1, false);
+    h.translate(0, height * 0.4, 0);
+    return h;
+  }
+  const washer = new THREE.CylinderGeometry(size * 0.62, size * 0.62, height * 0.22, 10);
   washer.translate(0, height * 0.11, 0);
-  const head = new THREE.CylinderGeometry(size * 0.5, size * 0.5, height * 0.7, 6);
+  const head = new THREE.CylinderGeometry(size * 0.5, size * 0.5, height * 0.7, 6, 1, false);
   head.translate(0, height * 0.22 + height * 0.35, 0);
   const g = merge([washer, head]);
   washer.dispose();
@@ -573,7 +578,7 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
   const roOf = (i: number) => (typeof o.ro === 'number' ? o.ro : o.ro(i / Math.max(1, F - 1)));
   const riOf = (i: number) => (o.ri === undefined ? 0 : typeof o.ri === 'number' ? o.ri : o.ri(i / Math.max(1, F - 1)));
   const hollow = o.ri !== undefined && o.ri !== 0;
-  const M = Math.max(6, o.segs);
+  const MF = Math.max(6, o.segs);
   const TAU = Math.PI * 2;
   const make = (side: 1 | -1): SweepResult => {
     const surf = new Buf();
@@ -604,13 +609,22 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
       else buf.idx.push(a, c, b);
     };
     let run: number[] = [];
+    // segments of the kept arc: proportional to the widest arc of the run (a half pipe gets
+    // half the segments of a whole one, so the two halves together match an uncut pipe)
+    let M = MF;
     const flush = () => {
       if (run.length < 2) {
         run = [];
         return;
       }
-      const cols = M + 1;
-      const surface = (radius: (i: number) => number, s: 1 | -1) => {
+      let widest = 0;
+      for (const i of run) {
+        const a = arcOf(frames[i], roOf(i));
+        if (a) widest = Math.max(widest, a.a1 - a.a0);
+      }
+      M = Math.max(4, Math.ceil((MF * widest) / TAU - 1e-6));
+      const surface = (radius: (i: number) => number, s: 1 | -1, M: number) => {
+        const cols = M + 1;
         const base = surf.count;
         for (const i of run) {
           const f = frames[i];
@@ -637,8 +651,9 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
             tri(surf, a + 1, a + cols + 1, a + cols, nrm);
           }
       };
-      surface(roOf, 1);
-      if (hollow) surface(riOf, -1);
+      surface(roOf, 1, M);
+      // the bore is seen only at cut ends and openings: half the segments do
+      if (hollow) surface(riOf, -1, Math.max(4, Math.ceil(M / 2)));
       // section strips in the plane: two strips per ring, [outer end -> inner end] on each side,
       // or both halves of the chord when the plane misses the bore (or for a solid rod)
       if (o.clipZ !== undefined) {

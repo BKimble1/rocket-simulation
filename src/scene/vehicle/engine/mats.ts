@@ -154,11 +154,11 @@ function tubeColor(): THREE.Texture {
   grad.addColorStop(1, '#3a3633');
   g.fillStyle = grad;
   g.fillRect(0, 0, W, H);
-  // faint per-tube variation (streaks along V)
+  // faint per-tube variation (one streak per tube, 8 tubes across the tile, along V)
   const r = rng(9);
-  for (let x = 0; x < W; x++) {
-    g.fillStyle = `rgba(${r() < 0.5 ? '255,240,220' : '40,30,25'},${0.015 + r() * 0.025})`;
-    g.fillRect(x, 0, 1, H);
+  for (let x = 0; x < W; x += W / 8) {
+    g.fillStyle = `rgba(${r() < 0.5 ? '255,240,220' : '40,30,25'},${0.02 + r() * 0.03})`;
+    g.fillRect(x, 0, W / 8, H);
   }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = THREE.RepeatWrapping;
@@ -378,7 +378,7 @@ export function baseMaterial(k: EMat): THREE.Material {
     case 'machined':
       return once(k, () => std({ color: '#b3ab9f', roughness: 0.24, metalness: 1, normalMap: brushedNormal(), normalScale: new THREE.Vector2(0.15, 0.15) }));
     case 'tubes':
-      return once(k, () => std({ color: '#ffffff', map: tubeColor(), roughness: 0.42, metalness: 1, normalMap: tubeNormal(), normalScale: new THREE.Vector2(0.7, 0.7), roughnessMap: roughnessNoise(37, 0.25) }));
+      return once(k, () => patchTubes(std({ color: '#ffffff', map: tubeColor(), roughness: 0.42, metalness: 1, normalMap: tubeNormal(), normalScale: new THREE.Vector2(0.7, 0.7), roughnessMap: roughnessNoise(37, 0.25) })));
     case 'stainless':
       return M('stainless');
     case 'steel':
@@ -415,6 +415,26 @@ export function baseMaterial(k: EMat): THREE.Material {
   }
 }
 
+/**
+ * The brazed-tube relief fades out where a tube covers less than about three pixels: past that
+ * the normal map only makes moire rings; full relief from about 10 px per tube (mipmapping alone does not remove them on a bell seen
+ * from metres away). The tubes stay visible as long as they are resolvable.
+ */
+function patchTubes(m: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace(
+      '#include <normal_fragment_maps>',
+      THREE.ShaderChunk.normal_fragment_maps.replace(
+        'mapN.xy *= normalScale;',
+        // 8 tubes per texture repeat across u
+        'mapN.xy *= normalScale * (1.0 - smoothstep(0.1, 0.26, fwidth(vNormalMapUv.x) * 8.0));',
+      ),
+    );
+  };
+  m.customProgramCacheKey = () => 'engine-tubes-aa';
+  return m;
+}
+
 export function hatchMaterial(f: HatchFamily): THREE.Material {
   return once(`hatch-${f}`, () => {
     const t = hatch(f);
@@ -447,11 +467,12 @@ function patchGlow(m: THREE.MeshStandardMaterial, uniform: { value: number }) {
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
         {
-          // brightest at the joint (about 1400 K), dimming toward the exit (dark red)
+          // radiatively cooled niobium: brightest just below the joint (about 1300 K, a dark
+          // red-orange), dimming toward the exit (dull red, then nothing visible)
           float t = clamp(vGlowT, 0.0, 1.0);
-          float hot = exp(-3.2 * t);
-          vec3 c = mix(vec3(0.55, 0.05, 0.01), vec3(1.0, 0.36, 0.08), hot);
-          totalEmissiveRadiance += c * (hot * 2.6 + 0.18) * uGlow;
+          float hot = exp(-4.6 * t);
+          vec3 c = mix(vec3(0.42, 0.035, 0.008), vec3(0.95, 0.24, 0.04), hot);
+          totalEmissiveRadiance += c * hot * 1.25 * uGlow;
         }`,
       );
   };
@@ -460,6 +481,7 @@ function patchGlow(m: THREE.MeshStandardMaterial, uniform: { value: number }) {
 
 export function engineMaterialSet(): MaterialSet {
   const fades = new Map<string, THREE.Material>();
+  const fadeList: THREE.Material[] = [];
   const owned: THREE.Material[] = [];
   const ownedTex: THREE.Texture[] = [];
   const glow = { value: 0 };
@@ -479,9 +501,16 @@ export function engineMaterialSet(): MaterialSet {
     if (!m) {
       m = src.clone();
       if (src === niobium) patchGlow(m as THREE.MeshStandardMaterial, glow);
-      m.transparent = fade < 1;
+      if (key === 'tubes') patchTubes(m as THREE.MeshStandardMaterial);
+      // always blended (opacity 1 when intact): toggling `transparent` later would not
+      // recompile the program, so the fade would pop instead of dissolving
+      m.transparent = true;
       m.opacity = fade;
+      m.depthWrite = fade > 0.5;
+      // one pass for double-sided section faces while they fade (not two)
+      m.forceSinglePass = true;
       fades.set(key, m);
+      fadeList.push(m);
       owned.push(m);
     }
     return m;
@@ -497,10 +526,9 @@ export function engineMaterialSet(): MaterialSet {
     setFade(o) {
       if (o === fade) return;
       fade = o;
-      for (const m of fades.values()) {
-        m.opacity = o;
-        m.transparent = o < 0.999;
-        m.depthWrite = o > 0.5;
+      for (let i = 0; i < fadeList.length; i++) {
+        fadeList[i].opacity = o;
+        fadeList[i].depthWrite = o > 0.5;
       }
     },
     setGlow(g) {
@@ -531,6 +559,7 @@ export function engineMaterialSet(): MaterialSet {
       owned.length = 0;
       ownedTex.length = 0;
       fades.clear();
+      fadeList.length = 0;
     },
   };
 }

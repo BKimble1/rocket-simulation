@@ -3,7 +3,7 @@
  * in-orbit burns integrated with RK4 (prograde or along a steering direction) with an exact
  * cutoff on a target, and small helpers (orbital elements in km, local-horizontal attitude).
  */
-import { MU_EARTH, R_EARTH } from '../../world/frames';
+import { EARTH_AXIS, MU_EARTH, R_EARTH } from '../../world/frames';
 import { Craft, type AttitudeCmd } from './craft';
 import type { Ctx } from './context';
 import { elements, kepler } from './kepler';
@@ -148,5 +148,12 @@ export function horizontal(r: V3, v: V3): V3 {
 }
 
 export const ORBIT_RATE = { wMax: 2 * DEG, aMax: 0.5 * DEG };
+
+/** Inclination of the orbit through (r, v) to the Earth's equator (deg). */
+export function incToEquator(r: V3, v: V3): number {
+  const h = vnorm(vcross(r, v));
+  const c = h.x * EARTH_AXIS.x + h.y * EARTH_AXIS.y + h.z * EARTH_AXIS.z;
+  return (Math.acos(clamp(c, -1, 1)) * 180) / Math.PI;
+}
 
 export { vdot, vlen };

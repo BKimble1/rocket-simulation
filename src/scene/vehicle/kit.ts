@@ -11,6 +11,7 @@ import type { BodyId, PartId } from '../../vehicle/parts';
 import type { MaterialId } from '../../content/materials/ids';
 import { mergeAll, normalize, capFromPoly, capStrip, type P2 } from './geom';
 import type { Look, VehicleMats } from './mats';
+import { lockNoCast } from './instancing';
 
 export type Detail = 'hangar' | 'flight';
 
@@ -213,8 +214,10 @@ export class Kit {
       if (b.spec.cut && this.hangar) material = this.mats.clip(material);
       const mesh = new THREE.Mesh(geom, material);
       mesh.name = `${b.spec.part}:${b.spec.look}`;
+      // flush details and decals never cast (kept even if an integration enables shadows on every mesh)
       mesh.castShadow = b.spec.shadow !== false && !b.spec.noCast;
-      mesh.receiveShadow = b.spec.shadow !== false;
+      mesh.receiveShadow = true;
+      if (!mesh.castShadow) lockNoCast(mesh);
       mesh.visible = !b.spec.internal;
       b.target.add(mesh);
       this.register(mesh, { part: b.spec.part, mat: b.spec.mat, kind: 'solid', cut: !!b.spec.cut && this.hangar, internal: !!b.spec.internal, base: material, body: b.body });
@@ -231,6 +234,7 @@ export class Kit {
         const mesh = new THREE.Mesh(geom, material);
         mesh.name = `cap:${c.part}:${c.look}`;
         mesh.castShadow = false;
+        lockNoCast(mesh);
         mesh.receiveShadow = true;
         c.section.caps[k].add(mesh);
         this.register(mesh, { part: c.part, mat: c.mat, kind: 'cap', cut: false, internal: false, base: material, body: c.section.body });

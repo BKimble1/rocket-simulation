@@ -1,13 +1,16 @@
 /**
  * Light inside the engine for demonstrations: combustion glow in the chamber and nozzle and
  * inside the gas generator (drawn in the back half, so it is seen only through the section),
- * and the brief green TEA-TEB ignition flash (inside the chamber and at the nozzle exit).
+ * the dull fuel-rich glow in the mouth of the turbine exhaust duct while the gas generator
+ * runs (seen without the section), and the brief green TEA-TEB ignition flash (inside the
+ * chamber and at the nozzle exit).
  */
 import * as THREE from 'three';
 import { radiusAt } from './contour';
 import type { Design } from './design';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BACK, revolve, type V2 } from './geo';
-import { TP } from './layout';
+import { TP, routes } from './layout';
 import type { EngineOperating } from './types';
 
 const smooth = (a: number, b: number, x: number) => {
@@ -38,7 +41,7 @@ export function buildGlow(d: Design, segs: number) {
   const L = x1;
   const prof = (f: number): V2[] => {
     const out: V2[] = [];
-    const n = 80;
+    const n = 44;
     for (let i = 0; i <= n; i++) {
       const x = x0 + ((x1 - x0) * i) / n;
       out.push([radiusAt(d.contour, x) * f, d.y(x)]);
@@ -66,7 +69,7 @@ export function buildGlow(d: Design, segs: number) {
     [0.049, -0.66],
     [0.049, -0.855],
   ];
-  const ggGeo = colored(revolve([{ pts: ggPts, open: true }], BACK[0], BACK[1], 48, { centre: new THREE.Vector3(d.tpX, 0, 0) }).surf!, (y) => {
+  const ggGeo = colored(revolve([{ pts: ggPts, open: true }], BACK[0], BACK[1], 32, { centre: new THREE.Vector3(d.tpX, 0, 0) }).surf!, (y) => {
     const t = (y - TP.ggHeadY) / (TP.ggTop - TP.ggHeadY);
     return [0.95 - 0.3 * t, 0.36 - 0.12 * t, 0.1];
   });
@@ -74,22 +77,51 @@ export function buildGlow(d: Design, segs: number) {
   const ggGlow = new THREE.Mesh(ggGeo, ggMat);
   group.add(ggGlow);
 
-  // ignition flash at the exit (green TEA-TEB light spilling out of the nozzle)
+  // ignition flash at the exit: green TEA-TEB light filling the exit and a short puff below it.
+  // Normal blending with per-vertex alpha (additive light would wash out to white against the
+  // pale hangar), so it reads green on any background.
   const er = d.exitR;
-  const flashPts: V2[] = [];
-  for (let i = 0; i <= 12; i++) {
-    const t = i / 12;
-    flashPts.push([er * (0.97 - 0.55 * t * t), d.exitY - t * er * 0.9]);
+  const rgba = (g: THREE.BufferGeometry, alpha: (r: number, y: number) => number) => {
+    const p = g.attributes.position;
+    const c = new Float32Array(p.count * 4);
+    for (let i = 0; i < p.count; i++) {
+      const r = Math.hypot(p.getX(i), p.getZ(i));
+      c.set([0.36, 1.0, 0.52, alpha(r, p.getY(i))], i * 4);
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 4));
+    return g;
+  };
+  const disc = rgba(revolve([{ pts: [[0.001, d.exitY + 0.02], [er * 0.97, d.exitY + 0.02]], open: true }], 0, Math.PI * 2, 48).surf!, (r) => 0.85 - 0.4 * (r / er));
+  const puffPts: V2[] = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    puffPts.push([Math.max(0.001, er * (0.95 - 0.8 * t * t)), d.exitY - t * er * 0.75]);
   }
-  const flashGeo = colored(revolve([{ pts: flashPts, open: true }], 0, Math.PI * 2, segs).surf!, (y) => {
-    const t = (d.exitY - y) / (er * 0.9);
-    const k = 1 - t;
-    return [0.25 * k, 0.9 * k, 0.4 * k];
-  });
-  const flashMat = mat();
+  const puff = rgba(revolve([{ pts: puffPts, open: true }], 0, Math.PI * 2, 48).surf!, (_r, y) => 0.5 * (1 - Math.min(1, (d.exitY - y) / (er * 0.75))));
+  // (mergeGeometries directly: the kit's merge() keeps only position, normal and uv)
+  const flashGeo = mergeGeometries([disc, puff], false)!;
+  disc.dispose();
+  puff.dispose();
+  const flashMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
   const flash = new THREE.Mesh(flashGeo, flashMat);
+  flash.renderOrder = 6;
   group.add(flash);
-  for (const m of [wall, core, ggGlow, flash]) m.visible = false;
+  // turbine exhaust mouth: fuel-rich gas (about 900 K) glows dull red-orange inside the lip
+  const ex = routes(d).exhaust;
+  const out = ex[ex.length - 1];
+  const mouthPts: V2[] = [
+    [0.001, out.y + 0.05],
+    [TP.exhaustR - 0.006, out.y - 0.005],
+    [TP.exhaustR + 0.004, out.y - 0.04],
+  ];
+  const mouthGeo = colored(revolve([{ pts: mouthPts, open: true }], 0, Math.PI * 2, 24, { centre: new THREE.Vector3(out.x, 0, out.z) }).surf!, (y) => {
+    const t = Math.min(1, Math.max(0, (out.y + 0.05 - y) / 0.09));
+    return [0.85 * (1 - 0.6 * t), 0.26 * (1 - 0.7 * t), 0.06 * (1 - t)];
+  });
+  const mouthMat = mat();
+  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+  group.add(mouth);
+  for (const m of [wall, core, ggGlow, flash, mouth]) m.visible = false;
 
   const green = new THREE.Color(0.38, 1, 0.5);
   const white = new THREE.Color(1, 1, 1);
@@ -108,11 +140,13 @@ export function buildGlow(d: Design, segs: number) {
       wall.visible = core.visible = a > 0.005;
       ggMat.opacity = o.gg ? open : 0;
       ggGlow.visible = ggMat.opacity > 0.005;
-      flashMat.opacity = ig * 0.9;
+      mouthMat.opacity = o.gg ? 0.9 : 0;
+      mouth.visible = o.gg;
+      flashMat.opacity = ig;
       flash.visible = ig > 0.005;
     },
     dispose() {
-      for (const m of [wall, core, ggGlow, flash]) {
+      for (const m of [wall, core, ggGlow, flash, mouth]) {
         m.geometry.dispose();
         (m.material as THREE.Material).dispose();
       }

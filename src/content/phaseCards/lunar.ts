@@ -10,7 +10,7 @@ export const LUNAR_CARDS: PhaseCard[] = [
     payload: `lunar flyby probe (${F.lunarProbeMass})`,
     recovery: false,
     s2TW: F.s2IgnitionTWLunar,
-    padWhy: 'The launch time is set by the Moon: the departure burn later has to send the probe to where the Moon will be about three days afterwards, so the launch is timed for that geometry (a simplification this simulator states).',
+    padWhy: 'The launch time is set by the Moon: the parking orbit must be lined up so that a burn from it can reach the place where the Moon will be about three days later. In this simulator the Moon\'s orbit is placed in the plane of the launch, a simplification that makes the geometry easy to see.',
     upperNext: 'Within a short time the air is thin enough for the fairing to come off.',
   }),
   card('lunar', 'fairing', {
@@ -21,7 +21,7 @@ export const LUNAR_CARDS: PhaseCard[] = [
     next: 'The upper stage burns on to a low parking orbit.',
   }),
   card('lunar', 'parking', {
-    what: `The E-1V burns to a low parking orbit about 200 km up and shuts down, moving at about ${F.parkingSpeed} (computed).`,
+    what: `The E-1V burns to a low parking orbit about ${F.parkingAlt} up and shuts down, moving at about ${F.parkingSpeed} (computed).`,
     whyNow: 'From a parking orbit the stage can wait for the right moment and place for the departure burn, instead of having to leave directly from the end of the ascent.',
     parts: ['vacuum-engine', 'nozzle-extension', 's2-tanks', 'avionics', 'main-valves'],
     forces: 'Thrust on a lightening stage, then free fall in orbit.',
@@ -47,12 +47,12 @@ export const LUNAR_CARDS: PhaseCard[] = [
   card('lunar', 'probe-sep', {
     what: `The clamp band releases and springs push the ${F.lunarProbeMass} probe away; the stage then moves off onto its own path.`,
     whyNow: 'The stage has no further job; the probe must fly on with its own power, attitude control and radio.',
-    parts: ['payload-adapter', 'satellite-bus', 'attitude-thrusters', 'avionics'],
-    forces: 'A gentle push of a few tenths of a metre per second; the probe then stabilizes its attitude.',
+    parts: ['payload-adapter', 'satellite-bus', 'attitude-thrusters', 's2-rcs', 'avionics'],
+    forces: `A gentle push of about ${F.payloadSepSpeed}; the probe then stabilizes its attitude.`,
     next: 'The probe begins its three-day coast toward the Moon.',
   }),
   card('lunar', 'cruise', {
-    what: 'The probe coasts outward for about three days, turning its array to the Sun and its antenna to Earth. The long coast is shown accelerated.',
+    what: 'The probe coasts outward for about three days, turning its array to the Sun and its antenna to Earth. The long coast is compressed in the playback: partly sped up, partly skipped (the playback bar says which).',
     whyNow: 'Nothing needs to be done but wait: the departure burn set the path. Small correction burns (not modelled) would trim it.',
     parts: ['satellite-bus', 'solar-arrays', 'antenna', 'attitude-thrusters', 'mli-blankets'],
     forces: `Earth's gravity slows the probe continuously as it climbs, from about ${F.tliSpeed} to only a few hundred metres per second relative to Earth by the Moon's distance, while the Moon moves along its own orbit at about ${F.moonSpeed} (computed).`,
@@ -63,7 +63,7 @@ export const LUNAR_CARDS: PhaseCard[] = [
     what: `The probe crosses into the Moon's sphere of influence, about ${F.soiRadius} from the Moon (computed from the Earth-Moon mass ratio): the region where it is more useful to describe the probe's motion relative to the Moon than to Earth.`,
     whyNow: 'The probe and the Moon are arriving at the same place at the same time, as the departure burn arranged.',
     parts: ['satellite-bus', 'antenna', 'attitude-thrusters'],
-    forces: 'Both Earth and Moon pull on the probe; the boundary is a modelling convenience, not a physical wall. Relative to the Moon the probe is now falling in fast.',
+    forces: `Both Earth and Moon pull on the probe; the boundary is a modelling convenience, not a physical wall. Near the top of its path the probe is moving slowly relative to Earth, while the Moon moves along its orbit at about ${F.moonSpeed}, so the Moon catches up with the slow probe: relative to the Moon, the probe approaches at a large fraction of that speed and speeds up as it falls in.`,
     next: 'The probe swings past the Moon at its closest approach.',
     equation: 'orbital-speed',
   }),

@@ -186,7 +186,7 @@ export function buildRoads(maps: SiteMaps): THREE.Group {
     mesh.frustumCulled = false;
     group.add(mesh);
   };
-  add(bank, SM('embankment'), 'road-embankments');
+  add(bank, SM('soil'), 'road-embankments');
   add(asphalt, SM('asphalt'), 'roads-asphalt');
   add(concrete, SM('concreteRoad'), 'roads-concrete');
   add(paint, SM('roadPaint'), 'road-markings');

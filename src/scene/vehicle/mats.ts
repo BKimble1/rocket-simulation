@@ -141,10 +141,10 @@ float skinFade = 1.0 - smoothstep(0.01, 0.06, length(fwidth(vVeh.xyz)));
     float patchN = vfbm(sp * vec3(1.1, 0.42, 1.1));
     float streak = vnoise(vec3(sp.x * 8.0, sp.y * 0.55, sp.z * 8.0));
     float fine = vnoise(sp * 70.0) * skinFade;
-    // heavier near the bottom of each band (cold liquid stays longest), thinner in the ullage
-    float cover = smoothstep(0.34, 0.72, patchN * 0.75 + streak * 0.42 + (fm - 0.55) * 0.95);
-    skinFrostM = clamp(cover * (0.55 + 0.45 * fm), 0.0, 1.0);
-    vec3 frostCol = mix(vec3(0.80, 0.86, 0.91), vec3(0.985, 0.99, 1.0), clamp(fine * 0.7 + streak * 0.45, 0.0, 1.0));
+    // patchy, thin frost in vertical streaks: bare paint (and the livery) shows between patches
+    float cover = smoothstep(0.42, 0.8, patchN * 0.8 + streak * 0.45 + (fm - 1.0) * 0.7);
+    skinFrostM = clamp(cover * (0.3 + 0.4 * fm) + fine * 0.06 * fm, 0.0, 0.72);
+    vec3 frostCol = mix(vec3(0.76, 0.83, 0.9), vec3(0.985, 0.99, 1.0), clamp(fine * 0.7 + streak * 0.45, 0.0, 1.0));
     diffuseColor.rgb = mix(diffuseColor.rgb, frostCol, skinFrostM);
   }
 #endif
@@ -183,7 +183,7 @@ const SKIN_NORMAL = /* glsl */ `
 
 const SKIN_CLEARCOAT = /* glsl */ `
 #ifdef USE_CLEARCOAT
-material.clearcoat *= (1.0 - skinFrostM) * (1.0 - 0.8 * skinSootM);
+material.clearcoat *= (1.0 - skinFrostM) * (1.0 - skinSootM);
 #endif
 `;
 
@@ -331,6 +331,16 @@ export class VehicleMats {
         m.color.set('#1b1c1f');
         m.clearcoat = 0.35;
         m.roughness = 0.42;
+        // leg lofts carry u = 0..1 round the section (about 3 m of perimeter), v in metres: a fine
+        // twill of about 8 mm cells, faint (it only reads at close range)
+        if (m.normalMap) {
+          const nm = m.normalMap.clone();
+          nm.repeat.set(48, 16);
+          nm.needsUpdate = true;
+          m.normalMap = nm;
+          m.normalScale.set(0.12, 0.12);
+          this.ownedTex.push(nm);
+        }
         this.skin(m, { soot: true });
         return m;
       }
@@ -425,6 +435,14 @@ export class VehicleMats {
         t.needsUpdate = true;
         this.ownedTex.push(t);
         return this.own(new THREE.MeshStandardMaterial({ color: '#ffffff', map: t, roughness: 0.55, metalness: 0.5 }));
+      }
+      case 'loxCap':
+      case 'rp1Cap': {
+        // liquid cut faces: seen from either side of the wedge planes
+        const m = this.own(cloneMat(this.get(look === 'loxCap' ? 'lox' : 'rp1')));
+        m.side = THREE.DoubleSide;
+        m.opacity = Math.min(1, m.opacity + 0.12);
+        return m;
       }
       case 'lox':
         return this.own(

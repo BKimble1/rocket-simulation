@@ -162,6 +162,8 @@ export function liquid(t: TankGeom, mass: number): { level: number; centroid: nu
 export interface MassItem {
   m: number;
   c: V3;
+  /** Which body the item belongs to (used when a stack splits). */
+  tag?: BodyId;
 }
 
 const MR1 = E1.mixtureRatio;
@@ -171,18 +173,18 @@ const MR2 = E1V.mixtureRatio;
 export function boosterDry(recovery: boolean): MassItem[] {
   const engines = S1.engineCount * E1.mass;
   const items: MassItem[] = [
-    { m: engines, c: v3(0, 1.6, 0) },
-    { m: S1.dry - engines, c: v3(0, 21.0, 0) },
+    { m: engines, c: v3(0, 1.6, 0), tag: 'booster' },
+    { m: S1.dry - engines, c: v3(0, 21.0, 0), tag: 'booster' },
   ];
-  if (recovery) items.push({ m: LEGS.mass, c: v3(0, LEGS.hingeY + LEGS.stowedLength / 2, 0) });
+  if (recovery) items.push({ m: LEGS.mass, c: v3(0, LEGS.hingeY + LEGS.stowedLength / 2, 0), tag: 'booster' });
   return items;
 }
 
 /** Upper-stage dry mass items (engine low, structure mid-stage, adapter included). */
 export function upperDry(): MassItem[] {
   return [
-    { m: E1V.mass, c: v3(0, 43.0, 0) },
-    { m: S2.dry - E1V.mass, c: v3(0, 49.2, 0) },
+    { m: E1V.mass, c: v3(0, 43.0, 0), tag: 'upper' },
+    { m: S2.dry - E1V.mass, c: v3(0, 49.2, 0), tag: 'upper' },
   ];
 }
 
@@ -197,7 +199,7 @@ export function fairingHalf(side: 'A' | 'B', open: number): MassItem {
   const a = s * FAIRING_OPEN_ANGLE * open;
   const dy = com.y - hinge.y;
   const dz = com.z - hinge.z;
-  return { m: FAIRING.mass / 2, c: v3(0, hinge.y + dy * Math.cos(a) - dz * Math.sin(a), hinge.z + dy * Math.sin(a) + dz * Math.cos(a)) };
+  return { m: FAIRING.mass / 2, c: v3(0, hinge.y + dy * Math.cos(a) - dz * Math.sin(a), hinge.z + dy * Math.sin(a) + dz * Math.cos(a)), tag: side === 'A' ? 'fairingA' : 'fairingB' };
 }
 export const FAIRING_OPEN_ANGLE = (25 * Math.PI) / 180;
 
@@ -211,18 +213,18 @@ export const PAYLOAD_COM: Record<PayloadId, V3> = {
 };
 
 /** Crew-vehicle bodies (station mission and return). */
-export const CAPSULE_ITEM: MassItem = { m: CAPSULE.mass, c: v3(0, MOUNT_Y.upperStage + SERVICE_MODULE.length + 1.05, 0) };
+export const CAPSULE_ITEM: MassItem = { m: CAPSULE.mass, c: v3(0, MOUNT_Y.upperStage + SERVICE_MODULE.length + 1.05, 0), tag: 'capsule' };
 /** Service module: dry + propellant counted separately (propellant for phasing, deorbit). */
 export const SM_DRY = 2600;
 export const SM_PROP_FULL = SERVICE_MODULE.mass - SM_DRY;
 /** Service-module propellant at launch (full). */
 export const SM_PROP_LAUNCH = SM_PROP_FULL;
 export const SM_COM = v3(0, MOUNT_Y.upperStage + SERVICE_MODULE.length / 2, 0);
-export const LES_ITEM: MassItem = { m: ABORT_TOWER.mass, c: v3(0, MOUNT_Y.upperStage + SERVICE_MODULE.length + CAPSULE.height + 2.6, 0) };
+export const LES_ITEM: MassItem = { m: ABORT_TOWER.mass, c: v3(0, MOUNT_Y.upperStage + SERVICE_MODULE.length + CAPSULE.height + 2.6, 0), tag: 'les' };
 export const LES_JETTISON_PROP = ENG_LES_JETTISON.mdot * 1.5;
 
 /** Research capsule and its adapter (suborbital). */
-export const RESEARCH_CAPSULE_ITEM: MassItem = { m: PAYLOADS.researchCapsule.mass, c: PAYLOAD_COM.researchCapsule };
+export const RESEARCH_CAPSULE_ITEM: MassItem = { m: PAYLOADS.researchCapsule.mass, c: PAYLOAD_COM.researchCapsule, tag: 'capsule' };
 
 /** First-stage propellant items (LOX and RP-1 at their liquid centroids). */
 export function s1PropItems(prop: number): MassItem[] {
@@ -262,10 +264,17 @@ export const areaOf = (d: number) => Math.PI * (d / 2) ** 2;
 /** Height of the first-stage nozzle exit above the ground when standing on deployed legs (m). */
 export const LANDED_NOZZLE_HEIGHT = -(LEGS.hingeY + LEGS.stowedLength * Math.cos((LEGS.deployedAngleDeg * Math.PI) / 180));
 
-/** Capsule docking-port centre (model frame y, capsule on the stack), estimated from spec heights. */
-export const CAPSULE_DOCK_Y = MOUNT_Y.upperStage + SERVICE_MODULE.length + CAPSULE.height + 0.35;
-/** Station nadir docking port, station frame (estimated: the node's nadir port below the centre). */
-export const STATION_DOCK = v3(0, -3.0, 0);
+/**
+ * Capsule docking-port face (model frame y, capsule on the stack): the heat-shield nadir sits
+ * 0.39 m below the service module's top ring (spherical shield of radius 4.6 m meeting r = 1.85 m)
+ * and the docking ring face is 3.15 m above the nadir, as in the spacecraft model
+ * (scene/spacecraft/capsule.ts, whose anchors are only available at render time).
+ */
+export const CAPSULE_DOCK_Y = MOUNT_Y.upperStage + SERVICE_MODULE.length - 0.39 + 3.15;
+/** Station nadir docking port face, station frame (scene/spacecraft/station.ts anchors.dockPort). */
+export const STATION_DOCK = v3(0, -3.24, 0);
+/** Station mass (kg), illustrative (only telemetry uses it). */
+export const STATION_MASS = 420_000;
 
 /** Body lengths (m) for the pitch moment of inertia used by the gimbal channels. */
 export const BODY_LENGTH: Partial<Record<BodyId, number>> = { booster: S1.length, upper: STATIONS.fairingTip - STATIONS.interstageTop };

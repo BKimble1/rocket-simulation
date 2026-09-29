@@ -181,7 +181,8 @@ float coastSdf( vec2 p ) {
 // ── towns: blocks, streets, roofs and yard trees; a mottled average when sub-pixel ──
 vec3 townColor( vec2 p, float px, vec3 land ) {
   float dens = 0.5 + 0.5 * fbmS( p, 420.0, 3, 47, px );
-  vec3 avg = mix( land, srgbC( 86.0, 86.0, 82.0 ), 0.45 + 0.35 * dens );
+  // seen from altitude a Florida town is mostly tree canopy and lawns with grey roofs and streets
+  vec3 avg = mix( land, srgbC( 78.0, 80.0, 72.0 ), 0.22 + 0.3 * dens ) * ( 0.9 + 0.18 * fbmS( p, 260.0, 2, 48, px ) );
   if ( px > 70.0 ) return avg;
   vec2 q = p / 118.0;
   vec2 cell = floor( q );
@@ -211,6 +212,14 @@ vec3 landAlbedo( vec2 p, float sdf, vec3 cov, float px, out float rough ) {
   vec3 c = mix( scrub, flatwoods, smoothstep( -0.15, 0.4, n1 ) );
   c = mix( c, dry, smoothstep( 0.2, 0.75, n2 ) * 0.45 );
   c *= 0.86 + 0.22 * n3 + 0.12 * n4;
+  // close up, the scrub breaks into clumps with shadowed cores and pale sandy gaps
+  float fine = 1.0 - smoothstep( 0.8, 5.0, px );
+  if ( fine > 0.0 ) {
+    float clump = vnoise( p / 2.1, 51 ) * 0.6 + vnoise( p / 0.8, 52 ) * 0.4;
+    float gap = smoothstep( 0.66, 0.86, vnoise( p / 4.5, 53 ) * 0.6 + vnoise( p / 1.3, 54 ) * 0.4 );
+    c = mix( c, c * ( 0.55 + 0.75 * clump ), fine );
+    c = mix( c, srgbC( 128.0, 118.0, 94.0 ) * ( 0.9 + 0.2 * clump ), gap * 0.35 * fine * ( 1.0 - cov.g ) );
+  }
   rough = 0.95;
   // marsh and wet prairie
   vec3 marsh = mix( srgbC( 88.0, 86.0, 56.0 ), srgbC( 64.0, 72.0, 44.0 ), 0.5 + 0.5 * n2 );
@@ -252,12 +261,12 @@ vec2 waveSlope( vec2 p, float t, float px, float ocean, out float var ) {
   float base = atan( 0.38, -0.92 );
   for ( int i = 0; i < 12; i++ ) {
     float fi = float( i );
-    float spread = mix( 0.35, 1.3, fi / 11.0 );
+    float spread = mix( 0.8, 1.4, fi / 11.0 );
     float ang = base + ( siteHash( ivec2( i, 3 ), 61 ) - 0.5 ) * spread * 2.0;
     vec2 dir = vec2( cos( ang ), sin( ang ) );
     float k = 6.2831853 / wl;
     float w = sqrt( 9.81 * k );
-    float steep = mix( 0.045, 0.12, fi / 11.0 ) * ampK;
+    float steep = mix( 0.03, 0.12, fi / 11.0 ) * ampK;
     float fade = 1.0 - smoothstep( 0.35, 0.9, px * 2.0 / wl );
     if ( fade <= 0.0 ) {
       var += 0.5 * steep * steep * 0.55;
@@ -338,7 +347,11 @@ const CLASSIFY = /* glsl */ `
   if ( ouv.x > 0.0 && ouv.y > 0.0 && ouv.x < 1.0 && ouv.y < 1.0 ) {
     vec3 o = texture2D( uOverlay, ouv ).rgb;
     float n = fbmS( sp, 9.0, 3, 21, px );
-    vec3 grass = mix( srgbC( 88.0, 104.0, 52.0 ), srgbC( 110.0, 116.0, 66.0 ), 0.5 + 0.5 * fbmS( sp, 60.0, 2, 22, px ) ) * ( 0.92 + 0.12 * n );
+    // mowed bahia grass: olive, with drier and greener patches and faint mower stripes
+    vec3 grass = mix( srgbC( 80.0, 94.0, 50.0 ), srgbC( 104.0, 106.0, 64.0 ), 0.5 + 0.5 * fbmS( sp, 60.0, 2, 22, px ) );
+    grass = mix( grass, srgbC( 118.0, 112.0, 74.0 ), smoothstep( 0.2, 0.7, fbmS( sp, 170.0, 2, 24, px ) ) * 0.45 );
+    float stripe = sin( dot( sp, vec2( 0.8, 0.6 ) ) * 3.14159 / 2.4 );
+    grass *= ( 0.92 + 0.12 * n ) * ( 1.0 + 0.035 * stripe * ( 1.0 - smoothstep( 0.3, 1.2, px ) ) );
     vec3 gravel = srgbC( 176.0, 170.0, 154.0 ) * ( 0.9 + 0.12 * n );
     vec3 sand = srgbC( 196.0, 184.0, 156.0 ) * ( 0.92 + 0.1 * n );
     albedo = mix( albedo, grass, o.r );
@@ -351,7 +364,7 @@ const CLASSIFY = /* glsl */ `
     float n = fbmS( sp, 9.0, 3, 21, px );
     float ap = 1.0 - smoothstep( uLz.z - 6.0, uLz.z + 4.0, lzD );
     float gr = 1.0 - smoothstep( uLz.z + 4.0, uLz.z + 38.0, lzD );
-    albedo = mix( albedo, srgbC( 92.0, 106.0, 54.0 ) * ( 0.92 + 0.12 * n ), gr );
+    albedo = mix( albedo, srgbC( 82.0, 94.0, 52.0 ) * ( 0.92 + 0.12 * n ), gr );
     albedo = mix( albedo, srgbC( 176.0, 170.0, 154.0 ) * ( 0.9 + 0.12 * n ), ap );
   }
 

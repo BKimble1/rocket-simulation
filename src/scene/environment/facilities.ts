@@ -136,7 +136,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
     }
     // top platform, stairway, vent stack (the boil-off vents here: SITE_ANCHORS.loxVents)
     B.at(cyl(2.4, 0.2, 24), SM('grating'), x, cy + r + 0.05, z, 0);
-    B.add(rod(v3(x + 3.2, cy + r - 0.6, z - 3.2), v3(x + 3.2, cy + r + 4.8, z - 3.2), 0.22, 12), SM('stainless'));
+    B.add(rod(v3(x + 3.2, cy + r - 0.6, z - 3.2), v3(x + 3.2, cy + r + 4.8, z - 3.2), 0.22, 12), SM('aluminum'));
     const stair: THREE.Vector3[] = [];
     for (let i = 0; i <= 24; i++) {
       const t = i / 24;
@@ -209,7 +209,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
       frp.translate(m.x, G + steelH + 9, m.z);
       B.add(frp, SM('frp'));
       B.at(bevelBox(3.2, 1.0, 3.2, 0.1), SM('concreteLight'), m.x, G + 0.3, m.z, 0);
-      B.add(rod(v3(m.x, G + m.h, m.z), v3(m.x, G + m.h + 2, m.z), 0.03, 6), SM('copper'));
+      B.add(rod(v3(m.x, G + m.h, m.z), v3(m.x, G + m.h + 2, m.z), 0.03, 6), SM('galv'));
       B.at(cyl(0.12, 0.2, 10), SM('redLight'), m.x, G + steelH + 0.3, m.z, 0);
       tops.push(v3(m.x, G + m.h - 0.5, m.z));
     }
@@ -242,8 +242,8 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
     B.add(p, SM('galv'));
     B.at(bevelBox(1.8, 0.8, 1.8, 0.08), SM('concreteLight'), x, G + 0.2, z, 0);
     const face = Math.atan2(-x, -z);
-    const head = new THREE.Group();
-    const HB = new Batch();
+    // the head's parts merge with the facilities batch (static)
+    const HB = B.view(new THREE.Matrix4().makeTranslation(x, G + hgt, z).multiply(new THREE.Matrix4().makeRotationY(face)).multiply(new THREE.Matrix4().makeRotationX(-0.25)));
     HB.at(box(4.2, 0.12, 1.2), SM('galv'), 0, 0, 0, 0);
     for (let i = 0; i < 6; i++) {
       const lx = -1.75 + (i % 3) * 1.75;
@@ -251,11 +251,6 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
       HB.at(bevelBox(0.9, 0.7, 0.35, 0.05), SM('steelDark'), lx, ly, 0.2, 0);
       HB.at(box(0.72, 0.52, 0.02), SM('lamp'), lx, ly, 0.38, 0);
     }
-    HB.build(head, 'light-head');
-    head.position.set(x, G + hgt, z);
-    head.rotation.y = face;
-    head.rotateX(-0.25);
-    group.add(head);
   }
 
   // ───────────── buildings ─────────────
@@ -299,7 +294,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
       const tx = x - w / 2 + 5 + i * 8;
       B.at(bevelBox(3.2, 3.4, 2.4, 0.05), SM('claddingGrey'), tx, gy + 1.95, z, 0);
       for (let k = 0; k < 7; k++) B.at(box(0.08, 2.4, 1.0), SM('galv'), tx - 1.5 + k * 0.5, gy + 1.7, z + 1.8, 0);
-      B.add(rod(v3(tx, gy + 3.6, z - 0.6), v3(tx, gy + 5, z - 0.6), 0.1, 8), SM('whiteMatte'));
+      B.add(rod(v3(tx, gy + 3.6, z - 0.6), v3(tx, gy + 5, z - 0.6), 0.1, 8), SM('white'));
     }
     const poles: THREE.Vector3[] = [];
     for (let i = 0; i < 5; i++) {
@@ -307,7 +302,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
       const px = x + 14 + (-60 - x - 14) * t;
       const pz = z - 10 + (40 - z + 10) * t;
       const py = groundY(maps, px, pz);
-      B.add(rod(v3(px, py, pz), v3(px, py + 12, pz), 0.14, 10), SM('soil'));
+      B.add(rod(v3(px, py, pz), v3(px, py + 12, pz), 0.14, 10), SM('concreteLight'));
       B.at(box(2.2, 0.15, 0.15), SM('steelDark'), px, py + 11.5, pz, Math.atan2(40 - z, -60 - x));
       poles.push(v3(px, py + 11.6, pz));
     }
@@ -331,7 +326,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
       [5, 8],
     ])
       B.add(rod(v3(x + dx, gy, z + dz), v3(x + dx, gy + 6, z + dz), 0.18, 10), SM('galv'));
-    B.add(rod(v3(x + 1.5, gy + 1.0, z - 4.2), v3(x + 1.5, gy + 1.0, z + 4.2), 0.06, 8), SM('yellow'));
+    B.add(rod(v3(x + 1.5, gy + 1.0, z - 4.2), v3(x + 1.5, gy + 1.0, z + 4.2), 0.06, 8), SM('white'));
   }
 
   // ───────────── horizontal integration hangar ─────────────
@@ -391,7 +386,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
     for (let i = 0; i < 5; i++) B.at(cyl(0.9, 1.4, 16), SM('galv'), x - w / 2 + 12 + i * 22, gy + h + 3.4, z + 8, 0);
     for (const s of [-1, 1]) B.at(box(1.2, 2.4, 0.08), SM('steelDark'), x + s * (doorW / 2 + 8), gy + 1.2, zN - 0.05, 0);
     // transporter apron in front of the doors
-    B.at(box(doorW + 10, 0.25, 55), SM('concreteRoad'), x, gy + 0.08, zN - 27.5, 0, { cast: false, receive: true });
+    B.at(box(doorW + 10, 0.25, 55), SM('concrete'), x, gy + 0.08, zN - 27.5, 0, { cast: false, receive: true });
   }
 
   // ───────────── instrumentation bunker (blockhouse) ─────────────
@@ -409,7 +404,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
       B.add(rod(v3(x + Math.cos(a) * r * 0.45, gy + h * 0.85, z - Math.sin(a) * r * 0.45), v3(x + Math.cos(a) * r * 0.45, gy + h + 0.9, z - Math.sin(a) * r * 0.45), 0.25, 12), SM('steelDark'));
     }
     B.add(rod(v3(x + 4, gy + h * 0.6, z + 6), v3(x + 4, gy + h + 12, z + 6), 0.08, 8), SM('galv'));
-    B.at(cyl(0.6, 0.12, 16), SM('whiteMatte'), x + 4, gy + h + 12, z + 6, 0);
+    B.at(cyl(0.6, 0.12, 16), SM('white'), x + 4, gy + h + 12, z + 6, 0);
   }
 
   // ───────────── perimeter fence ─────────────

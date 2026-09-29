@@ -11,7 +11,7 @@ import { LOCAL_TERRAIN } from '../../world/site';
 import { ATMO, SUN_IRRADIANCE, SUN_RGB, integrateRay, makeRayResult } from './atmosphere';
 import { makeSkyViewMaterial } from './skyView';
 import { makeSkyMaterial, makeSkyUniforms, fullScreenGeometry } from './skyPass';
-import { makeCloudMaterial, makeCloudCompositeMaterial, makeCloudOverlayMaterial, makeCloudUniforms, capGeometry } from './clouds';
+import { makeCloudMaterial, makeCloudCompositeMaterial, makeCloudUniforms, makeCloudProbeMaterial } from './clouds';
 import { generateCoverage, generateNoiseVolume } from './cloudGen';
 import { makeMoonMaterial } from './moon';
 import { I_TO_EQUATORIAL, moonQuaternion } from './celestial';
@@ -31,7 +31,6 @@ export interface SpaceOptions {
 
 /** Share of the diffuse sky/ground fill carried by the HemisphereLight (the rest comes from scene.environment). */
 const HEMI_SHARE = 0.35;
-const CLOUD_BLEND_H = 60; // m: fade of the proxy regimes around the layer bounds
 
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
@@ -71,30 +70,40 @@ export function createSpace(opts: SpaceOptions) {
   moon.name = 'space.moon';
   root.add(moon);
 
-  // ── clouds
+  // ── clouds: one full-screen march at reduced resolution into two targets (the part of each
+  // ray in front of the focus subject and the part beyond it), then full-resolution composites
+  // with per-pixel depth: back, front, and the depth of the dense clouds (see clouds.ts)
   const cloudU = makeCloudUniforms(uniforms);
   const cloudMat = makeCloudMaterial(cloudU);
-  const compositeMat = makeCloudCompositeMaterial(cloudU);
-  const capGeo = capGeometry(120, 160);
-  // the march runs in its own scene at reduced resolution...
   const cloudScene = new THREE.Scene();
-  const cloudMarch = new THREE.Mesh(capGeo, cloudMat);
+  const cloudMarch = new THREE.Mesh(skyGeo, cloudMat);
   cloudMarch.frustumCulled = false;
   cloudScene.add(cloudMarch);
   let cloudRT: THREE.WebGLRenderTarget | null = null;
   const clearColor = new THREE.Color();
-  // ...and a depth-tested proxy composites it into the flight scene
-  const cloudDome = new THREE.Mesh(capGeo, compositeMat);
-  cloudDome.frustumCulled = false;
-  cloudDome.renderOrder = -10;
-  cloudDome.name = 'space.clouds';
-  root.add(cloudDome);
-  const overlayMat = makeCloudOverlayMaterial(cloudU);
-  const overlay = new THREE.Mesh(fullScreenGeometry(), overlayMat);
-  overlay.frustumCulled = false;
-  overlay.renderOrder = 9000;
-  overlay.name = 'space.cloudOverlay';
-  root.add(overlay);
+  const cloudGeo = fullScreenGeometry();
+  const cloudLayers = (['back', 'front', 'depth'] as const).map((mode, i) => {
+    const mesh = new THREE.Mesh(cloudGeo, makeCloudCompositeMaterial(cloudU, mode));
+    mesh.frustumCulled = false;
+    // first among the transparent objects (steam and plumes in front of a cloud blend over it)
+    mesh.renderOrder = -500 + i;
+    mesh.name = `space.clouds.${mode}`;
+    root.add(mesh);
+    return mesh;
+  });
+  const cloudMats = cloudLayers.map((m) => m.material as THREE.ShaderMaterial);
+
+  // ── in-cloud probe: the cloud density at the camera, read back asynchronously (a few frames
+  // late, never stalling the GPU) for skyState.inCloud
+  const probeMat = makeCloudProbeMaterial(cloudU);
+  const probeScene = new THREE.Scene();
+  const probeMesh = new THREE.Mesh(skyGeo, probeMat);
+  probeMesh.frustumCulled = false;
+  probeScene.add(probeMesh);
+  let probeRT: THREE.WebGLRenderTarget | null = null;
+  const probeBuf = new Uint8Array(4);
+  let probeBusy = false;
+  let probeValue = 0;
 
   // ── lights
   const sun = new THREE.DirectionalLight(0xffffff, 3);
@@ -130,6 +139,8 @@ export function createSpace(opts: SpaceOptions) {
   let noiseRT: THREE.WebGL3DRenderTarget | null = null;
   let coverRT: THREE.WebGLCubeRenderTarget | null = null;
   let coverKey = '';
+  let coverDay: THREE.Texture | null = null;
+  let coverWater: THREE.Texture | null = null;
 
   const padEF = new THREE.Vector3(Math.cos(deg(SITE.lat)) * Math.cos(deg(SITE.lon)), Math.sin(deg(SITE.lat)), -Math.cos(deg(SITE.lat)) * Math.sin(deg(SITE.lon)));
   uniforms.uPadEF.value.copy(padEF);
@@ -158,8 +169,11 @@ export function createSpace(opts: SpaceOptions) {
     if (spaceAssets.ready) {
       const csize = spec.maxTexture >= 4096 ? 1024 : 512;
       const key = `${csize}:${spec.cloudOctaves}`;
-      if (key !== coverKey) {
+      // rebuilt when a texture that failed to load arrives on a retry (deserts need the day map)
+      if (key !== coverKey || coverDay !== spaceTextures.day || coverWater !== spaceTextures.water) {
         coverKey = key;
+        coverDay = spaceTextures.day;
+        coverWater = spaceTextures.water;
         coverRT?.dispose();
         coverRT = generateCoverage(gl, csize, spec.cloudOctaves, spaceTextures.day, spaceTextures.water);
         uniforms.uCoverage.value = coverRT.texture;
@@ -255,42 +269,30 @@ export function createSpace(opts: SpaceOptions) {
     cloudU.uFade.value = haveClouds ? 1 : 0;
     cloudU.uSteps.value = spec.cloudOctaves >= 6 ? 64 : spec.cloudOctaves >= 5 ? 48 : 32;
     cloudU.uLightSteps.value = spec.atmoSamples[1] >= 6 ? 5 : spec.atmoSamples[1] >= 4 ? 4 : 3;
-    // camera-local frame for the cap (+Y up)
-    tmpQ.setFromUnitVectors(new THREE.Vector3(0, 1, 0), camUp);
-    cloudU.uLocalToRender.value.setFromMatrix4(tmpM4.makeRotationFromQuaternion(tmpQ));
-    const acosC = (x: number) => Math.acos(Math.min(1, Math.max(-1, x)));
     subject.copy(director.flightPose.target);
     const subjDist = subject.distanceTo(O);
-    let regime = 0;
-    if (alt < CLOUD_BASE - CLOUD_BLEND_H * 0) regime = 0;
-    else if (alt > CLOUD_TOP) regime = 2;
-    else regime = 1;
+    // camera below, inside or above the layer (the field itself is continuous)
+    const regime = alt < CLOUD_BASE ? 0 : alt > CLOUD_TOP ? 2 : 1;
     cloudU.uRegime.value = regime;
-    if (regime === 0) {
-      cloudU.uShellR.value = Rb;
-      cloudU.uDR.value = Rb - camR;
-      cloudU.uThetaMax.value = acosC(R_EARTH / camR) + acosC(R_EARTH / Rb) + 0.002;
-      cloudU.uNearR.value = 0;
-    } else if (regime === 2) {
-      cloudU.uShellR.value = Rt;
-      cloudU.uDR.value = Rt - camR;
-      cloudU.uThetaMax.value = acosC(Rt / camR) + 0.0005;
-      cloudU.uNearR.value = 0;
-    } else {
-      const near = THREE.MathUtils.clamp(subjDist * 1.15 + 25, 60, 2000);
-      cloudU.uNear.value = near;
-      cloudU.uNearR.value = near;
-    }
-    overlay.visible = haveClouds && regime === 1;
-    cloudU.uNear.value = regime === 1 ? cloudU.uNearR.value : 0;
-    cloudDome.visible = haveClouds && (regime !== 2 || alt < 2.5e7);
+    // split the rays just beyond the subject (inside the layer a little further, so the cloud
+    // right around the subject is drawn in front of it); far subjects: everything is 'back'
+    cloudU.uSplit.value = subjDist < 5e5 ? Math.max(regime === 1 ? 60 : 0, subjDist * (regime === 1 ? 1.08 : 1.03) + 15) : 0;
+    for (const m of cloudLayers) m.visible = haveClouds;
     skyState.cloudBase = CLOUD_BASE;
     skyState.cloudTop = CLOUD_TOP;
-    skyState.inCloud = regime === 1 ? 1 : 0;
+    if (regime === 1 && haveClouds) {
+      if (frame.location === 'flight' && !probeBusy && frame.n % 4 === 0) probeClouds(gl);
+      skyState.inCloud = probeValue;
+    } else {
+      probeValue = 0;
+      skyState.inCloud = 0;
+    }
 
     // lighting
     const L = updateLighting(O, subject);
-    uniforms.uStarVis.value = 1;
+    // stars follow the exposure the camera is adapted to: none against the daytime sky (the
+    // sky-luminance mask in the shader), faint in sunlit space, clear in Earth's shadow
+    uniforms.uStarVis.value = 0.2 + 0.8 * THREE.MathUtils.smoothstep(skyState.exposure, 1.5, 3.1);
     uniforms.uStarGain.value = 0.06;
     uniforms.uAirglow.value = 1;
     moonMat.uniforms.uSunE.value = SUN_IRRADIANCE;
@@ -337,7 +339,28 @@ export function createSpace(opts: SpaceOptions) {
     if (frame.location === 'flight') updateEnv(gl, scene, alt, L.camLit);
 
     // clouds: march at reduced resolution
-    if (cloudDome.visible && frame.location === 'flight') renderClouds(gl, camera);
+    if (haveClouds && frame.location === 'flight') renderClouds(gl, camera);
+  }
+
+  function probeClouds(gl: THREE.WebGLRenderer) {
+    if (!probeRT) probeRT = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false, stencilBuffer: false });
+    const prev = gl.getRenderTarget();
+    const prevTone = gl.toneMapping;
+    gl.toneMapping = THREE.NoToneMapping;
+    gl.setRenderTarget(probeRT);
+    gl.render(probeScene, orthoCam);
+    gl.setRenderTarget(prev);
+    gl.toneMapping = prevTone;
+    probeBusy = true;
+    const rt = probeRT;
+    gl.readRenderTargetPixelsAsync(rt, 0, 0, 1, 1, probeBuf)
+      .then(() => {
+        if (rt === probeRT) probeValue = probeBuf[0] / 255;
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        probeBusy = false;
+      });
   }
 
   function renderSkyView(gl: THREE.WebGLRenderer) {
@@ -374,13 +397,18 @@ export function createSpace(opts: SpaceOptions) {
     const h = Math.max(16, Math.round(Hh * scale));
     if (!cloudRT || cloudRT.width !== w || cloudRT.height !== h) {
       cloudRT?.dispose();
-      cloudRT = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthBuffer: false, stencilBuffer: false });
-      cloudRT.texture.minFilter = THREE.LinearFilter;
-      cloudRT.texture.magFilter = THREE.LinearFilter;
-      cloudRT.texture.generateMipmaps = false;
-      cloudRT.texture.colorSpace = THREE.NoColorSpace;
+      cloudRT = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthBuffer: false, stencilBuffer: false, count: 2 });
+      for (const tex of cloudRT.textures) {
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.generateMipmaps = false;
+        tex.colorSpace = THREE.NoColorSpace;
+      }
     }
-    cloudU.uCloudTex.value = cloudRT.texture;
+    cloudMats[0].uniforms.uCloudTex.value = cloudRT.textures[1];
+    cloudMats[1].uniforms.uCloudTex.value = cloudRT.textures[0];
+    cloudMats[2].uniforms.uCloudTex.value = cloudRT.textures[0];
+    cloudMats[2].uniforms.uCloudTexBack.value = cloudRT.textures[1];
     cloudU.uFullRes.value.set(W, Hh);
     cloudU.uLowRes.value.set(w, h);
     cloudU.uPixel.value = uniforms.uPixel.value / scale;
@@ -430,11 +458,13 @@ export function createSpace(opts: SpaceOptions) {
     envMat.dispose();
     moonGeo.dispose();
     moonMat.dispose();
-    capGeo.dispose();
     cloudMat.dispose();
-    compositeMat.dispose();
-    overlayMat.dispose();
-    (overlay.geometry as THREE.BufferGeometry).dispose();
+    cloudGeo.dispose();
+    for (const m of cloudMats) m.dispose();
+    probeMat.dispose();
+    probeRT?.dispose();
+    probeRT = null;
+    coverDay = coverWater = null;
     if (envRT && scene.environment === envRT.texture) scene.environment = null;
     noiseRT?.dispose();
     coverRT?.dispose();

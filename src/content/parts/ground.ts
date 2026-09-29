@@ -6,7 +6,7 @@ import { F } from './derived';
 export const GROUND: (PartLesson | PartNote)[] = [
   lesson({
     id: 'launch-mount',
-    summary: 'The launch mount is the raised steel and concrete table the rocket stands on, with four hold-down clamps that keep it on the pad until all seven engines are confirmed healthy.',
+    summary: 'The launch mount is the raised steel and concrete table the rocket stands on, with four hold-down clamps that keep it on the pad until its engines are confirmed healthy.',
     where: `At the centre of the pad: the vehicle's aft skirt rests on the mount deck ${F.padDeckHeight} above the ground, with the nozzle exits at ${F.padNozzleExitHeight}. Four hold-down clamps grip fittings on the aft skirt; below them an opening leads into the flame deflector and trench.`,
     connections: ['thrust-structure', 's1-engine-cluster', 'flame-deflector', 'sound-suppression', 'service-tower'],
     function: `Support the fuelled vehicle (${F.liftoffMassLeo} on the LEO mission, a weight of ${F.liftoffWeightLeo}), hold it against wind, then restrain it after ignition until the engines are verified, and release all four clamps at the same instant.`,

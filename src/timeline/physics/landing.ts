@@ -13,7 +13,7 @@ import { E1, S1 } from '../../vehicle/spec';
 import { MU_EARTH, R_EARTH, siteFrameQuaternion, sitePosition } from '../../world/frames';
 import { LANDING_ZONE } from '../../world/site';
 import { cdBoosterTailFirst, cdSlender } from './aero';
-import { airDensity as densityAt, atmosphere as atmosphereAt } from './atmosphere';
+import { airDensity as densityAt, atmosphere as atmosphereAt, atmosphereInto, type AtmosphereSample } from './atmosphere';
 import { gimbalAngles, groundDistance } from './ascent';
 import { Craft, airVelocity, type AttitudeCmd } from './craft';
 import type { Ctx } from './context';
@@ -265,7 +265,7 @@ export function flyBoosterReturn(ctx: Ctx | null, c: Craft, o: RtlsOpts): RtlsRe
         entryV0 = vaN;
         c.rcsActuator = false;
       }
-      if (o.hop && descending && alt < 45_000) {
+      if (o.hop && descending && alt < 70_000) {
         phase = 'aero';
         phaseT = t;
         res.entryStart = res.entryEnd = t;
@@ -291,7 +291,7 @@ export function flyBoosterReturn(ctx: Ctx | null, c: Craft, o: RtlsOpts): RtlsRe
       }
     }
     if (phase === 'aero') {
-      dt = 0.1;
+      dt = 0.2;
       c.aero = aeroTailFirst;
       thr = 0;
       // lateral steering: every second, predict the unsteered (drag-only) touchdown point and
@@ -372,12 +372,12 @@ export function flyBoosterReturn(ctx: Ctx | null, c: Craft, o: RtlsOpts): RtlsRe
       const dragNow = (c.q_dyn * cdBoosterTailFirst(c.mach) * aeroTailFirst.area) / m;
       if (h > 150) {
         if (t >= nextThrottle) {
-          nextThrottle = t + 0.5;
+          nextThrottle = t + 0.8;
           const ramp0 = clamp((t - phaseT) / 1.0, 0, 1);
           let lo = E1.minThrottle;
           let hi = 1;
           if (stopHeight(c, lo, h, vz, m, ramp0) <= 0) {
-            for (let k = 0; k < 7; k++) {
+            for (let k = 0; k < 6; k++) {
               const mid = (lo + hi) / 2;
               if (stopHeight(c, mid, h, vz, m, ramp0) > 0) hi = mid;
               else lo = mid;
@@ -393,19 +393,19 @@ export function flyBoosterReturn(ctx: Ctx | null, c: Craft, o: RtlsOpts): RtlsRe
       // guidance), a = -6 (r - r_LZ) / tgo^2 - 4 v / tgo, aimed at a gate 40 m above the LZ with
       // no horizontal velocity; the time to go comes from the vertical profile. Below the gate a
       // critically damped position/velocity hold keeps the booster over the pad centre.
-      const H_GATE = 40;
+      const H_GATE = 60;
       let aH: V3;
       if (h > H_GATE + 5) {
         const aV = Math.max(0.5, (vz * vz - TOUCHDOWN_SPEED * TOUCHDOWN_SPEED) / (2 * h));
         const vGate = Math.sqrt(TOUCHDOWN_SPEED * TOUCHDOWN_SPEED + 2 * aV * H_GATE);
-        const tgoH = Math.max(2, (2 * (h - H_GATE)) / Math.max(1, vz + vGate));
+        const tgoH = Math.max(2, (0.85 * 2 * (h - H_GATE)) / Math.max(1, vz + vGate));
         aH = vsub(vscale(dr, -6 / (tgoH * tgoH)), vscale(vhRel, 4 / tgoH));
-      } else aH = vsub(vscale(dr, -0.5), vscale(vhRel, 1.4));
+      } else aH = vsub(vscale(dr, -0.6), vscale(vhRel, 1.6));
       if (vlen(aH) > 6) aH = vscale(vnorm(aH), 6);
       let aT = vadd(vscale(up, Math.max(0, aUp)), aH);
       // allowed tilt tapers near the ground so the booster stands upright at contact; the body
       // slews at up to 8 deg/s and the centre engine gimbals a further 5 deg
-      const tiltMax = DEG * (h > 300 ? 16 : h > 40 ? 8 + (8 * (h - 40)) / 260 : 1.5 + (6.5 * h) / 40);
+      const tiltMax = DEG * (h > 400 ? 16 : h > 60 ? 10 + (6 * (h - 60)) / 340 : 2 + (8 * h) / 60);
       const tilt = Math.acos(clamp(vdot(vnorm(aT), up), -1, 1));
       if (tilt > tiltMax) {
         const hor = vnorm(aH);
@@ -489,17 +489,17 @@ export function stopHeight(c: Craft, th: number, h0: number, vz0: number, m0?: n
   let vz = vz0;
   let m = m0 ?? c.mass;
   const comOff = c.alt - originAlt(c);
-  const dt = 0.1;
-  let a = atmosphereAt(Math.max(0, h + LANDED_NOZZLE_HEIGHT + comOff));
-  for (let i = 0; i < 1200; i++) {
-    if (i % 5 === 0) a = atmosphereAt(Math.max(0, h + LANDED_NOZZLE_HEIGHT + comOff));
+  const dt = 0.2;
+  const a = atmosphereInto(Math.max(0, h + LANDED_NOZZLE_HEIGHT + comOff), ATM);
+  for (let i = 0; i < 600; i++) {
+    if (i % 5 === 0) atmosphereInto(Math.max(0, h + LANDED_NOZZLE_HEIGHT + comOff), ATM);
     const ramp = Math.min(1, ramp0 + (i * dt) / 1.0);
     const thr = Math.max(E1.minThrottle * ramp, th * ramp);
     const T = Math.max(0, thr * ENG_S1.thrustVac - a.pressure * ENG_S1.area);
     const drag = (0.5 * a.density * vz * vz * cdBoosterTailFirst(vz / a.speedOfSound) * aeroTailFirst.area) / m;
     const acc = T / m + drag - 9.81; // upward
     const vzN = vz - acc * dt;
-    if (vzN <= 0) return h - (vz * vz) / (2 * Math.max(1e-6, acc)) * 0 - (vz * dt) / 2;
+    if (vzN <= 0) return h - (vz * dt) / 2;
     h -= (vz + vzN) * 0.5 * dt;
     vz = vzN;
     m -= ENG_S1.mdot * thr * dt;
@@ -507,6 +507,7 @@ export function stopHeight(c: Craft, th: number, h0: number, vz0: number, m0?: n
   }
   return h;
 }
+const ATM: AtmosphereSample = { altitude: 0, temperature: 0, pressure: 0, density: 0, speedOfSound: 0 };
 
 /** Vertical state after coasting `dt` seconds with drag (for the ignition test). */
 function coastAhead(c: Craft, dt: number): { h: number; vz: number; m: number } {

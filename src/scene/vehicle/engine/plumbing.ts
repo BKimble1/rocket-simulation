@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { Design } from './design';
-import { clippedTube, filletPath, hexBolt, merge, ringOf, roundPoly, sweep, transportFrames, type Frame, type V2 } from './geo';
+import { clippedTube, filletPath, hexBolt, ringOf, roundPoly, sweep, transportFrames, type Frame, type V2 } from './geo';
 import type { Kit, Tag } from './kit';
 import { TP, routes, EXHAUST_PHI } from './layout';
 import type { EngineDetail } from './types';
@@ -51,14 +51,13 @@ export function axisLathe(k: Kit, pts: V2[], t: Tag, c: THREE.Vector3, axis: THR
 export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: number) {
   const R = routes(d);
   const hangar = detail === 'hangar';
-  const rs = hangar ? 28 : detail === 'flight' ? 12 : 8;
+  const rs = hangar ? 20 : detail === 'flight' ? 10 : 8;
   const clip = k.section ? 0 : undefined;
-  const cl = (s: number) => Math.max(8, Math.round(s));
 
   /** Pipe along corner points with bends. */
   const pipe = (pts: THREE.Vector3[], ro: number | ((p: THREE.Vector3, s: number) => number), t: Tag, o: { ri?: number | ((p: THREE.Vector3, s: number) => number); bend?: number; segs?: number; hint?: THREE.Vector3; step?: number } = {}) => {
     const r0 = typeof ro === 'number' ? ro : ro(pts[0], 0);
-    const path = filletPath(pts, o.bend ?? r0 * 2.4, o.step ?? 0.015);
+    const path = filletPath(pts, o.bend ?? r0 * 2.4, hangar ? (o.step ?? 0.05) : 0.08, hangar ? 7.5 : 15);
     const frames = transportFrames(path, o.hint);
     const total = path.len[path.len.length - 1] || 1;
     const F = frames.length;
@@ -73,17 +72,14 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     if (detail === 'cluster') return;
     const w = 0.011;
     const rf = rp + Math.max(0.016, rp * 0.32);
-    const prof = roundPoly(
-      [
-        [rp - 0.003, -w],
-        [rf, -w],
-        [rf, w],
-        [rp - 0.003, w],
-      ],
-      (i) => (i === 1 || i === 2 ? 0.002 : 0),
-      2,
-    );
-    axisLathe(k, prof, t, p, dir, hangar ? 40 : 20);
+    const sq: V2[] = [
+      [rp - 0.003, -w],
+      [rf, -w],
+      [rf, w],
+      [rp - 0.003, w],
+    ];
+    const prof = hangar ? roundPoly(sq, (i) => (i === 1 || i === 2 ? 0.002 : 0), 2) : sq;
+    axisLathe(k, prof, t, p, dir, hangar ? 32 : 14);
     if (!hangar) return;
     const bolt = hexBolt(Math.max(0.009, rp * 0.2), Math.max(0.008, rp * 0.17));
     for (const side of [1, -1]) {
@@ -101,18 +97,17 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   // ── feed ducts below the gimbal bellows (engine side) ──
   const eng = (mat: Tag['mat']): Tag => ({ part: 'engine', mat });
   const x = d.tpX;
-  pipe([V(x, TP.bellowsY[0] + 0.001, 0), V(x, TP.loxInletTop + 0.012, 0)], TP.loxDuctR, eng('stainless'), { ri: TP.loxDuctR - 0.004, segs: hangar ? 40 : 16 });
+  pipe([V(x, TP.bellowsY[0] + 0.001, 0), V(x, TP.loxInletTop + 0.012, 0)], TP.loxDuctR, eng('stainless'), { ri: TP.loxDuctR - 0.004, segs: hangar ? 32 : 14 });
   flange(V(x, TP.loxInletTop + 0.012, 0), V(0, 1, 0), TP.loxDuctR + 0.004, eng('stainless'), 12);
   const fz = TP.fuelDuctZ;
-  pipe([V(x, TP.bellowsY[0] + 0.001, fz), ...R.fuelInlet.slice(1)], TP.fuelDuctR, eng('stainless'), { ri: TP.fuelDuctR - 0.004, bend: 0.07, segs: hangar ? 36 : 14 });
+  pipe([V(x, TP.bellowsY[0] + 0.001, fz), ...R.fuelInlet.slice(1)], TP.fuelDuctR, eng('stainless'), { ri: TP.fuelDuctR - 0.004, bend: 0.07, segs: hangar ? 28 : 12 });
   flange(V(x, TP.fuelInletY, 0.125), V(0, 0, 1), TP.fuelDuctR, eng('stainless'), 10);
 
   // ── LOX discharge (diffuser from the volute), MOV, into the dome ──
   const mvTag: Tag = { part: 'main-valves', mat: 'steel' };
-  const lox = pipe(R.loxDischarge, (_p, s) => TP.loxLineR - 0.01 * Math.max(0, 1 - s * 12), eng('stainless'), { ri: (_p, s) => TP.loxLineR - 0.005 - 0.01 * Math.max(0, 1 - s * 12), bend: 0.1, segs: hangar ? 36 : 14 });
-  void lox;
+  pipe(R.loxDischarge, (_p, s) => TP.loxLineR - 0.01 * Math.max(0, 1 - s * 12), eng('stainless'), { ri: (_p, s) => TP.loxLineR - 0.005 - 0.01 * Math.max(0, 1 - s * 12), bend: 0.1, segs: hangar ? 28 : 12, step: 0.025 });
   const mov = V(d.mov.x, d.mov.y, d.mov.z);
-  pipe(R.movToDome, TP.loxLineR, { part: 'injector', mat: 'stainless' }, { ri: TP.loxLineR - 0.005, segs: hangar ? 36 : 14 });
+  pipe(R.movToDome, TP.loxLineR, { part: 'injector', mat: 'stainless' }, { ri: TP.loxLineR - 0.005, segs: hangar ? 28 : 12 });
   flange(R.pts.movIn.clone().add(V(0.004, 0, 0)), V(1, 0, 0), TP.loxLineR, mvTag, 10);
   flange(R.pts.movOut.clone().add(V(-0.004, 0, 0)), V(1, 0, 0), TP.loxLineR, mvTag, 10);
   flange(R.pts.domePort.clone().add(V(-0.03, 0, 0)), V(1, 0, 0), TP.loxLineR, { part: 'injector', mat: 'stainless' }, 10);
@@ -145,7 +140,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     2,
   );
   if (detail === 'cluster') axisLathe(k, [[0.0005, -0.06], [0.068, -0.06], [0.068, 0.06], [0.0005, 0.06]], mvTag, mov, V(1, 0, 0), 12);
-  else axisLathe(k, movBody, mvTag, mov, V(1, 0, 0), hangar ? 64 : 24);
+  else axisLathe(k, movBody, mvTag, mov, V(1, 0, 0), hangar ? 48 : 20);
   // bonnet boss, stem and the rotary actuator on top, with a position indicator on the stem
   axisLathe(
     k,
@@ -193,7 +188,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
       ball.push([Math.sqrt(Rb * Rb - s * s), s]);
     }
     ball.push([rb, sEnd], [rb, -sEnd]);
-    const bl = sweep([{ pts: [...ball.slice(0, 17), [rb, sEnd], [rb, -sEnd]] }], axisFrames(mov, V(1, 0, 0), 0, TAU, 48));
+    const bl = sweep([{ pts: [...ball.slice(0, 17), [rb, sEnd], [rb, -sEnd]] }], axisFrames(mov, V(1, 0, 0), 0, TAU, 36));
     k.add(bl.surf, { part: 'main-valves', mat: 'chrome', node: 'mov' });
     const stem = new THREE.CylinderGeometry(0.011, 0.011, 0.19, 16);
     stem.translate(mov.x, mov.y + 0.07, mov.z);
@@ -215,9 +210,9 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   }
 
   // ── fuel discharge, MFV (butterfly), down the bell to the coolant inlet manifold ──
-  pipe(R.fuelDischarge, (_p, s) => TP.fuelLineR - 0.008 * Math.max(0, 1 - s * 14), eng('stainless'), { ri: (_p, s) => TP.fuelLineR - 0.004 - 0.008 * Math.max(0, 1 - s * 14), bend: 0.09, segs: hangar ? 32 : 12 });
+  pipe(R.fuelDischarge, (_p, s) => TP.fuelLineR - 0.008 * Math.max(0, 1 - s * 14), eng('stainless'), { ri: (_p, s) => TP.fuelLineR - 0.004 - 0.008 * Math.max(0, 1 - s * 14), bend: 0.09, segs: hangar ? 24 : 12, step: 0.025 });
   const mfv = V(d.mfv.x, d.mfv.y, d.mfv.z);
-  pipe(R.fuelDown, TP.fuelLineR, { part: 'nozzle', mat: 'stainless' }, { ri: TP.fuelLineR - 0.004, bend: 0.2, segs: hangar ? 32 : 12 });
+  pipe(R.fuelDown, TP.fuelLineR, { part: 'nozzle', mat: 'stainless' }, { ri: TP.fuelLineR - 0.004, bend: 0.2, segs: hangar ? 24 : 12 });
   flange(R.pts.mfvIn.clone().add(V(0, -0.004, 0)), V(0, 1, 0), TP.fuelLineR, mvTag, 10);
   flange(R.pts.mfvOut.clone().add(V(0, 0.004, 0)), V(0, 1, 0), TP.fuelLineR, mvTag, 10);
   const mfvBody: V2[] = roundPoly(
@@ -236,7 +231,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     (i) => (i === 0 || i === 9 ? 0 : 0.002),
     2,
   );
-  axisLathe(k, mfvBody, mvTag, mfv, V(0, 1, 0), hangar ? 56 : 20);
+  axisLathe(k, mfvBody, mvTag, mfv, V(0, 1, 0), hangar ? 40 : 18);
   // spindle bosses (front and back) and the actuator at the back
   if (detail !== 'cluster') {
     for (const sgn of [-1, 1]) {
@@ -275,9 +270,9 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   // ── gas generator taps and valves ──
   const tapT = { part: 'gas-generator', mat: 'stainless' } as Tag;
   if (detail !== 'cluster') {
-    pipe(R.loxTap, TP.tapR, tapT, { ri: TP.tapR - 0.002, bend: 0.05, segs: hangar ? 16 : 8 });
-    pipe(R.fuelTap, TP.tapR, tapT, { ri: TP.tapR - 0.002, bend: 0.05, segs: hangar ? 16 : 8 });
-    for (const p of [V(0.545, -0.6, -0.13), V(0.3, -0.62, -0.1525)]) {
+    pipe(R.loxTap, TP.tapR, tapT, { ri: TP.tapR - 0.002, bend: 0.05, segs: hangar ? 12 : 8 });
+    pipe(R.fuelTap, TP.tapR, tapT, { ri: TP.tapR - 0.002, bend: 0.05, segs: hangar ? 12 : 8 });
+    for (const p of [V(0.5, -0.6, -0.14), V(0.3, -0.62, -0.1525)]) {
       const body = new THREE.CylinderGeometry(0.02, 0.02, 0.06, 20);
       body.translate(p.x, p.y, p.z);
       k.add(body, { part: 'gas-generator', mat: 'steel' });
@@ -297,7 +292,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
       const b = 1 - THREE.MathUtils.smoothstep(y, hxT - 0.02, hxT + 0.04);
       return Math.min(a, b);
     };
-    return TP.exhaustR + 0.018 * bulge(p.y);
+    return TP.exhaustR + 0.016 * bulge(p.y);
   };
   const exT: Tag = { part: 'gas-generator', mat: 'inconelHot' };
   if (detail === 'cluster') pipe(ex, TP.exhaustR, exT, { bend: 0.1 });
@@ -305,13 +300,13 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     // upper duct (whole: it lies behind the section plane), HX section cut on its own axis
     const run = ex[ex.length - 1];
     const upper = [...ex.slice(0, 4), V(run.x, hxT + 0.07, run.z)];
-    pipe(upper, exR, exT, { ri: (p) => exR(p) - 0.004, bend: 0.1, segs: hangar ? 32 : 14 });
-    const hxPath = filletPath([V(run.x, hxT + 0.07, run.z), V(run.x, hxB - 0.07, run.z)], 0.1, 0.012);
+    pipe(upper, exR, exT, { ri: (p) => exR(p) - 0.004, bend: 0.1, segs: hangar ? 24 : 12 });
+    const hxPath = filletPath([V(run.x, hxT + 0.07, run.z), V(run.x, hxB - 0.07, run.z)], 0.1, 0.02);
     const hxFrames = transportFrames(hxPath, V(0, 0, 1));
-    const hx = clippedTube(hxFrames, { ro: (t) => exR(hxFrames[Math.round(t * (hxFrames.length - 1))].p), ri: hangar ? (t) => exR(hxFrames[Math.round(t * (hxFrames.length - 1))].p) - 0.004 : undefined, segs: hangar ? 32 : 14, clipZ: k.section ? run.z : undefined });
+    const hx = clippedTube(hxFrames, { ro: (t) => exR(hxFrames[Math.round(t * (hxFrames.length - 1))].p), ri: hangar ? (t) => exR(hxFrames[Math.round(t * (hxFrames.length - 1))].p) - 0.004 : undefined, segs: hangar ? 24 : 12, clipZ: k.section ? run.z : undefined });
     k.tube(hx, exT);
     const lower = [V(run.x, hxB - 0.07, run.z), V(run.x, run.y + 0.03, run.z)];
-    pipe(lower, TP.exhaustR, exT, { ri: TP.exhaustR - 0.004, segs: hangar ? 32 : 14 });
+    pipe(lower, TP.exhaustR, exT, { ri: TP.exhaustR - 0.004, segs: hangar ? 24 : 12 });
     // outlet flare (soot-blackened lip)
     const lip: V2[] = roundPoly(
       [
@@ -324,7 +319,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
       0.002,
       2,
     );
-    axisLathe(k, lip.map(([r, s]) => [r, s] as V2), { part: 'gas-generator', mat: 'soot' }, V(run.x, run.y, run.z), V(0, 1, 0), hangar ? 40 : 16);
+    axisLathe(k, lip.map(([r, s]) => [r, s] as V2), { part: 'gas-generator', mat: 'soot' }, V(run.x, run.y, run.z), V(0, 1, 0), hangar ? 32 : 14);
     flange(V(run.x, hxT + 0.07, run.z), V(0, 1, 0), TP.exhaustR, exT, 12);
     flange(V(run.x, hxB - 0.07, run.z), V(0, 1, 0), TP.exhaustR, exT, 12);
     flange(R.pts.exhaustStart.clone().add(V(0, 0, -0.012)), V(0, 0, 1), TP.exhaustR - 0.006, exT, 10);
@@ -332,13 +327,13 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
       // helium coil inside the heat exchanger (visible in the section view)
       const coil: THREE.Vector3[] = [];
       const turns = 7;
-      for (let i = 0; i <= turns * 24; i++) {
-        const t = i / (turns * 24);
+      for (let i = 0; i <= turns * 16; i++) {
+        const t = i / (turns * 16);
         const a = t * turns * TAU;
         coil.push(V(run.x + 0.052 * Math.sin(a), hxT - 0.005 - (hxT - hxB - 0.01) * t, run.z + 0.052 * Math.cos(a)));
       }
       const cf = transportFrames({ p: coil, t: coil.map((_p, i) => coil[Math.min(coil.length - 1, i + 1)].clone().sub(coil[Math.max(0, i - 1)]).normalize()), len: coil.map((_, i) => i * 0.01) });
-      k.add(clippedTube(cf, { ro: 0.0065, segs: 10 }).back.surf, { part: 'gas-generator', mat: 'bronze' });
+      k.add(clippedTube(cf, { ro: 0.0065, segs: 8 }).back.surf, { part: 'gas-generator', mat: 'bronze' });
     }
     // brackets from the duct to the bell hatbands
     for (const y of [-1.3, -1.52]) {
@@ -411,7 +406,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     const blk = new RoundedBoxGeometry(0.06, 0.04, 0.05, 2, 0.005);
     blk.translate(ig.x, ig.y - 0.105, ig.z);
     k.add(blk, igT);
-    const band = new THREE.TorusGeometry(0.036, 0.004, 8, 32);
+    const band = new THREE.TorusGeometry(0.036, 0.004, hangar ? 8 : 5, hangar ? 32 : 18);
     band.rotateX(Math.PI / 2);
     for (const dy of [0.05, -0.04]) k.add(band.clone().translate(ig.x, ig.y + dy, ig.z), { part: 'igniter', mat: 'inconel' });
     band.dispose();
@@ -432,7 +427,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   box.translate(J.x, J.y, J.z - 0.01);
   k.add(box, { part: 'engine', mat: 'anodized' });
   for (const h of R.harness) {
-    pipe(h, 0.0072, { part: 'engine', mat: 'braid' }, { bend: 0.05, segs: 10, step: 0.02 });
+    pipe(h, 0.0072, { part: 'engine', mat: 'braid' }, { bend: 0.05, segs: 8 });
     // connector at the far end
     const end = h[h.length - 1];
     const prev = h[h.length - 2];
@@ -448,6 +443,4 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     nut.translate(end.x, end.y, end.z);
     k.add(nut, { part: 'engine', mat: 'steel' });
   }
-  void merge;
-  void cl;
 }

@@ -11,7 +11,7 @@ export const ABLATOR: MaterialDraft = {
   focus:
     'A heat shield that works by being consumed. Its resin decomposes (pyrolysis), leaving a porous carbon char; the gases released blow into the boundary layer and block heat, and the surface slowly recedes. It protects the K-1 crew capsule during entry.',
   suits:
-    'During entry the capsule’s kinetic energy becomes heat in the shock layer ahead of it, and the shield must keep the structure behind it near room temperature for several minutes. A charring ablator handles that heat in four ways: the decomposition of its resin absorbs energy (pyrolysis is endothermic); the pyrolysis gases absorb more as they heat up while percolating out through the char; those gases then blow into the boundary layer and thicken it, which cuts the heat reaching the surface (blowing); and the hot char surface re-radiates. The untouched material underneath conducts heat poorly, so the heat front advances slowly. Low-density ablators such as PICA (about 270 kg/m³) handle very high heat flux for their mass.',
+    'During entry the capsule’s kinetic energy becomes heat in the shock layer ahead of it, and for several minutes the shield must keep the bond line and structure behind it within their temperature limits (a few hundred °C at most) while its surface runs far hotter. A charring ablator handles that heat in four ways: the decomposition of its resin absorbs energy (pyrolysis is endothermic); the pyrolysis gases absorb more as they heat up while percolating out through the char; those gases then blow into the boundary layer and thicken it, which cuts the heat reaching the surface (blowing); and the hot char surface re-radiates. The untouched material underneath conducts heat poorly, so the heat front advances slowly. Low-density ablators such as PICA (about 270 kg/m³) handle very high heat flux for their mass.',
   limits:
     'Single use: the shield is charred and partly eroded after one entry and is replaced. Recession slightly changes the shape, and the thickness must include margin for recession and char depth, which costs mass. Low-density ablators are soft and easily damaged on the ground, and large shields are built from tiles or blocks whose seams and gap fillers are weak points.',
   elsewhere: [
@@ -76,11 +76,11 @@ export const MLI: MaterialDraft = {
   focus:
     'Blankets of many thin metallized plastic films separated by netting. In vacuum there is no air to conduct or carry heat, so radiation is the main path, and MLI blocks it layer by layer. It wraps the K-1 satellite and the capsule service module.',
   suits:
-    'In vacuum, surfaces exchange heat mainly by thermal radiation. A thin vapour-deposited aluminium coating on polyimide or polyester film has a low emittance: it emits little and reflects most of what arrives. Each film in the stack becomes a radiation shield floating at an intermediate temperature; with N identical shields between two surfaces the radiated heat falls roughly to 1/(N + 1) of the unshielded value. The netting spacers keep the films from touching, so conduction between them stays small. The blanket shields the spacecraft from direct sunlight on one side and from the cold of deep space on the other, and keeps the equipment inside within its temperature range.',
+    'In vacuum, surfaces exchange heat mainly by thermal radiation. A thin vapour-deposited aluminium coating on polyimide or polyester film has a low emittance: it emits little and reflects most of what arrives. Each film in the stack becomes a radiation shield floating at an intermediate temperature; with N identical shields between two surfaces the radiated heat falls roughly to 1/(N + 1) of the unshielded value. The netting spacers keep the films from touching, so conduction between them stays small. The blanket limits the heat absorbed from direct sunlight and the heat lost to cold deep space, so the equipment inside stays within its temperature range.',
   limits:
     'Works only in vacuum: on the ground, gas conduction between the layers ruins its performance. Compression at seams, fasteners and edges creates conduction paths, so installed blankets perform several times worse than the ideal layer count predicts. The outer film must survive atomic oxygen and ultraviolet light in low orbit, and blankets must be vented so trapped air escapes during ascent.',
   elsewhere: [
-    { text: 'MLI blankets flew on Spacelab and on the Long Duration Exposure Facility; NASA’s guidelines record how their outer films degraded in low Earth orbit.', source: 'nasa-mli-guidelines' },
+    { text: 'NASA’s MLI material guidelines draw on blankets flown on Spacelab and on the Long Duration Exposure Facility, including how their outer films eroded and darkened under atomic oxygen and ultraviolet light in low Earth orbit.', source: 'nasa-mli' },
   ],
   compare: [
     { axis: 'Radiation versus conduction', text: 'Stops radiation, the dominant path in vacuum. Foam stops conduction and convection, the dominant paths in air.' },
@@ -96,7 +96,7 @@ export const MLI: MaterialDraft = {
     q: 'Why does a spacecraft wrap itself in shiny foil instead of thick foam?',
     a: 'Because in vacuum there is no air to conduct or carry heat: almost all heat moves by radiation. Foam insulates on the ground by trapping still air; in space its bulk would add mass without stopping radiation well. Shiny, low-emittance films each reflect most incoming radiation and emit little, and every extra layer adds another barrier, so a thin, light blanket does the job.',
   },
-  sources: ['nasa-mli-guidelines'],
+  sources: ['nasa-mli'],
 };
 
 export const CRYO_FOAM: MaterialDraft = {

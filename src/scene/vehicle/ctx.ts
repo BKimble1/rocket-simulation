@@ -6,6 +6,7 @@ import type { VehicleConfig } from './types';
 import type { Kit, Section } from './kit';
 import type { VehicleMats } from './mats';
 import type { TankId } from './tanks';
+import type { RigInstances } from './instancing';
 
 export interface EngineMount {
   id: string;
@@ -20,6 +21,11 @@ export interface EngineMount {
   selfGimbal: boolean;
   /** Gimbal point (model frame). */
   pivot: THREE.Vector3;
+  /**
+   * Drawn as instance `instance` of the baked outer-engine cluster (then `engine` is the shared
+   * template model, not in the scene, and `mount` is only a pose carrier).
+   */
+  instance?: number;
 }
 
 export interface LegRig {
@@ -39,7 +45,10 @@ export interface FinRig {
 }
 
 export interface BootRig {
+  /** One merged mesh holds every boot; this boot's vertices start at `offset`. */
   mesh: THREE.Mesh;
+  offset: number;
+  segs: number;
   engine: EngineMount;
   /** Top ring (plate hole) and bottom ring (on the nozzle, engine frame) radii and heights. */
   rTop: number;
@@ -50,8 +59,8 @@ export interface BootRig {
 }
 
 export interface FlowPath {
-  kind: 'lox' | 'rp1' | 'he';
-  demo: 'feed-flow' | 'tank-pressure';
+  kind: 'lox' | 'rp1' | 'he' | 'sig';
+  demo: 'feed-flow' | 'tank-pressure' | 'gnc-loop';
   points: THREE.Vector3[];
   radius: number;
   section: Section;
@@ -67,6 +76,10 @@ export interface Movers {
   fairing: { A: THREE.Group | null; B: THREE.Group | null };
   /** Sandwich layers that the 'sandwich-panel' demo separates slightly (radial scale). */
   sandwichLayers: { obj: THREE.Object3D; dir: 1 | -1 }[];
+  /** Instanced rigs (one posed template each), updated after posing. */
+  inst: { legs: RigInstances | null; fins: RigInstances | null; collets: RigInstances | null; pushers: RigInstances | null };
+  /** Instanced outer booster engines: meshes and a per-instance matrix writer. */
+  cluster: { meshes: THREE.InstancedMesh[]; set(i: number, m: THREE.Matrix4): void; commit(): void } | null;
 }
 
 export interface Ctx {

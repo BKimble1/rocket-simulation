@@ -4,8 +4,14 @@ import type { Source } from '../types';
  * Sources cited by the materials index, the glossary, the knowledge checks, the why-demos and
  * the equation notes (owned by that content). None of these could be opened from the build
  * environment (no access to nasa.gov and most publisher sites), so every entry is marked
- * `accessed: 'reference'`: identified by title and publisher, with numbers quoted only where
- * they are the standard published values for the stated alloy, condition and temperature.
+ * `accessed: 'reference'`: identified by title and publisher (document numbers confirmed by
+ * search where possible), with numbers quoted only where they are the standard published values
+ * for the stated alloy, condition and temperature.
+ *
+ * Ids are shared with src/content/sources/parts.ts where both lists cite the same document
+ * (sutton-rpe, huzel-huang-sp125, nasa-sp8007, nasa-isogrid, ussa-1976, nasa-copv, nasa-mli,
+ * nasa-grc-dynpress, knacke-parachutes): allSources() keeps the first definition, so each
+ * document appears once in the credits, and these entries remain as fallbacks.
  */
 export const MATERIAL_SOURCES: Source[] = [
   // Physics and engines
@@ -18,7 +24,7 @@ export const MATERIAL_SOURCES: Source[] = [
     accessed: 'reference',
   },
   {
-    id: 'nasa-sp125',
+    id: 'huzel-huang-sp125',
     title: 'Design of Liquid Propellant Rocket Engines, NASA SP-125 (D. K. Huzel and D. H. Huang)',
     publisher: 'NASA, 1971 (NTRS 19710019929)',
     url: 'https://ntrs.nasa.gov/citations/19710019929',
@@ -34,7 +40,7 @@ export const MATERIAL_SOURCES: Source[] = [
     accessed: 'reference',
   },
   {
-    id: 'nasa-grc-dynamic-pressure',
+    id: 'nasa-grc-dynpress',
     title: 'Dynamic Pressure',
     publisher: 'NASA Glenn Research Center, Beginner’s Guide to Aeronautics',
     url: 'https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure/',
@@ -86,7 +92,7 @@ export const MATERIAL_SOURCES: Source[] = [
     id: 'asm-handbook-v2',
     title: 'ASM Handbook, Volume 2: Properties and Selection: Nonferrous Alloys and Special-Purpose Materials',
     publisher: 'ASM International, 1990',
-    url: 'https://www.asminternational.org/',
+    url: 'https://dl.asminternational.org/handbooks/edited-volume/14',
     used: 'Typical room-temperature properties of aluminium alloy 2219-T87 (density, elastic modulus, yield and ultimate strength) and of pure copper',
     accessed: 'reference',
   },
@@ -134,10 +140,10 @@ export const MATERIAL_SOURCES: Source[] = [
   // Copper, niobium, titanium
   {
     id: 'nasa-grcop42-ellis',
-    title: 'GRCop-42: a higher-conductivity variant of GRCop-84 (D. L. Ellis, NTRS 20050192166)',
-    publisher: 'NASA Glenn Research Center',
+    title: 'Conductivity of GRCop-42 Alloy Enhanced (D. L. Ellis), in Research and Technology 2003',
+    publisher: 'NASA Glenn Research Center, 2004 (NTRS 20050192166)',
     url: 'https://ntrs.nasa.gov/citations/20050192166',
-    used: 'Room-temperature thermal conductivity of GRCop-42 (344 W/(m·K)), GRCop-84 (280 W/(m·K)) and pure copper (about 396 W/(m·K))',
+    used: 'Room-temperature thermal conductivity of GRCop-42 (344 W/(m·K)) against GRCop-84 (280 W/(m·K)), NARloy-Z (296 W/(m·K)) and pure copper (about 396 W/(m·K))',
     accessed: 'reference',
   },
   {
@@ -170,7 +176,7 @@ export const MATERIAL_SOURCES: Source[] = [
     title: 'TORAYCA T700S carbon fiber data sheet',
     publisher: 'Toray Composite Materials America',
     url: 'https://www.toraycma.com/wp-content/uploads/T700S-Data-Sheet.pdf',
-    used: 'Tensile strength, tensile modulus and density of a standard-modulus carbon fibre',
+    used: 'Tensile strength, tensile modulus and density of a standard-modulus carbon fibre supplied for filament winding and prepreg',
     accessed: 'reference',
   },
   {
@@ -178,11 +184,11 @@ export const MATERIAL_SOURCES: Source[] = [
     title: 'HexWeb CR III aluminium honeycomb data sheet',
     publisher: 'Hexcel Corporation',
     url: 'https://hexcel.com/wp-content/uploads/2025/12/HexWeb_CRIII_DataSheet.pdf',
-    used: 'Aluminium (5052) honeycomb core product densities, from 3.1 lb/ft³ (about 50 kg/m³) upward',
+    used: 'Nominal density of 5052 aluminium honeycomb with 1/8 in cells and 0.0007 in foil: 3.1 lb/ft³ (about 50 kg/m³)',
     accessed: 'reference',
   },
   {
-    id: 'nasa-copv-primer',
+    id: 'nasa-copv',
     title: 'Composite Overwrapped Pressure Vessels, A Primer, NASA/SP-2011-573 (McLaughlan, Forth and Grimes-Ledesma)',
     publisher: 'NASA Johnson Space Center, 2011 (NTRS 20110008406)',
     url: 'https://ntrs.nasa.gov/citations/20110008406',
@@ -215,11 +221,11 @@ export const MATERIAL_SOURCES: Source[] = [
     accessed: 'reference',
   },
   {
-    id: 'nasa-mli-guidelines',
+    id: 'nasa-mli',
     title: 'Multilayer Insulation Material Guidelines, NASA/TP-1999-209263 (M. M. Finckenor and D. Dooling)',
     publisher: 'NASA Marshall Space Flight Center, 1999 (NTRS 19990047691)',
     url: 'https://ntrs.nasa.gov/citations/19990047691',
-    used: 'MLI construction (aluminized polyimide and polyester films, netting spacers), outer-layer durability, flight heritage',
+    used: 'MLI construction (aluminized polyimide and polyester films, netting spacers), venting, grounding, outer-layer durability in low orbit, Spacelab and LDEF experience',
     accessed: 'reference',
   },
   // Textiles

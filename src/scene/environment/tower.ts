@@ -38,7 +38,8 @@ export function buildTower(detail: number): Tower {
 
   const ibeam = new Instances(iBeamUnit(0.13, 0.09), SM('towerSteel'));
   const tube = new Instances(new THREE.BoxGeometry(1, 1, 1), SM('towerSteel'));
-  const plate = new Instances(new THREE.BoxGeometry(1, 1, 1), SM('towerSteel'));
+  // gusset plates share the bracing's unit box and paint (one instanced mesh)
+  const plate = tube;
   const railRod = new Instances(new THREE.CylinderGeometry(1, 1, 1, 8, 1), SM('yellow'));
   const galvBar = new Instances(new THREE.BoxGeometry(1, 1, 1), SM('galv'));
   const B = new Batch();
@@ -202,7 +203,7 @@ export function buildTower(detail: number): Tower {
     // the car, parked at the crew level
     const carY = 66;
     B.at(bevelBox(2.4, 2.6, 2.2, 0.04), SM('claddingGrey'), 0, carY + 1.3, (ez0 + ez1) / 2 + 0.15, 0, tag);
-    B.at(box(1.2, 1.9, 0.02), SM('glass'), 0, carY + 1.2, ez1 - 0.35, 0);
+    B.at(box(1.2, 1.9, 0.02), SM('steelDark'), 0, carY + 1.2, ez1 - 0.35, 0);
     // machine room on the roof
     B.at(bevelBox(3.4, 2.6, 3.2, 0.05), SM('claddingGrey'), 0, H + 1.3 + 0.0, (ez0 + ez1) / 2, 0, tag);
   }
@@ -214,7 +215,7 @@ export function buildTower(detail: number): Tower {
     mast.translate(0, H + mastH / 2, 0);
     B.add(mast, SM('frp'), undefined, tag);
     B.add(cyl(0.6, 0.8, 16), SM('steelDark'), new THREE.Matrix4().setPosition(0, H + 0.4, 0));
-    B.add(rod(v3(0, H + mastH, 0), v3(0, TOWER.mastTop, 0), 0.04, 8), SM('copper'));
+    B.add(rod(v3(0, H + mastH, 0), v3(0, TOWER.mastTop, 0), 0.04, 8), SM('galv'));
     for (const a of [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3]) {
       const base = v3(Math.cos(a) * 3.2, H + 0.1, Math.sin(a) * 3.2);
       B.add(rod(base, v3(0, H + mastH * 0.35, 0), 0.05, 6), SM('galv'));
@@ -227,7 +228,7 @@ export function buildTower(detail: number): Tower {
     B.at(box(0.35, 0.4, 0.3), SM('yellow'), 3.4, H + 3.3, 2.6, 0);
     // antennas and a weather mast
     B.add(rod(v3(3.2, H, -3.2), v3(3.2, H + 4.5, -3.2), 0.05, 6), SM('galv'));
-    B.at(cyl(0.35, 0.08, 16), SM('whiteMatte'), 3.2, H + 4.5, -3.2, 0);
+    B.at(cyl(0.35, 0.08, 16), SM('claddingGrey'), 3.2, H + 4.5, -3.2, 0);
     B.add(rod(v3(-3.3, H, -3.2), v3(-3.3, H + 3, -3.2), 0.04, 6), SM('galv'));
     for (const [x, z] of [
       [-h, -h],
@@ -255,7 +256,6 @@ export function buildTower(detail: number): Tower {
 
   ibeam.build(group, 'tower-ibeams', { cast: true, receive: true, ...tag });
   tube.build(group, 'tower-braces', { cast: true, receive: true, ...tag });
-  plate.build(group, 'tower-gussets', { cast: false, receive: true, ...tag });
   railRod.build(group, 'tower-rails', { cast: detail > 0.6, receive: true, ...tag });
   galvBar.build(group, 'tower-galv', { cast: true, receive: true, ...tag });
   B.build(group, 'tower');
@@ -308,8 +308,9 @@ export function buildTower(detail: number): Tower {
     for (const s of [-1, 1]) rails.member(v3(0.2, 1.1, zc + s * (width / 2 - 0.15)), v3(len - 0.2, 1.1, zc + s * (width / 2 - 0.15)), 0.022, 0.022);
     // hinge post
     AB.add(rod(v3(0, -0.6, 0), v3(0, depth + 0.6, 0), 0.22, 16), SM('steelDark'));
-    tI.build(pivot, `${name}-truss`, { cast: true, receive: true, part: 'service-tower' });
-    rails.build(pivot, `${name}-rails`, { cast: false, receive: true, part: 'service-tower' });
+    // the arm swings as one piece: its members merge into its batch (a few draw calls per arm)
+    tI.mergeInto(AB, SM('towerSteel'), { cast: true, receive: true, part: 'service-tower' });
+    rails.mergeInto(AB, SM('towerSteel'));
     return { pivot, AB, zc };
   };
 
@@ -322,7 +323,7 @@ export function buildTower(detail: number): Tower {
     // umbilical carrier plate at the vehicle skin and the lines along the arm
     const tip = len;
     AB.at(bevelBox(0.35, 1.5, 1.3, 0.04), SM('steelDark'), tip + 0.1, 1.55, zc, 0);
-    AB.at(bevelBox(0.12, 1.2, 1.0, 0.02), SM('stainless'), tip + 0.36, 1.55, zc, 0);
+    AB.at(bevelBox(0.12, 1.2, 1.0, 0.02), SM('steelDark'), tip + 0.36, 1.55, zc, 0);
     AB.add(pipe([v3(-0.2, 0.55, zc - 0.5), v3(tip - 0.6, 0.55, zc - 0.5), v3(tip + 0.2, 1.3, zc - 0.3), v3(tip + 0.45, 1.3, zc - 0.3)], 0.2, 0.6, 12), SM('aluminum'));
     AB.add(pipe([v3(-0.2, 0.5, zc + 0.5), v3(tip - 0.6, 0.5, zc + 0.5), v3(tip + 0.2, 1.8, zc + 0.3), v3(tip + 0.45, 1.8, zc + 0.3)], 0.14, 0.6, 12), SM('rubber'));
     AB.add(pipe([v3(-0.2, 1.4, zc), v3(tip - 0.2, 1.4, zc), v3(tip + 0.45, 2.0, zc)], 0.06, 0.4, 8), SM('rubber'));

@@ -31,13 +31,16 @@ export const TP = {
   loxDuctR: 0.082,
   fuelDuctR: 0.058,
   loxLineR: 0.05,
-  fuelLineR: 0.043,
+  fuelLineR: 0.037,
   exhaustR: 0.062,
   tapR: 0.012,
   /** Fuel feed duct: vertical run in front of the pump (z) and interface height. */
   fuelDuctZ: 0.215,
   bellowsY: [0.03, 0.17] as [number, number],
 };
+
+/** Largest axis distance of the fuel line centre (line and clamps stay inside the envelope). */
+const LINE_R_MAX = 0.522;
 
 /** Plan angle (lathe convention) of the turbine exhaust duct run. */
 export const EXHAUST_PHI = (138 * Math.PI) / 180;
@@ -119,16 +122,18 @@ export function routes(d: Design): Routes {
     v(-0.4, mfvIn.y + 0.1, 0),
     mfvIn.clone(),
   ];
-  const [rmBase, ym] = [d.rOut(d.y(d.manifoldX)), d.y(d.manifoldX)];
-  const manifoldR = rmBase + 0.03 - 0.006;
-  const manifoldIn = v(-manifoldR, ym + 0.028, 0);
+  const ym = d.y(d.manifoldX);
+  const manifoldR = d.manifoldR;
+  // the line drops onto an inlet boss on the upper outer quadrant of the torus
+  const lineR = Math.min(manifoldR + 0.012, LINE_R_MAX);
+  const manifoldIn = v(-lineR, ym + 0.022, 0);
   const fuelDown: THREE.Vector3[] = [mfvOut.clone()];
-  const standoff = 0.062;
-  for (let y = mfvOut.y - 0.12; y > ym + 0.1; y -= 0.1) {
-    const r = Math.max(-mfv.x, d.rOut(y) + standoff);
+  const standoff = TP.fuelLineR + 0.008;
+  for (let y = mfvOut.y - 0.12; y > ym + 0.16; y -= 0.1) {
+    const r = Math.min(LINE_R_MAX, Math.max(-mfv.x, d.rOut(y) + standoff));
     fuelDown.push(v(-r, y, 0));
   }
-  fuelDown.push(v(-(manifoldR + 0.0), ym + 0.1, 0), manifoldIn.clone());
+  fuelDown.push(v(-lineR, ym + 0.1, 0), manifoldIn.clone());
 
   // feed ducts from the stage: LOX straight down into the axial inlet, RP-1 down in front
   // of the pump and into the side inlet of the fuel plenum
@@ -139,12 +144,12 @@ export function routes(d: Design): Routes {
   // gas generator propellant taps (small lines from the pump discharges)
   const ggLoxPort = v(x + 0.062 * Math.sin((150 * Math.PI) / 180), -0.885, 0.062 * Math.cos((150 * Math.PI) / 180));
   const ggFuelPort = v(x + 0.062 * Math.sin((210 * Math.PI) / 180), -0.885, 0.062 * Math.cos((210 * Math.PI) / 180));
-  const loxTap = [v(x + 0.045, TP.loxVoluteY - 0.02, -rEnd - 0.01), v(x + 0.12, -0.2, -0.15), v(0.545, -0.3, -0.13), v(0.545, -0.8, -0.13), v(ggLoxPort.x + 0.05, -0.885, ggLoxPort.z - 0.06), ggLoxPort.clone()];
+  const loxTap = [v(x + 0.045, TP.loxVoluteY - 0.02, -rEnd - 0.01), v(x + 0.1, -0.2, -0.15), v(0.5, -0.3, -0.14), v(0.5, -0.8, -0.14), v(ggLoxPort.x + 0.05, -0.885, ggLoxPort.z - 0.06), ggLoxPort.clone()];
   const fuelTap = [v(x - 0.07, TP.fuelVoluteY - 0.03, -rEnd - 0.005), v(0.31, -0.47, -0.16), v(0.3, -0.8, -0.15), v(ggFuelPort.x - 0.04, -0.885, ggFuelPort.z - 0.06), ggFuelPort.clone()];
 
   // turbine exhaust: from the collector straight back, down to the duct run beside the bell
   const exhaustStart = v(x, TP.collectorY, -0.126);
-  const rr = 0.565 - TP.exhaustR;
+  const rr = d.exhaustRunR;
   const run = v(rr * Math.sin(EXHAUST_PHI), 0, rr * Math.cos(EXHAUST_PHI));
   const yEnd = d.ggExit.y + 0.05;
   const exhaust = [exhaustStart.clone(), v(x, TP.collectorY, -0.2), v(run.x + 0.03, -0.6, run.z + 0.06), v(run.x, -0.7, run.z), v(run.x, yEnd, run.z)];

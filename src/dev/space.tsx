@@ -5,7 +5,10 @@
  *   cam=e,n,u,hdg,pitch,fov camera in pad-local ENU metres (DevStage)
  *   moon=d,az,el           put the camera d metres from the Moon's centre (az/el in degrees,
  *                          around the Earth-Moon line) looking at the Moon
- *   earth=1                look at the Earth's centre from the camera position (whole-Earth views)
+ *   earth=1                look at the Earth's centre from the camera position, north up
+ *   subj=<m>               put the focus subject this far along the view (default 100 m)
+ *   rocket=1               a 3.7 m x 60 m white stand-in cylinder, upright at the subject (to judge
+ *                          cloud occlusion as it climbs through the layer)
  *   probe=1                lighting probes 100 m ahead: white and grey diffuse spheres, a mirror
  *                          sphere, brushed metal, and a 1:10 stand-in vehicle cylinder
  *   hole=1                 tint the globe inside the local-terrain disk
@@ -21,7 +24,7 @@ import { skyState } from '../scene/space/skyState';
 import { frame } from '../scene/frame';
 import { director } from '../director/director';
 import { stageHooks } from '../scene/Stage';
-import { moonPosition, R_MOON } from '../world/frames';
+import { EARTH_AXIS, moonPosition, R_MOON } from '../world/frames';
 import { perf } from '../scene/quality';
 import { spaceAssets } from '../scene/space/assets';
 
@@ -31,7 +34,8 @@ function CameraOverrides() {
   useEffect(() => {
     const moonArg = q.get('moon');
     const lookEarth = q.get('earth') === '1';
-    if (!moonArg && !lookEarth) return;
+    const subj = q.has('subj') ? Number(q.get('subj')) : 0;
+    if (!moonArg && !lookEarth && !subj) return;
     const base = stageHooks.tick;
     const m = new THREE.Vector3();
     const toEarth = new THREE.Vector3();
@@ -40,6 +44,7 @@ function CameraOverrides() {
     stageHooks.tick = (dt) => {
       base?.(dt);
       const p = director.flightPose;
+      if (subj > 0) p.target.sub(p.pos).setLength(subj).add(p.pos);
       if (moonArg) {
         const [d, az, el] = moonArg.split(',').map(Number);
         moonPosition(frame.missionTime, frame.tl?.moonPhase0 ?? 0, m);
@@ -53,9 +58,9 @@ function CameraOverrides() {
         p.target.copy(m);
         p.up.copy(up);
       } else if (lookEarth) {
+        // north up: the Earth's axis
         p.target.set(0, 0, 0);
-        p.up.set(0, 1, 0);
-        if (Math.abs(p.pos.clone().normalize().y) > 0.95) p.up.set(1, 0, 0);
+        p.up.copy(EARTH_AXIS);
       }
     };
     return () => {
@@ -104,6 +109,21 @@ function Probes() {
     }
   }, 1);
   return <primitive object={group} />;
+}
+
+function StandIn() {
+  const mesh = useMemo(() => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(1.85, 1.85, 60, 48), new THREE.MeshStandardMaterial({ color: 0xf3f2ee, roughness: 0.45 }));
+    m.castShadow = m.receiveShadow = true;
+    return m;
+  }, []);
+  useEffect(() => () => (mesh.geometry.dispose(), (mesh.material as THREE.Material).dispose()), [mesh]);
+  useFrame(() => {
+    const t = director.flightPose.target;
+    mesh.position.set(t.x - frame.origin.x, t.y - frame.origin.y, t.z - frame.origin.z);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), t.clone().normalize());
+  }, 1);
+  return <primitive object={mesh} />;
 }
 
 function TextureDebug() {
@@ -177,6 +197,7 @@ export default function Dev() {
       <CameraOverrides />
       <Debug />
       {q.get('probe') === '1' ? <Probes /> : null}
+      {q.get('rocket') === '1' ? <StandIn /> : null}
       {q.get('debug') === 'textures' ? <TextureDebug /> : null}
     </>
   );

@@ -242,6 +242,14 @@ function forwardSkirt(ctx: Ctx) {
   }
   harness.push(harness[0].clone());
   kit.add(s.group, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(harness, false, 'centripetal'), 96, 0.018, 6, false), { part: 'avionics', mat: 'al-2219', look: 'rubber', internal: true, cut: true });
+  // guidance loop routes for the gnc-loop demonstration (schematic): IMU/GNSS receiver to the
+  // flight computer, then the actuator commands down the tower side toward the booster
+  const imu = boxes[2];
+  const fc = boxes[0];
+  const yS = shelfY + 0.34;
+  const arc = (a: number, b: number, n: number) => Array.from({ length: n + 1 }, (_, i) => polar(1.5, a + ((b - a) * i) / n, yS));
+  ctx.flows.push({ kind: 'sig', demo: 'gnc-loop', points: arc(imu.phi, fc.phi, 10), radius: 0.028, section: s });
+  ctx.flows.push({ kind: 'sig', demo: 'gnc-loop', points: [...arc(fc.phi, AZ.raceway - Math.PI * 2, 14), polar(R + 0.06, AZ.raceway, yS), polar(R + 0.06, AZ.raceway, S.interstageTop + 0.04)], radius: 0.028, section: s });
   return s;
 }
 

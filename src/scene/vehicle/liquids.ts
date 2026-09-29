@@ -32,7 +32,7 @@ export class Liquid {
     this.mesh.renderOrder = 2;
     this.mesh.visible = false;
     section.group.add(this.mesh);
-    const capMat = mats.get(look);
+    const capMat = mats.get(look === 'lox' ? 'loxCap' : 'rp1Cap');
     this.caps = [0, 1].map((k) => {
       const m = new THREE.Mesh(new THREE.BufferGeometry(), capMat);
       m.name = `liquid-cap:${tank}`;

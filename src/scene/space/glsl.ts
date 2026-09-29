@@ -158,12 +158,18 @@ float ign(vec2 px) { return fract(52.9829189 * fract(dot(px, vec2(0.06711056, 0.
  * globe: +X longitude 0, +Y north, -Z 90 deg E). One function serves the global layer seen from
  * orbit, the cumulus near the pad and the cloud shadows on the ground.
  *
- *   coverage (cube map, weather systems at ~10 km)  x  clusters (tile 40 km)
- *   x cells (tile 7 km, Perlin-Worley)  -  erosion (tile 1.6 km, Worley), faded with distance
- *   x vertical profile (flat bases at CLOUD_BASE, tops rising with coverage)
+ *   coverage (cube map, weather systems at ~10 km)  x  clusters (tile 26 km)
+ *   x cumulus cells (tile 4.2 km, Perlin-Worley, towers about 1 km across)
+ *   x vertical gradient (flat bases at CLOUD_BASE, dome tops), applied BEFORE the coverage
+ *     threshold so towers narrow with height, then eroded by Worley detail (tile 0.9 km).
+ * Far away (lod -> 1) the cells are replaced by a statistical mean whose optical depth gives
+ * the same average opacity as the resolved cells, so the field neither sparkles nor turns into
+ * an overcast sheet with distance.
  */
 export const CLOUD_BASE = 1500;
-export const CLOUD_TOP = 4600;
+export const CLOUD_TOP = 3500;
+/** Extinction per unit cloud density (1/m): a mean free path of 50 m in the dense core. */
+export const CLOUD_SIGMA = 0.02;
 
 export const CLOUD_GLSL = /* glsl */ `
 uniform samplerCube uCoverage;
@@ -172,44 +178,57 @@ uniform vec3 uPadEF;          // unit vector to the pad, Earth-fixed
 uniform float uCloudTime;     // unused drift hook (clouds are static over a lesson)
 const float C_BASE = ${f(CLOUD_BASE)};
 const float C_TOP = ${f(CLOUD_TOP)};
+const float C_SIGMA = ${f(CLOUD_SIGMA)};
+const float C_CELL = ${f(1 / 4200)};
+const float C_CLUSTER = ${f(1 / 26000)};
+const float C_DETAIL = ${f(1 / 900)};
+// thickness of cloud a vertical ray crosses in a typical cell (sets the far-field mean)
+const float C_COLUMN = 700.0;
 
 float remap01(float v, float a, float b) { return clamp((v - a) / (b - a), 0.0, 1.0); }
 
 /* Weather coverage 0..1 and cloud-top factor 0..1 at an Earth-fixed direction, with the pad's
-   local weather: scattered fair-weather cumulus, a clear column right above the pad. */
+   local weather: scattered fair-weather cumulus, a mostly clear column right above the pad. */
 vec2 cloudWeather(vec3 pEF, out float padDist) {
   vec3 n = normalize(pEF);
   vec4 cv = textureCube(uCoverage, n);
   float cov = cv.r;
   float top = cv.g;
   padDist = length(n - uPadEF) * A_RB;
-  float wPad = 1.0 - smoothstep(55000.0, 160000.0, padDist);
-  cov = mix(cov, 0.46, wPad);
-  top = mix(top, 0.35, wPad);
+  float wPad = 1.0 - smoothstep(60000.0, 180000.0, padDist);
+  cov = mix(cov, 0.44, wPad);
+  top = mix(top, 0.5, wPad);
   // keep the column over the pad and the first kilometres of the ascent mostly clear
-  cov *= mix(1.0, 0.25 + 0.75 * smoothstep(2500.0, 7000.0, padDist), wPad);
+  cov *= mix(1.0, 0.3 + 0.7 * smoothstep(1800.0, 6500.0, padDist), wPad);
   return vec2(cov, top);
 }
 
-float heightProfile(float hf, float topF) {
-  // flat base (fast rise), rounded top; taller clouds where the top factor is high
-  float topH = mix(0.38, 1.0, topF);
-  return smoothstep(0.0, 0.07, hf) * (1.0 - smoothstep(topH * 0.55, topH, hf));
+/* Vertical gradient: fast rise at a flat base, parabolic fall to the tallest tops (topH). */
+float heightGradient(float hf, float topF) {
+  float topH = mix(0.42, 1.0, topF);
+  float x = hf / topH;
+  return smoothstep(0.0, 0.045, hf) * clamp(1.0 - x * x, 0.0, 1.0);
 }
 
-/* Shape (0..1) at a point: coverage thresholding clusters and cells. lod 0 = full detail;
-   toward 1 the field is replaced by its local mean (what a long step or a wide pixel sees), so
-   distant clouds neither sparkle nor vanish. */
-float cloudShape(vec3 pEF, vec2 wc, float lod) {
+/* Shape (0..1) at a point. lod 0 = full detail; toward 1 the cells are replaced by their mean
+   (what a long step or a wide pixel sees). */
+float cloudShape(vec3 pEF, float hf, vec2 wc, float lod) {
   float cov = wc.x;
-  vec4 a = texture(uNoise, pEF * (1.0 / 40000.0));
-  float clusters = a.r * 0.7 + a.g * 0.3;
-  float mean = cov * cov * (0.35 + 0.9 * clusters) * 0.62;
+  float g = heightGradient(hf, wc.y);
+  float thr = 1.0 - cov;
+  if (g <= thr) return 0.0;
+  vec4 a = texture(uNoise, pEF * C_CLUSTER);
+  float clusters = a.r * 0.6 + a.g * 0.4;
+  float mean = 0.0;
+  if (lod > 0.0) {
+    // area fraction of the thresholded cells at this height, as an optical depth over a column
+    float area = clamp((g - thr) / max(g, 1e-3), 0.0, 1.0) * (0.55 + 0.9 * clusters);
+    mean = -log(1.0 - min(area, 0.93)) / (C_SIGMA * C_COLUMN);
+  }
   if (lod >= 0.999) return mean;
-  vec4 b = texture(uNoise, pEF * (1.0 / 7000.0) + vec3(0.37, 0.11, 0.73));
-  float cells = b.r * 0.8 + b.g * 0.2;
-  float base = clusters * 0.45 + cells * 0.55;
-  float detailed = remap01(base, 1.0 - cov, 1.0);
+  vec4 b = texture(uNoise, pEF * C_CELL + vec3(0.37, 0.11, 0.73));
+  float n = (b.r * 0.85 + b.g * 0.15) * 0.74 + clusters * 0.26;
+  float detailed = remap01(n * g, thr, 1.0);
   return mix(detailed, mean, lod);
 }
 
@@ -220,24 +239,35 @@ float cloudDensity(vec3 pEF, float h, float lod, float erodeLod) {
   float pd;
   vec2 wc = cloudWeather(pEF, pd);
   if (wc.x < 0.02) return 0.0;
-  float s = cloudShape(pEF, wc, lod) * heightProfile(hf, wc.y);
+  float s = cloudShape(pEF, hf, wc, lod);
   if (s <= 0.0) return 0.0;
   if (erodeLod < 1.0) {
-    vec4 e = texture(uNoise, pEF * (1.0 / 1600.0) + vec3(0.5, 0.2, 0.9));
+    vec4 e = texture(uNoise, pEF * C_DETAIL + vec3(0.5, 0.2, 0.9));
     float er = e.g * 0.5 + e.b * 0.3 + e.a * 0.2;
-    // erode more at the bottom (wispy) and less in the core
-    float amt = (0.28 + 0.2 * (1.0 - hf)) * (1.0 - erodeLod);
+    // billowy tops, wispier bottoms
+    float amt = (0.32 + 0.22 * (1.0 - hf)) * (1.0 - erodeLod);
     s = remap01(s, er * amt, 1.0);
   }
   return s;
 }
 
-/* Column opacity for shadows cast on the ground (0 = clear, 1 = opaque). */
-float cloudColumn(vec3 pEF) {
+/* Column opacity for shadows cast on the ground (0 = clear, 1 = opaque): the towers' footprint
+   near the base, less the eroded fringe, so shadows match the clouds. lod -> 1 (a pixel wider
+   than a cell) gives the mean shade instead of aliasing cells. */
+float cloudColumn(vec3 pEF, float lod) {
   float pd;
   vec2 wc = cloudWeather(pEF, pd);
   if (wc.x < 0.02) return 0.0;
-  float s = cloudShape(pEF, wc, 0.3);
-  return clamp(s * (1.4 + wc.y), 0.0, 1.0);
+  float g = heightGradient(0.18, wc.y);
+  float thr = 1.0 - wc.x;
+  if (g <= thr) return 0.0;
+  vec4 a = texture(uNoise, pEF * C_CLUSTER);
+  float clusters = a.r * 0.6 + a.g * 0.4;
+  float mean = clamp((g - thr) / g * (0.55 + 0.9 * clusters), 0.0, 1.0) * 0.8;
+  if (lod >= 0.999) return mean;
+  vec4 b = texture(uNoise, pEF * C_CELL + vec3(0.37, 0.11, 0.73));
+  float n = (b.r * 0.85 + b.g * 0.15) * 0.74 + clusters * 0.26;
+  float detailed = smoothstep(0.18, 0.55, remap01(n * g, thr, 1.0));
+  return mix(detailed, mean, lod);
 }
 `;
