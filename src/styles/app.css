@@ -1501,6 +1501,10 @@ code {
     right: 8px;
     flex-wrap: wrap;
   }
+  /* the phase sheet already carries the phase title */
+  .mission-top:has(~ .phasecard) .mission-title__phase {
+    display: none;
+  }
   .playbar__time {
     min-width: 70px;
   }

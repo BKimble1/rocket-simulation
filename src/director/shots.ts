@@ -11,6 +11,7 @@ import { frame } from '../scene/frame';
 import { R_EARTH, sitePosition, siteFrameQuaternion, moonPosition } from '../world/frames';
 import { clamp, fitFov, type CamPose } from './pose';
 import type { BodyState } from '../timeline/sample';
+import { MOUNT_Y } from '../scene/spacecraft/types';
 
 /** Approximate half-length (m) of each body for framing. */
 export const BODY_SIZE: Record<BodyId, { half: number; centreY: number }> = {
@@ -25,6 +26,15 @@ export const BODY_SIZE: Record<BodyId, { half: number; centreY: number }> = {
   station: { half: 40, centreY: 0 },
   ground: { half: 50, centreY: 0 },
 };
+
+/** The suborbital research capsule rides on the booster (model frame), lower than the crew capsule. */
+const RESEARCH_CAPSULE = { half: 2, centreY: MOUNT_Y.boosterCapsuleAdapter + 1.1 };
+
+/** Framing size of a body in the mission on screen. */
+export function bodySize(id: BodyId): { half: number; centreY: number } {
+  if (id === 'capsule' && frame.tl?.id === 'suborbital') return RESEARCH_CAPSULE;
+  return BODY_SIZE[id];
+}
 
 const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
@@ -59,7 +69,7 @@ export function bodyPoint(s: BodyState, local: THREE.Vector3, out: THREE.Vector3
 
 /** Centre of a body's visual extent (absolute). */
 export function bodyCentre(id: BodyId, s: BodyState, out: THREE.Vector3): THREE.Vector3 {
-  return bodyPoint(s, v3.set(0, BODY_SIZE[id].centreY, 0), out);
+  return bodyPoint(s, v3.set(0, bodySize(id).centreY, 0), out);
 }
 
 /** A ground camera at east/north/up metres from the pad, at mission time t. */
@@ -96,7 +106,7 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
   const s = frame.bodies[shot.subject];
   if (!s) return false;
   const P = shot.params ?? {};
-  const size = BODY_SIZE[shot.subject];
+  const size = bodySize(shot.subject);
   basisOf(s, B);
   const centre = bodyCentre(shot.subject, s, v1);
   const lookAlong = P.look ?? 0;
@@ -241,7 +251,7 @@ export function evalFree(subject: BodyId, o: FreeOrbit, ctx: ShotContext, out: C
   keepAboveGround(out.pos, 2);
   out.target.copy(c);
   out.up.copy(B2.up);
-  out.fov = clamp(fitFov(BODY_SIZE[subject].half, o.dist, ctx.aspect, 1.3), 10, 65);
+  out.fov = clamp(fitFov(bodySize(subject).half, o.dist, ctx.aspect, 1.3), 10, 65);
   return true;
 }
 

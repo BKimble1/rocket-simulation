@@ -161,7 +161,7 @@ export const PARTS: Record<PartId, PartDef> = Object.fromEntries(
     p('satellite-bus', 'Satellite bus', 'Satellite', 'satellite', 'payload', { variants: ['satellite'], keywords: ['spacecraft', 'bus', 'payload'] }),
     p('solar-arrays', 'Solar arrays', 'Solar arrays', 'satellite', 'payload', { variants: ['satellite', 'capsule'], keywords: ['solar panels', 'power', 'wings'] }),
     p('antenna', 'Communications antenna', 'Antenna', 'satellite', 'payload', { variants: ['satellite'], keywords: ['dish', 'radio', 'downlink', 'reflector'] }),
-    p('attitude-thrusters', 'Spacecraft attitude thrusters and reaction wheels', 'Attitude control', 'satellite', 'payload', { variants: ['satellite', 'capsule'], keywords: ['RCS', 'reaction wheels', 'hydrazine', 'thrusters'] }),
+    p('attitude-thrusters', 'Spacecraft attitude thrusters and reaction wheels', 'Attitude control', 'satellite', 'payload', { variants: ['satellite', 'capsule', 'suborbital'], keywords: ['RCS', 'reaction wheels', 'hydrazine', 'thrusters'] }),
     p('mli-blankets', 'Multilayer insulation blankets', 'MLI blankets', 'satellite', 'thermal', { variants: ['satellite', 'capsule'], keywords: ['MLI', 'gold foil', 'thermal blanket', 'kapton'] }),
     p('apogee-engine', 'Satellite apogee engine', 'Apogee engine', 'satellite', 'propulsion', { variants: ['satellite'], principal: false, keywords: ['liquid apogee engine', 'circularization', 'LAE'] }),
     p('capsule', 'Crew capsule (pressure vessel)', 'Capsule', 'capsule', 'payload', { variants: ['capsule', 'suborbital'], keywords: ['crew module', 'pressure vessel', 'cabin'] }),

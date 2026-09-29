@@ -143,9 +143,9 @@ export const OUTLINES: Record<MissionId, MissionOutline> = {
     id: 'station',
     title: 'Station delivery',
     short: 'Station delivery',
-    purpose: 'Launch a crew capsule into the station’s orbital plane, catch up by phasing, and dock.',
+    purpose: 'Launch a crew capsule into the station’s orbital plane, catch up by phasing, and dock. The crew stack with its abort tower needs all of the booster’s propellant, so on this mission the booster is expended instead of flying home.',
     payload: 'capsule',
-    recovery: true,
+    recovery: false,
     stack: 'full',
     phases: [
       { id: 'pad', title: 'Countdown and crew access arm', focus: 'booster' },
@@ -161,9 +161,8 @@ export const OUTLINES: Record<MissionId, MissionOutline> = {
       { id: 'approach', title: 'Final approach along the radial line', focus: 'capsule' },
       { id: 'docking', title: 'Soft capture and hard capture', focus: 'capsule' },
     ],
-    branch: RTLS,
-    events: ['arms-retract', 'engine-start', 'liftoff', 'tower-clear', 'max-q', 'meco', 'stage-sep', 'ses1', 'les-jettison', 'seco', 'capsule-sep', 'arrays-deploy', 'phasing-burn-1', 'phasing-burn-2', 'hold-point', 'soft-capture', 'hard-capture', ...RTLS_EVENTS],
-    outcome: 'Why matching relative motion matters, and why a spacecraft cannot simply point at a station and fly straight to it.',
+    events: ['arms-retract', 'engine-start', 'liftoff', 'tower-clear', 'max-q', 'meco', 'stage-sep', 'ses1', 'les-jettison', 'seco', 'capsule-sep', 'arrays-deploy', 'phasing-burn-1', 'phasing-burn-2', 'hold-point', 'soft-capture', 'hard-capture'],
+    outcome: 'Why matching relative motion matters, why a spacecraft cannot simply point at a station and fly straight to it, and why a heavier payload can cost the booster its return trip.',
   },
   return: {
     id: 'return',
