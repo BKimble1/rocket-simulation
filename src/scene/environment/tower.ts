@@ -10,6 +10,7 @@
  */
 import * as THREE from 'three';
 import { PAD } from '../../world/site';
+import { CAPSULE, SERVICE_MODULE, STATIONS } from '../../vehicle/spec';
 import { Batch, Instances, bevelBox, box, cyl, iBeamUnit, pipe, rod, v3 } from './geom';
 import { SM } from './mats';
 import { TOWER } from './layout';
@@ -343,7 +344,18 @@ export function buildTower(detail: number): Tower {
   }
   // crew access arm with the white room at the hatch (capsule configuration), level 66
   {
-    const y = PAD.nozzleExitHeight + 58.3 - 1.05; // walkway floor: the hatch sill ~1 m above it
+    // The capsule (spec.ts: CAPSULE, SERVICE_MODULE) seats on the service module's ring, its
+    // shoulder (r = 1.95 m) ~0.2 m above the ring, the backshell narrowing at 25 deg above it; the
+    // hatch is at ~58.3 m above the nozzle exit (brief). The walkway floor sits just below the hatch
+    // sill and clear above the shoulder; the white room stops 1.8 m from the axis (clear of the
+    // backshell at its floor) and a hood with a rubber lip reaches in, parallel to the cone, to 2 cm
+    // off the capsule around the hatch.
+    const ringY = PAD.nozzleExitHeight + STATIONS.s2ForwardSkirtTop + SERVICE_MODULE.length;
+    const hatchY = PAD.nozzleExitHeight + 58.3;
+    const cone = THREE.MathUtils.degToRad(CAPSULE.sidewallDeg);
+    const backshellR = (yy: number) => CAPSULE.baseDiameter / 2 - Math.max(0, yy - (ringY + 0.18)) * Math.tan(cone);
+    const y = hatchY - 0.62; // walkway floor
+    const roomR = 1.8; // white room face from the vehicle axis
     const hingeZ = -1.5;
     const pivot = new THREE.Group();
     pivot.name = 'arm-crew-access';
@@ -351,7 +363,8 @@ export function buildTower(detail: number): Tower {
     group.add(pivot);
     const AB = new Batch({ cast: true, receive: true, part: 'service-tower' });
     const wr = 2.7; // white room depth
-    const reach = vehicleX - (face + 0.3) - 1.75; // to 1.75 m from the axis
+    const axisX = vehicleX - (face + 0.3); // the vehicle axis in arm coordinates
+    const reach = axisX - roomR;
     const len = reach - wr;
     const zc = 1.5;
     // enclosed walkway: floor, roof, side panels with a window band
@@ -369,7 +382,16 @@ export function buildTower(detail: number): Tower {
     // white room: a larger cabin with the hatch seal toward the capsule
     AB.at(bevelBox(wr, 3.0, 3.0, 0.05), SM('white'), len + wr / 2, 1.45, zc, 0, { part: 'service-tower' });
     AB.at(box(0.08, 0.9, 2.0), SM('glass'), len + wr * 0.35, 1.9, zc + 1.52, Math.PI / 2);
-    AB.at(bevelBox(0.35, 2.3, 2.1, 0.12), SM('rubber'), len + wr + 0.1, 1.3, zc, 0);
+    {
+      // hood and lip around the hatch: tilted with the backshell (local x across it, y up its slant)
+      const hy = hatchY - y;
+      const sx = axisX - backshellR(hatchY); // the backshell surface at the hatch
+      const n = new THREE.Vector2(-Math.cos(cone), Math.sin(cone)); // outward normal (toward the tower, up)
+      const place = (off: number) =>
+        new THREE.Matrix4().makeTranslation(sx + n.x * off, hy + n.y * off, zc).multiply(new THREE.Matrix4().makeRotationZ(-cone));
+      AB.add(bevelBox(0.62, 1.5, 1.5, 0.05), SM('white'), place(0.12 + 0.31));
+      AB.add(bevelBox(0.1, 1.5, 1.5, 0.03), SM('rubber'), place(0.02 + 0.05));
+    }
     AB.at(box(0.06, 0.4, 3.02), SM('accent'), len + wr / 2, 2.6, zc, 0);
     // hinge post and diagonal stay
     AB.add(rod(v3(0, -1.6, 0), v3(0, 3.2, 0), 0.24, 16), SM('steelDark'));

@@ -86,6 +86,7 @@ uniform int uLightSteps;
 uniform float uPixel;
 uniform float uFade;       // overall opacity (fade in once textures exist)
 uniform float uLimbKeep;   // share kept of the clouds seen beyond the Earth's limb (0 from high up)
+uniform float uNightFill;  // night-side fill irradiance from above (moonlight, airglow)
 
 float hgPhase(float c, float g) {
   float g2 = g * g;
@@ -128,8 +129,12 @@ vec4 marchSegment(float ta, float tb, int steps, float jit, out float tm) {
     vec3 pEF = uCamEF + gDirEF * t;
     float r = length(pEF);
     float h = r - A_RB;
-    float foot = t * uPixel;
-    float lod = smoothstep(250.0, 2600.0, max(foot, dt * 0.35));
+    // the pixel's footprint on the layer, stretched along the view where the ray meets the layer
+    // at a grazing angle (area-equivalent width): cells narrower than about two footprints are
+    // replaced by their mean, else they alias into salt-like dots seen from altitude
+    float sinG = abs(dot(gDirEF, pEF)) / r;
+    float foot = t * uPixel * inversesqrt(max(sinG, 0.04));
+    float lod = smoothstep(220.0, 1500.0, max(foot, dt * 0.35)) + smoothstep(3000.0, 12000.0, foot);
     float elod = smoothstep(40.0, 300.0, max(foot, dt * 0.2));
     float dens = cloudDensity(pEF, h, lod, elod);
     if (dens > 0.002) {
@@ -137,7 +142,7 @@ vec4 marchSegment(float ta, float tb, int steps, float jit, out float tm) {
       float muS = dot(pEF, gSunEF) / r;
       if (!gAmbSet) {
         // ambient light is smooth over the layer: evaluate it once per pixel
-        gAmbSky = SUN_E * skyIrradiance(muS) * iso;
+        gAmbSky = (SUN_E * skyIrradiance(muS) + uNightFill * (1.0 - smoothstep(-0.12, 0.02, muS))) * iso;
         gAmbGnd = SUN_E * (skyIrradiance(muS) + transmittanceSun(A_RB + 2.0, muS) * max(muS, 0.0)) * 0.14 * iso;
         gAmbSet = true;
       }
@@ -199,6 +204,8 @@ void main() {
   gPh1 = mix(hgPhase(cosT, 0.4), hgPhase(cosT, -0.1), 0.2);
   gPh2 = hgPhase(cosT, 0.15);
   gAmbSet = false;
+  // white-noise jitter (a structured pattern such as interleaved gradient noise leaves visible
+  // hatching inside bright clouds once upsampled)
   float jit = hash12(gl_FragCoord.xy);
 
   float fa = t0, fb = min(t1, uSplit);
@@ -287,6 +294,7 @@ export function makeCloudUniforms(shared: Record<string, THREE.IUniform>): Recor
     uCamR: shared.uCamR,
     uSun: shared.uSun,
     uToEF: shared.uToEF,
+    uNightFill: shared.uNightFill,
     uPixel: { value: 0.001 },
     uCs: { value: new THREE.Vector4() },
     uCamEF: { value: new THREE.Vector3() },

@@ -9,7 +9,7 @@
  */
 import * as THREE from 'three';
 import { PAD, LANDING_ZONE } from '../../world/site';
-import { MOUNT, TRENCH, TU, TV, trenchXZ, trenchFloor, LOX_SPHERE, WATER_TOWER, TOWER, LZ_TOP_H, DEFLECTOR } from './layout';
+import { MOUNT, TRENCH, TU, TV, trenchXZ, trenchFloor, LOX_SPHERE, WATER_TOWER, TOWER, LZ_TOP_H, DELUGE, deflectorY } from './layout';
 import { sphereY } from './map';
 
 export type SiteConfig = 'satellite' | 'capsule';
@@ -37,35 +37,42 @@ const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 function delugeNozzles(): Nozzle[] {
   const out: Nozzle[] = [];
-  const deckY = PAD.deckHeight;
-  // ring of spray heads under the deck around the flame hole, aimed at the plume below the nozzles
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2 + Math.PI / 16;
-    const r = MOUNT.holeR + 0.55;
-    const p = v(Math.cos(a) * r, deckY - MOUNT.thickness - 0.15, Math.sin(a) * r);
+  const D = DELUGE;
+  const deckTop = PAD.deckHeight;
+  const deckBot = deckTop - MOUNT.thickness;
+  // ring of spray heads under the deck around the flame hole (the nozzle tips of pad.ts's ring),
+  // aimed at the plume below the engine nozzles
+  for (let i = 0; i < D.ringCount; i++) {
+    const a = (i / D.ringCount) * Math.PI * 2 + Math.PI / D.ringCount;
+    const q = trenchXZ(Math.cos(a) * (D.ringR - D.tipIn), Math.sin(a) * (D.ringR - D.tipIn));
+    const p = v(q.x, deckBot - D.tipDrop, q.z);
     const target = v(0, PAD.nozzleExitHeight - 3.5, 0);
     out.push({ pos: p, dir: target.sub(p).normalize(), flow: 0.4 });
   }
-  // four rainbird cannons on the deck corners, firing across the deck toward the base of the vehicle
+  // four rainbird cannons on the deck corners, firing across the deck toward the base of the
+  // vehicle: the muzzle of each barrel, along the barrel
   for (const [sgn, sgv] of [
     [1, 1],
     [1, -1],
     [-1, 1],
     [-1, -1],
   ]) {
-    const q = trenchXZ(sgn * (MOUNT.halfS - 0.7), sgv * (MOUNT.halfV - 0.7));
-    const p = v(q.x, deckY + 1.6, q.z);
-    const target = v(0, deckY + 0.6, 0);
-    out.push({ pos: p, dir: target.sub(p).normalize(), flow: 3.0 });
+    const x = sgn * (MOUNT.halfS - D.rbInset);
+    const z = sgv * (MOUNT.halfV - D.rbInset);
+    const dl = v(-x, -D.rbDroop, -z).normalize();
+    const m = v(x, deckTop + D.rbY, z).addScaledVector(dl, D.rbLen);
+    const q = trenchXZ(m.x, m.z);
+    const dq = trenchXZ(dl.x, dl.z);
+    out.push({ pos: v(q.x, m.y, q.z), dir: v(dq.x, dl.y, dq.z).normalize(), flow: 3.0 });
   }
-  // deflector face and trench wall nozzles
-  for (let i = 0; i < 6; i++) {
-    const s = -5 + i * 2.6;
+  // trench wall headers (above the deflector face), spraying across the trench and down
+  const dl = Math.hypot(1, D.wallDip);
+  for (const s of D.wallS) {
     for (const side of [-1, 1]) {
-      const q = trenchXZ(s, side * (TRENCH.halfWidth - 0.15));
-      const y = Math.max(trenchFloor(s) + 2.0, -3.2);
-      const p = v(q.x, y, q.z);
-      const d = v(-TV.x * side, -0.35, -TV.z * side).normalize();
+      const across = side * (TRENCH.halfWidth - D.wallOff - D.wallStub / dl);
+      const q = trenchXZ(s, across);
+      const p = v(q.x, D.wallY - (D.wallStub * D.wallDip) / dl, q.z);
+      const d = v(-TV.x * side, -D.wallDip, -TV.z * side).normalize();
       out.push({ pos: p, dir: d, flow: 0.6 });
     }
   }
@@ -73,7 +80,9 @@ function delugeNozzles(): Nozzle[] {
 }
 
 const mouth = trenchXZ(TRENCH.sMouth - 4, 0);
-const impact = trenchXZ(-1.2, 0);
+// the plume axis is the vehicle axis (x = z = 0): it meets the deflector face at s = 0
+const impactY = deflectorY(0);
+const faceSlope = (deflectorY(0.5) - deflectorY(-0.5)) / 1.0;
 const lzY = sphereY(LANDING_ZONE.x, LANDING_ZONE.z, LZ_TOP_H);
 
 export const SITE_ANCHORS = {
@@ -83,8 +92,8 @@ export const SITE_ANCHORS = {
   trenchExit: v(mouth.x, trenchFloor(TRENCH.sMouth - 4) + 2.8, mouth.z),
   trenchDir: v(TU.x, 0, TU.z),
   /** Where the plume axis meets the deflector face, and the face normal there. */
-  deflectorImpact: v(impact.x, DEFLECTOR[5][1] + 0.5, impact.z),
-  deflectorNormal: v(TU.x * 0.55, 0.83, TU.z * 0.55).normalize(),
+  deflectorImpact: v(0, impactY, 0),
+  deflectorNormal: v(-TU.x * faceSlope, 1, -TU.z * faceSlope).normalize(),
   /** Launch mount deck top centre and flame-hole radius. */
   mountDeck: v(0, PAD.deckHeight, 0),
   flameHoleRadius: MOUNT.holeR,

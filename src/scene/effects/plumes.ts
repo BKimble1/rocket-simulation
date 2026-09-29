@@ -117,7 +117,7 @@ function engineCore(e: EmitterSnap, p: VolumeParams, steps: number) {
   for (let n = 0; n < 5; n++) {
     const y = s * (0.62 + n);
     if (y > Lcore * 1.5) break;
-    blob(p, y, 0.11 * s, re * (0.42 - 0.035 * n), 26 * thr * vis * Math.pow(0.72, n), bcol(COL.diamond).lerp(COL.green, green * 0.8));
+    blob(p, y, 0.15 * s, re * (0.4 - 0.04 * n), 17 * thr * vis * Math.pow(0.6, n), bcol(COL.diamond).lerp(COL.green, green * 0.8));
   }
   // TEA-TEB: the pyrophoric igniter burns bright green at the exit for a fraction of a second
   blob(p, 0.6 * D, 1.2 * D, 1.1 * re, 7 * green, bcol(COL.green));
@@ -168,13 +168,17 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   p.smokeB.copy(solid ? COL.solidSmokeB : COL.sootB);
   // the under-expanded plume at altitude: sunlit translucent envelope with an orange glow near the nozzles
   const wbal = smooth(1.6, 14, s.pr);
-  // condensed exhaust and afterburning keep the ballooned plume bright as it spreads
+  // condensed exhaust and afterburning keep the ballooned plume bright as it spreads; a small
+  // motor's plume balloons as wide but carries far less gas, so it is fainter (abort tower)
+  const size = Math.min(1, s.Req / 1.2);
   p.exK = 1 - 0.45 * wbal;
-  p.scatSigma = 0.4 * wbal * sq;
+  p.scatSigma = 0.4 * wbal * sq * size;
   p.scatAlb.copy(COL.envelope);
-  p.glowI = 1.4 * wbal * sq * st * (solid ? 2 : 1);
-  // the ballooned plume is smooth: fine turbulence would only show as grain over its width
+  p.glowI = 1.4 * wbal * sq * st * (solid ? 1.4 : 1) * size;
+  // the ballooned plume is smooth: fine turbulence would only show as grain over its width;
+  // its glow sits near the nozzles of a long volume, so march it with more samples
   p.turb *= 1 - 0.6 * wbal;
+  p.steps = Math.round(steps + 10 * wbal);
   p.glowDecay = 0.5 * s.Rbal + 6;
   p.glowCore.copy(COL.balloonGlow);
   p.glowRim.copy(COL.balloonRim);
@@ -241,7 +245,7 @@ function vacuumPlume(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.steps = steps;
   p.seed = hashId(e.id) * 17;
   p.margin = 1.3;
-  p.glowI = (hyp ? 0.9 : 1.2) * thr * st;
+  p.glowI = (hyp ? 0.6 : 0.75) * thr * st;
   p.glowDecay = D * (hyp ? 2.6 : 3.2);
   p.glowCore.copy(hyp ? COL.hypCore : COL.vacCore).lerp(COL.green, green * 0.8);
   p.glowRim.copy(hyp ? COL.hypRim : COL.vacRim);

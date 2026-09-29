@@ -91,11 +91,7 @@ export class EffectsSystem {
     this.root.matrixAutoUpdate = true;
   }
 
-  /** The camera of the last update (diagnostics). */
-  lastCam: THREE.Camera | null = null;
-
   update(camera: THREE.Camera) {
-    this.lastCam = camera;
     const src = effects.source;
     this.particles.setSource(src);
     this.nowCache.setSource(src);
@@ -137,12 +133,13 @@ export class EffectsSystem {
 
     // plumes at the displayed time
     const now = this.nowCache.compute(t, this.now)!;
+    // flicker (decor clock: tells nothing), stronger during an engine start transient
+    let startAmp = 0;
+    for (const e of now.emitters) if (e.sinceIgnition < 1.6 && e.throttle > 0.01) startAmp = Math.max(startAmp, 1 - Math.min(1, e.sinceIgnition / 1.6));
+    const amp = 0.07 + 0.3 * startAmp;
     const flick = (seed: number) => {
       const a = noise1(decor * 19 + seed * 131.7);
       const b = noise1(decor * 47 + seed * 57.3 + 9.1);
-      let startAmp = 0;
-      for (const e of now.emitters) if (e.sinceIgnition < 1.6 && e.throttle > 0.01) startAmp = Math.max(startAmp, 1 - Math.min(1, e.sinceIgnition / 1.6));
-      const amp = 0.07 + 0.3 * startAmp;
       return Math.max(0.2, 1 + amp * ((a - 0.5) * 1.6 + (b - 0.5) * 0.8));
     };
     this.plumes.update(now.emitters, now.clusters, origin, V, decor, this.camFwd, STEPS[tier], flick);

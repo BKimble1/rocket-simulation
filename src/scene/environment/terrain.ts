@@ -159,6 +159,25 @@ vec3 landAlbedo( vec2 p, float sdf, vec3 cov, float px, out float rough ) {
   vec3 c = mix( scrub, flatwoods, smoothstep( -0.15, 0.4, n1 ) );
   c = mix( c, dry, smoothstep( 0.2, 0.75, n2 ) * 0.45 );
   c *= 0.86 + 0.22 * n3 + 0.12 * n4;
+  // thickets and hammocks: the patch field the plant scatter grows in (vegetation.ts suit()), so
+  // the ground under the plants and the ground where they are culled (from altitude) agree:
+  // palmetto and oak thickets darker, tree hammocks darker and greener, open prairie paler between.
+  // Thicket edges are ragged at ~10 m. Normalised by its mean (0.909, 0.934, 0.839) and faded out
+  // once the 140 m patches are finer than a few pixels, so the average tone (matched to the globe
+  // imagery) does not change.
+  {
+    float fA = 1.0 - smoothstep( 30.0, 90.0, px );
+    float fB = 1.0 - smoothstep( 8.0, 22.0, px );
+    float fC = 1.0 - smoothstep( 2.5, 7.0, px );
+    if ( fA > 0.0 ) {
+      float patchN = mix( 0.5, vnoise( p / 140.0, 23 ), fA ) * 0.7 + mix( 0.5, vnoise( p / 37.0, 29 ), fB ) * 0.3;
+      patchN += ( vnoise( p / 9.0, 31 ) - 0.5 ) * 0.12 * fC;
+      float thicket = smoothstep( 0.38, 0.52, patchN );
+      float hammock = smoothstep( 0.56, 0.7, patchN );
+      vec3 modT = mix( vec3( 1.22, 1.17, 1.08 ), vec3( 0.78, 0.82, 0.76 ), thicket ) * mix( vec3( 1.0 ), vec3( 0.76, 0.88, 0.74 ), hammock );
+      c *= mix( vec3( 1.0 ), modT / vec3( 0.909, 0.934, 0.839 ), fA );
+    }
+  }
   // close up, the scrub breaks into clumps with shadowed cores and pale sandy gaps
   float fine = 1.0 - smoothstep( 0.8, 5.0, px );
   if ( fine > 0.0 ) {

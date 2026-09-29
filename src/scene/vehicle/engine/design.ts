@@ -117,8 +117,8 @@ export function engineDesign(kind: EngineKind): Design {
   const exhaustRunR = EXHAUST_RUN_R;
   let ggY = -0.9;
   for (let yy = -0.9; yy > exitY; yy -= 0.01) {
-    // E-1 bell sets the limit for both engines (same core, same duct)
-    if (rOutE1(yy) + 0.012 > exhaustRunR - ductR) break;
+    // the wider of the two bells sets the limit for both engines (same core, same duct)
+    if (rOutBells(yy) + 0.012 > exhaustRunR - ductR) break;
     ggY = yy;
   }
   const ggPhi = 138 * DEG;
@@ -162,19 +162,20 @@ export function engineDesign(kind: EngineKind): Design {
   };
 }
 
-let e1Outer: ((y: number) => number) | null = null;
-/** Outer radius of the E-1 bell at engine y (both engines route the same exhaust duct). */
-function rOutE1(y: number): number {
-  if (!e1Outer) {
-    const d = engineDesignBare('E-1');
-    e1Outer = d;
+let bellsOuter: ((y: number) => number) | null = null;
+/** Outer radius at engine y of the wider of the two regen bells (both engines route the same exhaust duct). */
+function rOutBells(y: number): number {
+  if (!bellsOuter) {
+    const a = engineDesignBare('E-1');
+    const b = engineDesignBare('E-1V');
+    bellsOuter = (yy: number) => Math.max(a(yy), b(yy));
   }
-  return e1Outer(y);
+  return bellsOuter(y);
 }
 
 function engineDesignBare(kind: EngineKind): (y: number) => number {
   const spec = kind === 'E-1' ? E1 : E1V;
-  const exitY = -(STATIONS.s1Gimbal - STATIONS.s1NozzleExit);
+  const exitY = kind === 'E-1' ? -(STATIONS.s1Gimbal - STATIONS.s1NozzleExit) : -(STATIONS.s2Gimbal - STATIONS.s2NozzleExit);
   const rt = spec.throatDiameter / 2;
   const rc = 1.7 * rt;
   let c = buildContour({ rt, rc, re: spec.exitDiameter / 2, lStar: 1.15, nozzleLength: 1.4 });

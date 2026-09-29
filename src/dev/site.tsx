@@ -1,6 +1,6 @@
 /**
  * Dev harness for the launch site: the sky (SpaceWorld), the site and a stand-in vehicle
- * (radius 1.85 m, 67 m tall) on the mount. URL: hold=0..1, arms=0..1, deluge=0..1,
+ * (radius 1.85 m, 67 m tall; with cfg=capsule a service module, capsule and abort tower on top) on the mount. URL: hold=0..1, arms=0..1, deluge=0..1,
  * cfg=capsule, novehicle=1, clouds=0 (hide the cloud layer), hole=1 (tint the globe where the
  * terrain replaces it), hide=name,name (hide named objects, e.g. terrain-fade-ring), a2c=0 (alpha to coverage off),
  * hzsteps=n / hzmarch=0..1 (site haze march steps and weight), plus the flight camera (?t=&cam=e,n,u,heading,pitch,fov).
@@ -48,16 +48,36 @@ function StandInVehicle() {
     add(new THREE.CylinderGeometry(R, R, 33.6, 64), white, 4.3 + 16.8);
     add(new THREE.CylinderGeometry(R, R, 6.5, 64), graphite, 37.9 + 3.25);
     add(new THREE.CylinderGeometry(R, R, 9.5, 64), white, 44.4 + 4.75);
-    add(new THREE.CylinderGeometry(2.0, R, 0.6, 64), white, 53.9 + 0.3);
-    add(new THREE.CylinderGeometry(2.0, 2.0, 6.5, 64), white, 54.5 + 3.25);
-    const nose = new THREE.LatheGeometry(
-      Array.from({ length: 24 }, (_, i) => {
-        const t = i / 23;
-        return new THREE.Vector2(2.0 * Math.sqrt(Math.max(0, 1 - t * t)) * (1 - 0.02 * t), t * 6.0);
-      }),
-      64,
-    );
-    add(nose, white, 61.0);
+    if (siteState.config === 'capsule') {
+      // service module, the capsule's backshell (25 deg cone from the shoulder, r 1.95 m) and the
+      // abort tower: the outline the crew access arm must clear (spacecraft module's proportions)
+      add(new THREE.CylinderGeometry(1.85, 1.85, 3.2, 64), white, 53.9 + 1.6);
+      const shell = new THREE.LatheGeometry(
+        [
+          [0, 0],
+          [1.85, 0],
+          [1.95, 0.1],
+          [1.94, 0.18],
+          [0.81, 2.6],
+          [0.66, 2.65],
+          [0, 2.7],
+        ].map(([r, y]) => new THREE.Vector2(r, y)),
+        64,
+      );
+      add(shell, graphite, 57.1);
+      add(new THREE.CylinderGeometry(0.3, 0.45, 7.9, 24), white, 59.8 + 3.95);
+    } else {
+      add(new THREE.CylinderGeometry(2.0, R, 0.6, 64), white, 53.9 + 0.3);
+      add(new THREE.CylinderGeometry(2.0, 2.0, 6.5, 64), white, 54.5 + 3.25);
+      const nose = new THREE.LatheGeometry(
+        Array.from({ length: 24 }, (_, i) => {
+          const t = i / 23;
+          return new THREE.Vector2(2.0 * Math.sqrt(Math.max(0, 1 - t * t)) * (1 - 0.02 * t), t * 6.0);
+        }),
+        64,
+      );
+      add(nose, white, 61.0);
+    }
     for (let i = 0; i < 7; i++) {
       const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
       const r = i === 6 ? 0 : 1.2;

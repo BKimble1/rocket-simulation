@@ -90,6 +90,10 @@ uniform vec3 uScatAlb;
 uniform float uEndFade;
 // dilution exponent of the glow and the sunlit envelope as the plume expands (1: mass conserved)
 uniform float uExK;
+// bounding margin on the radius (the profile is windowed to zero there: no visible edge)
+uniform float uMargin;
+// fade-in distance from the camera (m) when it is inside the plume (no veil over the view)
+uniform float uNear;
 uniform float uSootOuter;
 uniform float uDebug;
 // light (already divided by pi)
@@ -206,7 +210,8 @@ void main() {
     // value noise has a small variance: stretch it to full contrast
     float n2 = smoothstep(0.28, 0.72, nz);
     float x = r / R * (1.0 + (n2 - 0.5) * 0.55 * uTurb);
-    float rad = exp(-x * x * uRadK);
+    float rad = exp(-x * x * uRadK) * (1.0 - smoothstep(0.72 * uMargin, 0.98 * uMargin, x));
+    if (uNear > 0.0) rad *= smoothstep(0.0, uNear, t);
     if (rad < 0.003) continue;
     float turb = mix(1.0, 0.15 + 1.7 * n2, uTurb);
     float endF = 1.0 - smoothstep(uY1 - uEndFade, uY1, y);
@@ -245,7 +250,7 @@ void main() {
   float a = (1.0 - T) * uOpacity;
   emit *= uOpacity;
   vec3 sc = a > 1e-4 ? scat * uOpacity / a : vec3(0.0);
-  gl_FragColor = vec4(fxOut(sc) * a + fxFlame(emit), a);
+  gl_FragColor = fxComposite(fxOut(sc), a, fxFlame(emit));
 }
 `;
 
@@ -405,6 +410,8 @@ function baseMaterial(): THREE.ShaderMaterial {
       uScatAlb: { value: new THREE.Color() },
       uEndFade: { value: 1 },
       uExK: { value: 1 },
+      uMargin: { value: 1.3 },
+      uNear: { value: 0 },
       uSootOuter: { value: 0 },
       uDebug: { value: 0 },
       uSunLocal: { value: new THREE.Vector3(0, 1, 0) },
@@ -543,6 +550,8 @@ export class Volume {
     (u.uScatAlb.value as THREE.Color).copy(p.scatAlb);
     u.uEndFade.value = Math.max(0.01, p.endFade);
     u.uExK.value = p.exK;
+    u.uMargin.value = p.margin;
+    u.uNear.value = inside ? Math.max(1, 0.8 * plumeR(p, Math.min(Math.max(yc, 0), y1))) : 0;
     u.uSootOuter.value = p.sootOuter;
     u.uDebug.value = volumeDebug.mode;
     this.depth = tv.copy(dir).multiplyScalar((y0 + y1) * 0.5).add(exit).dot(camFwd);

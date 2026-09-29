@@ -64,6 +64,18 @@ vec3 fxFlame(vec3 e) {
   return linearToOutputTexel(vec4(m, 1.0)).rgb;
 }
 /**
+ * Premultiplied output of a medium that scatters (colour sc, opacity a, both display-encoded)
+ * and emits (E, display-encoded). Emission is composited as a "screen" over what is behind
+ * (the alpha carries its mean), not added: adding display-encoded light over a bright sky or
+ * the sunlit Earth would wash out to white, while screening approximates adding linear light
+ * and saturates gracefully.
+ */
+vec4 fxComposite(vec3 sc, float a, vec3 E) {
+  E = clamp(E, 0.0, 1.0);
+  float aE = (E.r + E.g + E.b) * (1.0 / 3.0);
+  return vec4(sc * a * (1.0 - aE) + E, a + aE - a * aE);
+}
+/**
  * The same curve without the sRGB encoding, for emission that many overlapping sprites add up
  * in the (display-encoded) framebuffer: the encoding lifts small values several times over, so
  * dozens of faintly glowing sprites would sum to a bright glow. Matches fxFlame near white.

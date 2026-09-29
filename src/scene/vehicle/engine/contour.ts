@@ -54,11 +54,19 @@ export interface Contour {
 
 const DEG = Math.PI / 180;
 
-/** Bell initial and exit angles from the length fraction (Rao charts, eps 15-100, smoothed). */
-export function raoAngles(fraction: number): { thetaN: number; thetaE: number } {
+/**
+ * Bell initial and exit angles from the length fraction and the expansion ratio (Rao's charts,
+ * smoothed; fitted at an expansion ratio of 16, where the angles depend on the length only).
+ * A larger expansion ratio turns the wall out harder after the throat and ends flatter: at a
+ * length fraction of 1.0 the charts give about 20 deg initial angle for eps 16 but about 27 deg
+ * for eps 100. Without that term a long vacuum bell (fraction above 1) would degenerate into a
+ * straight 15 deg cone with a kink at the lip.
+ */
+export function raoAngles(fraction: number, eps = 16): { thetaN: number; thetaE: number } {
   const f = Math.max(0.6, fraction);
-  const thetaN = Math.max(15, 40 - 20 * ((f - 0.6) / 0.4)) * DEG;
-  const thetaE = Math.max(2.5, 14 - 10 * ((f - 0.6) / 0.4)) * DEG;
+  const e = Math.log10(Math.max(4, eps) / 16);
+  const thetaN = Math.max(15, 40 - 20 * ((f - 0.6) / 0.4) + 8 * e) * DEG;
+  const thetaE = Math.max(2.5, 14 - 10 * ((f - 0.6) / 0.4) - 3 * e) * DEG;
   return { thetaN, thetaE };
 }
 
@@ -106,7 +114,7 @@ export function buildContour(inp: ContourInput): Contour {
 
   // bell
   const bellFraction = nozzleLength / cone15Length(rt, re);
-  const { thetaN, thetaE } = raoAngles(bellFraction);
+  const { thetaN, thetaE } = raoAngles(bellFraction, (re / rt) ** 2);
   const nx = r3 * Math.sin(thetaN);
   const nr = rt + r3 * (1 - Math.cos(thetaN));
   const ex = nozzleLength;

@@ -184,7 +184,7 @@ void main() {
     col += field(p) * dw;
   }
   col *= uI;
-  gl_FragColor = vec4(fxFlame(col), 1.0);
+  gl_FragColor = fxComposite(vec3(0.0), 0.0, fxFlame(col));
 }
 `;
 
@@ -226,7 +226,13 @@ export class PlasmaVolume {
       transparent: true,
       depthWrite: false,
       depthTest: true,
-      blending: THREE.AdditiveBlending,
+      // premultiplied: the glow screens over what is behind it (fxComposite)
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+      blendSrcAlpha: THREE.OneFactor,
+      blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
     });
     this.mesh = new THREE.Mesh(geo, this.mat);
     this.mesh.frustumCulled = false;

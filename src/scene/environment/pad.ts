@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { PAD } from '../../world/site';
 import { Batch, bevelBox, box, cyl, pipe, rod, v3, extrude, mergeParts } from './geom';
 import { SM } from './mats';
-import { HARDSTAND, EMBANK, RAMP, TRENCH, TU, TV, trenchXZ, trenchFloor, DEFLECTOR, MOUNT, GRADE } from './layout';
+import { HARDSTAND, EMBANK, RAMP, TRENCH, TU, TV, trenchXZ, trenchFloor, DEFLECTOR, MOUNT, GRADE, DELUGE } from './layout';
 import { PAD_TEX_EXT } from './textures';
 import { siteState } from './state';
 
@@ -275,6 +275,31 @@ export function buildPad(): Pad {
     }
   }
 
+  // ───────────── trench wall deluge headers (SITE_ANCHORS.delugeNozzles, last 12) ─────────────
+  {
+    const D = DELUGE;
+    const s0 = D.wallS[0] - 0.8;
+    const s1 = D.wallS[D.wallS.length - 1] + 0.8;
+    const dl = Math.hypot(1, D.wallDip);
+    for (const side of [-1, 1]) {
+      const vh = side * (hw - D.wallOff);
+      const a = trenchXZ(s0, vh);
+      const b = trenchXZ(s1, vh);
+      // header along the wall, fed by a riser from the hardstand edge above the deflector's lip
+      const top = trenchXZ(s0, vh);
+      B.add(pipe([P(top.x, -0.45, top.z), P(a.x, D.wallY, a.z), P(b.x, D.wallY, b.z)], 0.14, 0.4, 12), SM('galv'), undefined, { part: 'sound-suppression' });
+      for (const s of D.wallS) {
+        const p0 = trenchXZ(s, vh);
+        const p1 = trenchXZ(s, vh - (side * D.wallStub) / dl);
+        const y1 = D.wallY - (D.wallStub * D.wallDip) / dl;
+        B.add(rod(P(p0.x, D.wallY, p0.z), P(p1.x, y1, p1.z), 0.07, 10), SM('stainless'), undefined, { part: 'sound-suppression' });
+        // wall bracket
+        const w = trenchXZ(s, side * (hw - 0.02));
+        B.add(rod(P(w.x, D.wallY - 0.22, w.z), P(p0.x, D.wallY - 0.22, p0.z), 0.04, 6), SM('galv'));
+      }
+    }
+  }
+
   // ───────────── the flame opening's steel coaming on the hardstand ─────────────
   {
     const edge = (a: { x: number; z: number }, b: { x: number; z: number }, out: { x: number; z: number }) => {
@@ -362,15 +387,15 @@ export function buildPad(): Pad {
     }
     // under-deck spray ring and its nozzles (sound suppression)
     B.part = 'sound-suppression';
-    const ringR = MOUNT.holeR + 0.9;
+    const ringR = DELUGE.ringR;
     const ring = new THREE.TorusGeometry(ringR, 0.2, 10, 96);
     ring.rotateX(Math.PI / 2);
-    ring.translate(0, deckBot - 0.35, 0);
+    ring.translate(0, deckBot - DELUGE.ringDrop, 0);
     MB.add(ring, SM('galv'), undefined, { part: 'sound-suppression' });
-    for (let i = 0; i < 16; i++) {
-      const a = (i / 16) * Math.PI * 2 + Math.PI / 16;
-      const c = v3(Math.cos(a) * ringR, deckBot - 0.35, Math.sin(a) * ringR);
-      const tip = v3(Math.cos(a) * (ringR - 0.45), deckBot - 0.6, Math.sin(a) * (ringR - 0.45));
+    for (let i = 0; i < DELUGE.ringCount; i++) {
+      const a = (i / DELUGE.ringCount) * Math.PI * 2 + Math.PI / DELUGE.ringCount;
+      const c = v3(Math.cos(a) * ringR, deckBot - DELUGE.ringDrop, Math.sin(a) * ringR);
+      const tip = v3(Math.cos(a) * (ringR - DELUGE.tipIn), deckBot - DELUGE.tipDrop, Math.sin(a) * (ringR - DELUGE.tipIn));
       MB.add(rod(c, tip, 0.08, 8), SM('galv'), undefined, { part: 'sound-suppression' });
     }
     // rainbird cannons on the deck corners
@@ -380,13 +405,13 @@ export function buildPad(): Pad {
       [-1, 1],
       [-1, -1],
     ]) {
-      const x = ss * (hs - 0.7);
-      const z = sv * (hv - 0.7);
+      const x = ss * (hs - DELUGE.rbInset);
+      const z = sv * (hv - DELUGE.rbInset);
       MB.at(cyl(0.3, 1.1, 16), SM('galv'), x, deckTop + 0.55, z, 0, { part: 'sound-suppression' });
       MB.at(cyl(0.42, 0.25, 16), SM('galv'), x, deckTop + 1.12, z, 0);
-      const dir = v3(-x, -0.1, -z).normalize();
-      const b0 = v3(x, deckTop + 1.3, z);
-      const b1 = b0.clone().addScaledVector(dir, 1.5);
+      const dir = v3(-x, -DELUGE.rbDroop, -z).normalize();
+      const b0 = v3(x, deckTop + DELUGE.rbY, z);
+      const b1 = b0.clone().addScaledVector(dir, DELUGE.rbLen - 0.35);
       MB.add(rod(b0, b1, 0.18, 14), SM('galv'), undefined, { part: 'sound-suppression' });
       MB.add(rod(b1, b1.clone().addScaledVector(dir, 0.35), 0.13, 14), SM('stainless'));
     }
@@ -456,10 +481,11 @@ export function buildPad(): Pad {
         [0.3, 0.45],
         [0.05, 1.1],
         [-0.45, 1.3],
-        [px - 0.15, py + 0.7],
-        [px - 0.16, py + 0.09],
-        [px - 0.07, py + 0.085],
-        [px + 0.04, py + 0.065],
+        // the hook's inboard face stays 3 cm clear of the aft-skirt skin beside the lug
+        [px - 0.07, py + 0.7],
+        [px - 0.07, py + 0.09],
+        [px + 0.0, py + 0.085],
+        [px + 0.06, py + 0.06],
         [px + 0.09, py - 0.02],
         [px + 0.05, py - 0.12],
         [px + 0.35, py - 0.1],
@@ -473,8 +499,8 @@ export function buildPad(): Pad {
   }
   // bridge across the top of the hook and a web down its back
   const bridge = bevelBox(0.75, 0.18, 0.52, 0.03);
-  bridge.rotateZ(Math.atan2(1.3 - (py + 0.7), -0.45 - (px - 0.15)));
-  bridge.translate((px - 0.15 - 0.45) / 2, (py + 0.7 + 1.3) / 2 - 0.02, 0);
+  bridge.rotateZ(Math.atan2(1.3 - (py + 0.7), -0.45 - (px - 0.07)));
+  bridge.translate((px - 0.07 - 0.45) / 2, (py + 0.7 + 1.3) / 2 - 0.02, 0);
   jawParts.push({ g: bridge });
   jawParts.push({ g: bevelBox(0.2, 0.95, 0.52, 0.03).translate(0.14, 0.55, 0) });
   jawParts.push({ g: cyl(0.26, 0.52, 20).rotateX(Math.PI / 2) });
@@ -500,10 +526,13 @@ export function buildPad(): Pad {
     T.add(pipe([v3(4.9, deckTop + 0.3, 0.35), v3(5.6, deckTop + 0.3, 0.35), v3(5.9, deckTop - 0.6, 0.35)], 0.12, 0.3), SM('aluminum'));
     tsmBases.push(frame);
   }
+  // plate-local x runs outboard from the carrier plate (at the vehicle skin) into the mast's
+  // front face (1.6 m outboard); the boom and hoses end 8 cm inside the mast, and stay 12 cm clear
+  // of its back face when the plate is pulled back against the front face (1.3 m) at release
   const plateParts: [THREE.Material, THREE.BufferGeometry][] = [
-    [SM('steelDark'), mergeParts([{ g: bevelBox(0.18, 1.1, 0.9, 0.03) }, { g: rod(v3(0.1, 0, 0), v3(2.3, 0.2, 0), 0.07, 10) }])],
-    [SM('rubber'), mergeParts([{ g: pipe([v3(0.1, 0.25, 0.2), v3(1.0, 0.25, 0.2), v3(1.6, 0.9, 0.2), v3(2.0, 0.9, 0.2)], 0.09, 0.3) }])],
-    [SM('aluminum'), mergeParts([{ g: pipe([v3(0.1, -0.2, -0.2), v3(1.0, -0.2, -0.2), v3(1.6, 0.5, -0.2), v3(2.0, 0.5, -0.2)], 0.11, 0.3) }])],
+    [SM('steelDark'), mergeParts([{ g: bevelBox(0.18, 1.1, 0.9, 0.03) }, { g: rod(v3(0.1, 0, 0), v3(1.68, 0.1, 0), 0.07, 10) }])],
+    [SM('rubber'), mergeParts([{ g: pipe([v3(0.1, 0.25, 0.2), v3(0.8, 0.25, 0.2), v3(1.3, 0.75, 0.2), v3(1.68, 0.75, 0.2)], 0.09, 0.3) }])],
+    [SM('aluminum'), mergeParts([{ g: pipe([v3(0.1, -0.2, -0.2), v3(0.8, -0.2, -0.2), v3(1.3, 0.4, -0.2), v3(1.68, 0.4, -0.2)], 0.11, 0.3) }])],
   ];
   const tsmPlates = plateParts.map(([m, g]) => {
     const im = new THREE.InstancedMesh(g, m, tsmBases.length);
@@ -529,10 +558,11 @@ export function buildPad(): Pad {
     });
     jaws.instanceMatrix.needsUpdate = true;
     jaws.computeBoundingSphere();
-    // tail service mast plates pull back and drop once the vehicle is released
+    // tail service mast plates pull back against the mast face (and droop a little) once the
+    // vehicle is released
     const k = smooth(0.05, 0.6, h);
     tsmBases.forEach((base, i) => {
-      _m.copy(base).multiply(_r.makeTranslation(2.0 + k * 1.3, deckTop + 1.5, 0)).multiply(new THREE.Matrix4().makeRotationZ(-k * 0.35));
+      _m.copy(base).multiply(_r.makeTranslation(2.0 + k * 1.3, deckTop + 1.5, 0)).multiply(new THREE.Matrix4().makeRotationZ(-k * 0.08));
       for (const im of tsmPlates) im.setMatrixAt(i, _m);
     });
     for (const im of tsmPlates) {

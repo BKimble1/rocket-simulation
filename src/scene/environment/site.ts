@@ -85,10 +85,11 @@ export function buildSite(maps: SiteMaps): Site {
   root.updateMatrixWorld(true);
   const lods: LodEntry[] = [];
   root.traverse((o) => {
-    const max = (o.userData.lodMax as number | undefined) ?? LOD_MAX[o.name];
+    const maxH = (o.userData.lodMaxH as number | undefined) ?? Infinity;
+    const max = (o.userData.lodMax as number | undefined) ?? LOD_MAX[o.name] ?? (maxH < Infinity ? Infinity : undefined);
     if (max === undefined) return;
     const box = new THREE.Box3().setFromObject(o);
-    if (!box.isEmpty()) lods.push({ o, box, max, maxH: (o.userData.lodMaxH as number | undefined) ?? Infinity });
+    if (!box.isEmpty()) lods.push({ o, box, max, maxH });
   });
 
   // the deck and trench darken and turn glossy under the sound-suppression water

@@ -412,7 +412,7 @@ const GROUND: Species = {
   name: 'ground',
   salt: 37,
   dtT: 6,
-  life: 175,
+  life: 185,
   window: true,
   spawn(_k, ts, _dt, snap, rec, rnd, ctx) {
     let c: ClusterSnap | null = null;
@@ -489,11 +489,12 @@ const GROUND: Species = {
     rec.size1 = (20 + 24 * rnd(13)) * ctx.sizeK;
     rec.tauS = 6 + 7 * rnd(14);
     rec.sizeLin = 0.1;
-    rec.life = 85 + 90 * rnd(15);
+    // persists for one to three minutes, drifting with the wind and thinning as it spreads
+    rec.life = 100 + 85 * rnd(15);
     rec.alpha0 = Math.min(1, 0.88 * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.15;
-    rec.fadeOut = 0.5;
+    rec.fadeOut = 0.55;
     rec.thin = 0.3;
     rec.thinRef = rec.size0 * 2;
     // mostly white steam (deluge water boiled by the exhaust, condensing as it cools), with
@@ -655,11 +656,13 @@ const PUFF: Species = {
     const hyp = e.kind === 'hypergolic';
     const mono = e.kind === 'mono' || hyp;
     const rho = airDensity(e.ambientPressure, e.altitude) / RHO_SL;
-    const vac = e.altitude > 85000 || rho < 1e-6;
+    const vac = e.altitude > 100000 || rho < 1e-7;
+    // how much the air holds the puff back: 1 in the lower atmosphere, 0 in near-vacuum
+    const dense = smoothstep(-6.5, -2.5, Math.log10(Math.max(rho, 1e-12)));
     rec.p0.copy(e.pos).addScaledVector(e.dir, e.exitRadius * 2);
     const off = perp(e.dir, rnd(2) * Math.PI * 2, v2).multiplyScalar(Math.tan(0.32 * Math.sqrt(rnd(3))));
     v1.copy(e.dir).add(off).normalize();
-    const sp = (mono ? 22 + 14 * rnd(4) : 34 + 26 * rnd(4)) * (vac ? 1 : 2.2);
+    const sp = (mono ? 22 + 14 * rnd(4) : 34 + 26 * rnd(4)) * (1 + 1.2 * dense);
     rec.up.copy(rec.p0).normalize();
     rec.group = Group.Puff;
     if (vac) {
@@ -670,9 +673,11 @@ const PUFF: Species = {
       rec.grav.copy(e.pos).multiplyScalar(-MU_EARTH / (r * r * r));
       rec.tau = 1e9;
     } else {
+      // leaves with the vehicle's velocity plus the jet's, and slows to the air (quickly in
+      // dense air; in the thin upper air it keeps pace with the vehicle)
       rec.mode = Mode.Air;
-      rec.u0.copy(v1).multiplyScalar(sp);
-      rec.tau = 0.18;
+      rec.u0.copy(e.airVel).addScaledVector(v1, sp);
+      rec.tau = Math.min(mixingTau(rho) * 0.4, 30);
       windWorld(ts, e.altitude, rec.wind);
     }
     rec.buoy = 0;
@@ -680,21 +685,22 @@ const PUFF: Species = {
     rec.tauB = 1;
     rec.floor = -1e9;
     rec.size0 = (mono ? 0.07 : 0.12 + 0.08 * rnd(5)) * ctx.sizeK;
-    rec.size1 = (mono ? 0.9 + 0.5 * rnd(6) : 2.2 + 2.2 * rnd(6)) * ctx.sizeK * (vac ? 1.3 : 1);
+    rec.size1 = (mono ? 0.9 + 0.5 * rnd(6) : 2.2 + 2.2 * rnd(6)) * ctx.sizeK * (1.3 - 0.3 * dense);
     rec.tauS = 0.4;
     // in vacuum the gas expands at its thermal speed and is gone in a fraction of a second;
     // in air it slows within metres and disperses in about a second
-    rec.sizeLin = vac ? (mono ? 2.5 : 9) : 0.5;
-    rec.life = vac ? 0.35 + 0.35 * rnd(7) : 0.8 + 0.6 * rnd(7);
-    rec.alpha0 = Math.min(1, (hyp ? 0.3 : mono ? 0.22 : 0.55) * ctx.alphaK);
+    rec.sizeLin = (mono ? 2.5 : 9) * (1 - dense) + 0.5 * dense;
+    rec.life = (0.35 + 0.35 * rnd(7)) * (1 - dense) + (0.8 + 0.6 * rnd(7)) * dense;
+    rec.alpha0 = Math.min(1, (hyp ? 0.26 : mono ? 0.22 : 0.3 + 0.2 * dense) * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.03;
     rec.fadeOut = 0.25;
-    rec.thin = vac ? 1 : 0.8;
+    rec.thin = 1 - 0.2 * dense;
     rec.thinRef = rec.size0 * 4;
     if (hyp) {
-      rec.alb0.setRGB(0.96, 0.84, 0.76);
-      rec.alb1.setRGB(0.93, 0.9, 0.88);
+      // a brief orange flash at the nozzle, then a faint, slightly warm white puff
+      rec.alb0.setRGB(0.95, 0.9, 0.84);
+      rec.alb1.setRGB(0.93, 0.92, 0.9);
     } else if (mono) {
       rec.alb0.setRGB(0.92, 0.9, 0.84);
       rec.alb1.setRGB(0.92, 0.9, 0.84);
@@ -704,15 +710,16 @@ const PUFF: Species = {
     }
     rec.tauC = hyp ? 0.25 : 1;
     if (hyp) {
-      rec.emit.setRGB(1.0, 0.42, 0.34).multiplyScalar(0.9);
-      rec.tauE = 0.07;
+      rec.emit.setRGB(1.0, 0.5, 0.26).multiplyScalar(0.8);
+      rec.tauE = 0.05;
     } else {
       rec.emit.setRGB(0, 0, 0);
       rec.tauE = 1;
     }
     rec.rot0 = rnd(8) * Math.PI * 2;
     rec.spin = (rnd(9) - 0.5) * 2;
-    rec.variant = Math.floor(rnd(10) * 4);
+    // soft wisps (atlas tiles 2-3): a gas puff has no cauliflower billows
+    rec.variant = 2 + Math.floor(rnd(10) * 2);
     rec.gapDt = 0;
     rec.stretchVel = 0;
     return true;

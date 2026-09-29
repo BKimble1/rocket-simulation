@@ -281,9 +281,13 @@ void main() {
   float hg = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) / 12.566;
   float sunVis = 1.0 - 0.72 * shadow;
   // a thick cloud scatters many times: its sunlit side is brighter than a white wall would be
-  vec3 light = uSunCol * sunVis * mix(wrap * 1.3 + hg * (1.0 - dens) * 5.0, 0.55 + 0.5 * wrap + hg * 6.0, thinMedium);
+  vec3 light = uSunCol * sunVis * mix(wrap * 1.3 + hg * (1.0 - dens) * 5.0, 0.8 + 0.4 * wrap + hg * 6.0, thinMedium);
   float up = dot(n, uUpView) * 0.5 + 0.5;
-  light += mix(uGround, uSky, up) * (1.25 - 0.35 * shadow);
+  // inside a thick cloud light scatters many times and mixes: its shaded parts take a more
+  // neutral grey than the blue sky alone would give
+  vec3 amb = mix(uGround, uSky, up);
+  amb = mix(amb, vec3(dot(amb, vec3(0.3, 0.5, 0.2))), 0.45 * (1.0 - thinMedium));
+  light += amb * (1.25 - 0.35 * shadow);
   // the flame is an extended source tens of metres long: soften the falloff near it
   for (int i = 0; i < 2; i++) {
     vec3 L = uFlamePos[i] - vView;
@@ -296,7 +300,7 @@ void main() {
   float fog = 1.0 - exp(-dist * uHazeDensity);
   col = mix(col, uHaze, fog);
   emitT *= 1.0 - fog;
-  gl_FragColor = vec4(fxOut(col) * a + fxGlow(emitT), a);
+  gl_FragColor = fxComposite(fxOut(col), a, fxGlow(emitT));
 }
 `;
 

@@ -57,6 +57,7 @@ uniform float uPixel;       // angular size of a pixel (rad)
 uniform float uStarGain;
 uniform float uStarVis;     // 0..1 overall star visibility (exposure adaptation)
 uniform float uAirglow;
+uniform float uNightFill;   // night-side fill irradiance on the ground (moonlight, airglow)
 uniform float uCloudsOn;
 uniform vec3 uSunViewT;     // transmittance from the camera toward the Sun
 uniform sampler2D uDay;
@@ -124,12 +125,16 @@ vec3 earthSurface(vec3 p, vec3 n, vec3 d, float padDist) {
     float hMid = ${((CLOUD_BASE + CLOUD_TOP) * 0.5).toFixed(1)};
     float ts = hMid / max(muS, 0.08);
     vec3 pc = uToEF * (uCamPos + p + uSun * ts);
-    float lodS = smoothstep(150.0, 1500.0, length(p) * uPixel / max(-dot(n, d), 0.2));
+    float fp = length(p) * uPixel / max(-dot(n, d), 0.2);
+    float lodS = smoothstep(150.0, 1500.0, fp) + smoothstep(3000.0, 12000.0, fp);
     shadow = 1.0 - 0.8 * cloudColumn(pc, lodS);
   }
   vec3 Esun = SUN_E * Ts * max(muS, 0.0);
   vec3 Esky = SUN_E * skyIrradiance(muS);
   vec3 col = albedo / PI * (Esun * shadow + Esky * mix(1.0, 0.75, 1.0 - shadow));
+  // the faint night fill the vehicles get in Earth's shadow, so the night side reads as a dark
+  // globe (land, coasts) under the city lights rather than a hole
+  col += albedo / PI * uNightFill * (1.0 - smoothstep(-0.12, 0.02, muS));
 
   // sea: sun glint on a wind-roughened surface, and the sky's reflection
   if (water > 0.01) {
@@ -150,7 +155,21 @@ vec3 earthSurface(vec3 p, vec3 n, vec3 d, float padDist) {
   }
   // city lights come on after sunset (civil twilight), under the night side only
   float nightK = 1.0 - smoothstep(-0.16, -0.015, muS);
-  col += night * night * NIGHT_GAIN * nightK * (1.0 - 0.9 * water);
+  vec3 lights = night * night * NIGHT_GAIN * nightK * (1.0 - 0.9 * water);
+  if (nightK > 0.0 && max(lights.r, lights.g) > 0.0) {
+    // below the map's 20 km texels: break each blob into clusters of towns (cellular noise at
+    // 12, 6 and 3 km, mean about 1); each scale fades out before a pixel resolves fewer than
+    // about four of its cells, so the lights never glitter
+    float fp = length(p) * uPixel / max(-dot(n, d), 0.2);
+    if (fp < 6000.0) {
+      vec4 tz = texture(uNoise, nEF * (A_RB / 48000.0));
+      float x = mix(tz.g, 0.5, smoothstep(2500.0, 6000.0, fp)) * 0.35
+              + mix(tz.b, 0.5, smoothstep(1200.0, 3000.0, fp)) * 0.35
+              + mix(tz.a, 0.5, smoothstep(600.0, 1500.0, fp)) * 0.3;
+      lights *= mix(1.0, 8.0 * x * x * x, 1.0 - smoothstep(2500.0, 6000.0, fp));
+    }
+  }
+  col += lights;
   return col;
 }
 
@@ -297,6 +316,8 @@ void main() {
   gl_FragDepth = depth;
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
+  // half-LSB dither of the 8-bit output: the sky's slow gradients otherwise band into contours
+  gl_FragColor.rgb += (ign(gl_FragCoord.xy) - 0.5) / 255.0;
 #endif
 }
 `;
@@ -327,6 +348,7 @@ export function makeSkyUniforms(): SkyUniforms {
     uStarGain: { value: 1 },
     uStarVis: { value: 1 },
     uAirglow: { value: 1 },
+    uNightFill: { value: 0 },
     uCloudsOn: { value: 0 },
     uDay: { value: null },
     uNight: { value: null },

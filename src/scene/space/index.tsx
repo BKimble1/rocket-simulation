@@ -9,6 +9,10 @@
  * pass draws everything behind the world), scene.environment, a shadow-casting DirectionalLight
  * along the Sun that follows the focus subject, and a HemisphereLight. It writes `skyState`
  * every frame for the other modules.
+ *
+ * With test hooks on (FLAGS.hooks): window.__rocketSky (skyState), window.__rocketSpaceAssets
+ * (loading state) and window.__rocketSpace.bench(n) (milliseconds per space pass at the current
+ * view, see system.ts).
  */
 import { useFrame, useThree } from '@react-three/fiber';
 import { use, useEffect, useMemo } from 'react';

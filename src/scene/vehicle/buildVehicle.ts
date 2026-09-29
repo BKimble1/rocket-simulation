@@ -299,6 +299,9 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   const _X = new THREE.Vector3(1, 0, 0);
   let angP = 0;
   let angY = 0;
+  // reusable engine commands (setOperating copies the fields)
+  const _gim = { pitch: 0, yaw: 0 };
+  const _run = { flow: 0, gg: false, shaftAngle: 0, ignite: 0 };
   /** Gimbal rotation: pitch about the model X axis, yaw about the model Z axis. */
   const gimbalQ = (pitchDeg: number, yawDeg: number, out: THREE.Quaternion) => out.setFromEuler(_e.set(pitchDeg * DEG, 0, yawDeg * DEG, 'XZY'));
   const engineAngles = (m: EngineMount) => {
@@ -332,7 +335,9 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
         // express the model-frame command in the engine frame (the mount is yawed about Y)
         const c = Math.cos(m.yaw);
         const s = Math.sin(m.yaw);
-        m.engine.setOperating({ pitch: angP * c - angY * s, yaw: angP * s + angY * c });
+        _gim.pitch = angP * c - angY * s;
+        _gim.yaw = angP * s + angY * c;
+        m.engine.setOperating(_gim);
       } else {
         m.mount.quaternion.copy(_q).multiply(_qy.setFromAxisAngle(_Y, m.yaw));
       }
@@ -621,7 +626,11 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     }
     if (!on) return;
     const flow = on === 'tvc' ? 0 : 1;
-    for (const m of liveEngines) m.engine.setOperating({ flow, gg: flow > 0, shaftAngle: t * Math.PI * 2 * 0.5, ignite: on === 'combustion' ? Math.max(0, 1 - demoP * 8) : 0 });
+    _run.flow = flow;
+    _run.gg = flow > 0;
+    _run.shaftAngle = t * Math.PI * 2 * 0.5;
+    _run.ignite = on === 'combustion' ? Math.max(0, 1 - demoP * 8) : 0;
+    for (const m of liveEngines) m.engine.setOperating(_run);
   };
 
   const model: VehicleModel = {

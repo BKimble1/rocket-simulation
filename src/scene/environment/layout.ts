@@ -140,6 +140,44 @@ export const MOUNT = {
   gripR: 1.85,
 };
 
+/**
+ * Sound-suppression hardware at the mount, shared by the geometry (pad.ts) and the nozzle
+ * anchors (state.ts) so the spray starts where the hardware is. Mount frame: x along the
+ * trench (TU), z across it (TV).
+ */
+export const DELUGE = {
+  /** Spray ring under the deck: ring radius, its depth below the deck bottom, nozzle tips inboard of and below it. */
+  ringR: MOUNT.holeR + 0.9,
+  ringDrop: 0.35,
+  tipIn: 0.45,
+  tipDrop: 0.6,
+  ringCount: 16,
+  /** Rainbird cannons: inset from the deck corners, barrel height above the deck, barrel length to the muzzle, droop (dy per metre). */
+  rbInset: 0.7,
+  rbY: 1.3,
+  rbLen: 1.85,
+  rbDroop: 0.1,
+  /** Trench wall headers: height, stations along the trench (s), header offset from the wall, nozzle stub length. */
+  wallY: -3.2,
+  wallS: [-3.4, -1.0, 1.4, 3.8, 6.2, 8.6],
+  wallOff: 0.25,
+  wallStub: 0.32,
+  /** Wall nozzle aim: across the trench and down (dy per metre across). */
+  wallDip: 0.35,
+};
+
+/** Height of the flame deflector's face at distance s along the trench (linear between profile points). */
+export function deflectorY(s: number): number {
+  const D = DEFLECTOR;
+  if (s <= D[0][0]) return D[0][1];
+  for (let i = 0; i < D.length - 1; i++) {
+    const [s0, y0] = D[i];
+    const [s1, y1] = D[i + 1];
+    if (s <= s1) return y0 + ((y1 - y0) * (s - s0)) / (s1 - s0);
+  }
+  return D[D.length - 1][1];
+}
+
 // ───────────────────────────── service tower ─────────────────────────────
 
 export const TOWER = {

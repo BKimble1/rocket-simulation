@@ -17,7 +17,7 @@ import { makeMoonMaterial } from './moon';
 import { I_TO_EQUATORIAL, moonQuaternion } from './celestial';
 import { CLOUD_BASE, CLOUD_TOP } from './glsl';
 import { spaceTextures, spaceAssets, loadSpaceTextures } from './assets';
-import { updateLighting } from './lighting';
+import { NIGHT_FLOOR_SKY, earthshine, updateLighting } from './lighting';
 import { skyState } from './skyState';
 
 export interface SpaceOptions {
@@ -234,11 +234,10 @@ export function createSpace(opts: SpaceOptions) {
     moonMat.uniforms.uSun.value.copy(SUN_DIRECTION);
     moonMat.uniforms.uEarthRel.value.copy(O).negate();
     moonMat.uniforms.uMoonRel.value.copy(moon.position);
-    // earthshine: sunlit Earth seen from the Moon (phase from the Sun-Earth-Moon angle)
-    const phaseCos = -tmpV2.copy(moonAbs).normalize().dot(SUN_DIRECTION);
-    const litFrac = 0.5 * (1 + phaseCos);
-    const solidAng = Math.PI * (R_EARTH / moonAbs.length()) ** 2;
-    moonMat.uniforms.uEarthshine.value = SUN_IRRADIANCE * 0.3 * litFrac * solidAng / Math.PI * 1.0;
+    // earthshine: the sunlit part of the Earth seen from the Moon (a full Earth at new Moon,
+    // when the Moon's Earth-facing side is dark), the same model as the spacecraft fill light
+    earthshine(moonAbs, tmpV2);
+    moonMat.uniforms.uEarthshine.value = (tmpV2.x + tmpV2.y + tmpV2.z) / 3;
 
     // sun, white balanced; transmittance from the camera toward the Sun (for the disk)
     uniforms.uSunE.value.copy(SUN_RGB);
@@ -273,6 +272,8 @@ export function createSpace(opts: SpaceOptions) {
     cloudU.uSteps.value = spec.cloudOctaves >= 6 ? 64 : spec.cloudOctaves >= 5 ? 48 : 32;
     cloudU.uLightSteps.value = spec.atmoSamples[1] >= 6 ? 5 : spec.atmoSamples[1] >= 4 ? 4 : 3;
     subject.copy(director.flightPose.target);
+    // a subject inside the Earth (a view aimed at its centre) has no light of its own: use the camera
+    if (subject.lengthSq() < (0.5 * R_EARTH) ** 2) subject.copy(O);
     const subjDist = subject.distanceTo(O);
     // camera below, inside or above the layer (the field itself is continuous)
     const regime = alt < CLOUD_BASE ? 0 : alt > CLOUD_TOP ? 2 : 1;
@@ -301,6 +302,7 @@ export function createSpace(opts: SpaceOptions) {
     uniforms.uStarVis.value = 0.2 + 0.8 * THREE.MathUtils.smoothstep(skyState.exposure, 1.5, 3.1);
     uniforms.uStarGain.value = 0.06;
     uniforms.uAirglow.value = 1;
+    uniforms.uNightFill.value = NIGHT_FLOOR_SKY;
     moonMat.uniforms.uSunE.value = SUN_IRRADIANCE;
 
     // directional light: follows the subject, texel-snapped against the pad

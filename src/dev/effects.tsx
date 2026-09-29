@@ -18,7 +18,7 @@
  *   only=core|column|gg|vac        draw only that kind of plume volume
  *   vdbg=1|2|3       volume debug: bounds, raw emission, opacity
  * At run time (tests, captures): window.__fxDev.vcam = [d, az, el, fov, look] moves the orbit
- * camera, window.__fxDev.set({ scenario, alt, throttle }) swaps the synthetic source, and
+ * camera, window.__fxDev.set({ scenario, alt, throttle, tRef }) swaps the synthetic source, and
  * window.__rocketFrame.missionTime sets the time.
  */
 import { useFrame } from '@react-three/fiber';

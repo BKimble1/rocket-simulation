@@ -197,7 +197,7 @@ vec2 cloudWeather(vec3 pEF, out float padDist) {
   padDist = length(n - uPadEF) * A_RB;
   // the local weather blends into the global field over hundreds of kilometres, along an
   // irregular edge (cv.b), so from orbit it reads as a cumulus field over the coast, not a disk
-  float wPad = 1.0 - smoothstep(50000.0, 420000.0, padDist * (0.65 + 0.7 * cv.b));
+  float wPad = 1.0 - smoothstep(50000.0, 420000.0, padDist * (0.4 + 1.3 * cv.b));
   cov = mix(cov, 0.44, wPad);
   top = mix(top, 0.5, wPad);
   // keep the column over the pad and the first kilometres of the ascent mostly clear
@@ -221,18 +221,27 @@ float heightGradient(float hf, float topF) {
 }
 
 /* Shape (0..1) at a point. lod 0 = full detail; toward 1 the cells are replaced by their mean
-   (what a long step or a wide pixel sees). */
+   (what a long step or a wide pixel sees); from 1 to 2 the cluster pattern too. */
 float cloudShape(vec3 pEF, float hf, vec2 wc, float lod) {
   float cov = wc.x;
   float g = heightGradient(hf, wc.y);
   float thr = 1.0 - cov;
-  if (g <= thr) return 0.0;
+  // the mean field's tops rise and fall with the clusters (up to 1.4x the top factor, below)
+  float gHi = lod > 0.0 && lod < 1.999 ? heightGradient(hf, min(1.0, wc.y * 1.4)) : g;
+  if (max(g, gHi) <= thr) return 0.0;
   vec4 a = texture(uNoise, pEF * C_CLUSTER);
-  float clusters = a.r * 0.6 + a.g * 0.4;
+  // lod beyond 1: a pixel wider than the cluster pattern sees its mean (the channels are
+  // stretched to 0..1 around 0.5), else the 26 km pattern aliases into grain seen from far away
+  float clusters = mix(a.r * 0.6 + a.g * 0.4, 0.5, clamp(lod - 1.0, 0.0, 1.0));
+  lod = min(lod, 1.0);
   float mean = 0.0;
   if (lod > 0.0) {
-    // area fraction of the thresholded cells at this height, as an optical depth over a column
-    float area = clamp((g - thr) / max(g, 1e-3), 0.0, 1.0) * (0.55 + 0.9 * clusters);
+    // area fraction of the thresholded cells at this height, as an optical depth over a column.
+    // The clusters lift and lower its top as they do the cells' (taller cells where they are
+    // high), so a dense deck whose cells are below a pixel keeps a lumpy top that the Sun shades
+    // instead of turning into a flat plain.
+    float gm = heightGradient(hf, clamp(wc.y * (0.6 + 0.8 * clusters), 0.0, 1.0));
+    float area = clamp((gm - thr) / max(gm, 1e-3), 0.0, 1.0) * (0.55 + 0.9 * clusters);
     mean = -log(1.0 - min(area, 0.93)) / (C_SIGMA * C_COLUMN);
   }
   if (lod >= 0.999) return mean;
@@ -272,7 +281,8 @@ float cloudColumn(vec3 pEF, float lod) {
   float thr = 1.0 - wc.x;
   if (g <= thr) return 0.0;
   vec4 a = texture(uNoise, pEF * C_CLUSTER);
-  float clusters = a.r * 0.6 + a.g * 0.4;
+  float clusters = mix(a.r * 0.6 + a.g * 0.4, 0.5, clamp(lod - 1.0, 0.0, 1.0));
+  lod = min(lod, 1.0);
   float mean = clamp((g - thr) / g * (0.55 + 0.9 * clusters), 0.0, 1.0) * 0.8;
   if (lod >= 0.999) return mean;
   vec4 b = texture(uNoise, cellCoord(pEF, a));

@@ -401,7 +401,7 @@ export function baseMaterial(k: EMat): THREE.Material {
       return M('blackAnodized');
     case 'niobium':
       // silicide-coated niobium alloy: matte dark grey with a slight bronze tint
-      return once(k, () => std({ color: '#4a443e', roughness: 0.72, metalness: 0.5, roughnessMap: roughnessNoise(43, 0.2) }));
+      return once(k, () => std({ color: '#312d29', roughness: 0.72, metalness: 0.3, roughnessMap: roughnessNoise(43, 0.2) }));
     case 'faceplate':
       return once(k, () => {
         const f = faceplate();
@@ -425,6 +425,36 @@ export function baseMaterial(k: EMat): THREE.Material {
  */
 function patchTubes(m: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
   m.onBeforeCompile = (sh) => {
+    // Tangent frame from the geometry, not from screen-space derivatives: the bell is a solid of
+    // revolution about the object's Y axis with u growing with the plan angle (x = r sin phi,
+    // z = r cos phi), so the tangent is (z, 0, -x). Derivative tangents are constant per
+    // triangle and draw V-shaped bands along the quad diagonals of the coarser bells; vertex
+    // tangent attributes would not survive the vehicle's baking of the cluster engines.
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vTubeT;').replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+      {
+        vec3 tO = vec3(position.z, 0.0, -position.x);
+        float tl = length(tO);
+        vec4 tw = vec4(tl > 1e-6 ? tO / tl : vec3(1.0, 0.0, 0.0), 0.0);
+        #ifdef USE_INSTANCING
+          tw = instanceMatrix * tw;
+        #endif
+        vTubeT = (modelViewMatrix * tw).xyz;
+      }`,
+    );
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vTubeT;').replace(
+      '#include <normal_fragment_begin>',
+      `#include <normal_fragment_begin>
+      {
+        vec3 tT = vTubeT - normal * dot(normal, vTubeT);
+        tT = dot(tT, tT) > 1e-12 ? normalize(tT) : vec3(1.0, 0.0, 0.0);
+        #ifdef DOUBLE_SIDED
+          tT *= faceDirection;
+        #endif
+        tbn = mat3(tT, cross(normal, tT), normal);
+      }`,
+    );
     sh.fragmentShader = sh.fragmentShader.replace(
       '#include <normal_fragment_maps>',
       THREE.ShaderChunk.normal_fragment_maps.replace(
@@ -434,7 +464,7 @@ function patchTubes(m: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
       ),
     );
   };
-  m.customProgramCacheKey = () => 'engine-tubes-aa';
+  m.customProgramCacheKey = () => 'engine-tubes-aa-t';
   return m;
 }
 

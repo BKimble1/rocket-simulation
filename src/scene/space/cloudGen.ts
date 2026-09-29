@@ -211,8 +211,9 @@ void main() {
   // convective towers in the tropics, flatter decks elsewhere
   float tropic = exp(-pow(latD / 18.0, 2.0));
   float top = clamp(0.25 + 0.55 * cov * (0.5 + 0.5 * tropic) + 0.25 * meso, 0.0, 1.0);
-  // B: smooth noise (a few hundred km) that frays the edge of the pad's local weather
-  float wob = clamp(0.5 + 1.1 * fbm(n * 5.0 + vec3(11.0, 3.0, 7.0), 3), 0.0, 1.0);
+  // B: noise at 40-200 km that frays the edge of the pad's local weather (coarser noise only
+  // scales a round patch, which reads as a disk from orbit)
+  float wob = clamp(0.5 + 1.3 * fbm(n * 32.0 + vec3(11.0, 3.0, 7.0), 3), 0.0, 1.0);
   gl_FragColor = vec4(cov, top, wob, 1.0);
 }
 `;

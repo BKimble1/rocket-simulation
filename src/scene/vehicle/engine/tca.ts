@@ -42,7 +42,12 @@ function xs(d: Design, x0: number, x1: number): number[] {
   for (let i = 1; i < p.length - 1; i++) {
     const turn = Math.abs(dir(p[last], p[i + 1]) - dir(p[last], p[last + 1]));
     const far = p[i + 1][0] - p[last][0] > 0.35;
-    if (turn > sampleTurn || far) {
+    // on the tube wall, a ring wherever the radius has grown by 6 %: its quads are trapezoids with
+    // rectangular UVs, and each triangle's affine texture mapping kinks the brazed tubes at the
+    // quad diagonal (V-shaped bands) unless the rings are close in radius
+    const tubes = p[i][0] > d.xChamberEnd - 0.01 && p[i][0] < d.xRegenEnd + 0.01;
+    const flare = tubes && Math.abs(Math.log(p[i + 1][1] / p[last][1])) > 0.06;
+    if (turn > sampleTurn || far || flare) {
       out.push(p[i][0]);
       last = i;
     }

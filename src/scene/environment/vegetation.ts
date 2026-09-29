@@ -3,7 +3,7 @@
  * slash pines and cabbage palms, placed once (seeded, deterministic) on land outside the mowed
  * and gravelled ground (read from the overlay), off the beach and the wet margins, growing in
  * thickets and hammocks and thinning with distance. Each plant is a few crossed foliage cards
- * (a procedural leaf atlas, alpha-tested with a mip-level coverage boost, normals bent outward so a clump shades like a volume)
+ * (a procedural leaf atlas, alpha-tested through a coverage-preserving mip chain, normals bent outward so a clump shades like a volume)
  * on a trunk where it has one. Three instanced meshes (shrubs, pines, palms) with per-instance
  * tint, one set per scatter region (pad, tracking camera, landing zone), each hidden when the
  * camera is too far for its plants to cover a pixel. The terrain shader's colour variation carries
@@ -17,7 +17,6 @@ import { overlayAt, type Overlay } from './overlay';
 import { rng } from './textures';
 import { withHaze } from './haze';
 import { mergeParts } from './geom';
-import { alphaMip } from './mats';
 
 export interface Vegetation {
   group: THREE.Group;
@@ -40,32 +39,39 @@ function leafAtlas(): THREE.CanvasTexture {
   const pick = (cols: string[]) => cols[Math.floor(r() * cols.length)];
   g.lineCap = 'round';
 
-  // saw palmetto and scrub oak: fans of blades rising from the ground, dense at the base
+  // saw palmetto and scrub oak: fans of blades rising from the ground, dense at the base. Every
+  // blade ends inside a dome (shortened, never clamped to the column's edges), so the clump's
+  // silhouette is rounded at any distance, not a box.
   {
     const cols = ['#3f5229', '#4a5c30', '#56653a', '#374826', '#5e6440', '#2f3f22'];
+    const inDome = (x: number, y: number) => ((x - 128) / 122) ** 2 + ((y - 256) / 236) ** 2 <= 1;
     for (let f = 0; f < 26; f++) {
-      const bx = 22 + r() * 212;
-      const by = 250 - r() * 70;
+      const bx = 48 + r() * 160;
+      const by = 250 - r() * 56;
       const n = 10 + Math.floor(r() * 10);
       const len = 55 + r() * 95;
       for (let i = 0; i < n; i++) {
         const a = -Math.PI / 2 + (r() - 0.5) * 2.6;
-        const l = len * (0.6 + r() * 0.4);
+        let l = len * (0.6 + r() * 0.4);
+        while (l > 10 && !inDome(bx + Math.cos(a) * l, by + Math.sin(a) * l * 0.85)) l *= 0.88;
         const ex = bx + Math.cos(a) * l;
         const ey = by + Math.sin(a) * l * 0.85;
         g.strokeStyle = pick(cols);
         g.lineWidth = 3 + r() * 5;
         g.beginPath();
         g.moveTo(bx, by);
-        g.quadraticCurveTo(bx + Math.cos(a) * l * 0.5, by + Math.sin(a) * l * 0.5 - 6, Math.max(2, Math.min(254, ex)), Math.max(4, ey));
+        g.quadraticCurveTo(bx + Math.cos(a) * l * 0.5, by + Math.sin(a) * l * 0.5 - 6, ex, ey);
         g.stroke();
       }
     }
-    // a dark, dense core so the clump reads solid from afar
+    // a dark, dense core low in the clump: a few overlapping lobes (one wide band would read as a
+    // straight-sided plinth from a distance)
     g.fillStyle = '#2c3a22';
-    g.beginPath();
-    g.ellipse(128, 238, 110, 36, 0, 0, Math.PI * 2);
-    g.fill();
+    for (let i = 0; i < 6; i++) {
+      g.beginPath();
+      g.ellipse(128 + (r() - 0.5) * 120, 238 + r() * 14, 22 + r() * 22, 14 + r() * 14, 0, 0, Math.PI * 2);
+      g.fill();
+    }
   }
   // pine crown: tufts of needles in an irregular, flat-topped mass, with a few branches
   {
@@ -154,7 +160,72 @@ function leafAtlas(): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
+  t.mipmaps = coverageMips(c, 4, ALPHA_TEST);
+  t.generateMipmaps = false;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
   return t;
+}
+
+/** Alpha-test threshold of the foliage cards (the coverage the mip chain preserves). */
+const ALPHA_TEST = 0.42;
+
+/**
+ * Mip chain for an alpha-tested atlas that keeps each column's alpha-test coverage (the fraction
+ * of texels above the threshold) at every level. Plain box-filtered mips average thin blades and
+ * needles toward transparent, so distant plants dissolve; a uniform alpha boost fills whole
+ * cards, so distant clumps turn into boxes. Each level is box-filtered from the unscaled level
+ * above and its alpha scaled until the coverage matches the full-resolution atlas: the dense
+ * parts of a plant stay opaque, the sparse fringe goes, and the silhouette keeps its shape.
+ */
+function coverageMips(src: HTMLCanvasElement, columns: number, threshold: number): HTMLCanvasElement[] {
+  const t255 = threshold * 255;
+  const coverage = (d: Uint8ClampedArray, w: number, h: number, x0: number, x1: number, s: number) => {
+    let n = 0;
+    for (let y = 0; y < h; y++) for (let x = x0; x < x1; x++) if (d[(y * w + x) * 4 + 3] * s > t255) n++;
+    return n / Math.max(1, (x1 - x0) * h);
+  };
+  const base = src.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, src.width, src.height);
+  const target = Array.from({ length: columns }, (_, k) => coverage(base.data, src.width, src.height, (k * src.width) / columns, ((k + 1) * src.width) / columns, 1));
+  const mean = target.reduce((a, b) => a + b, 0) / columns;
+  const out: HTMLCanvasElement[] = [src];
+  let prev = src;
+  while (prev.width > 1 || prev.height > 1) {
+    const w = Math.max(1, prev.width >> 1);
+    const h = Math.max(1, prev.height >> 1);
+    const raw = document.createElement('canvas');
+    raw.width = w;
+    raw.height = h;
+    const rg = raw.getContext('2d', { willReadFrequently: true })!;
+    rg.imageSmoothingEnabled = true;
+    rg.drawImage(prev, 0, 0, w, h);
+    const img = rg.getImageData(0, 0, w, h);
+    const cols = w >= columns * 2 ? columns : 1;
+    for (let k = 0; k < cols; k++) {
+      const x0 = Math.floor((k * w) / cols);
+      const x1 = Math.floor(((k + 1) * w) / cols);
+      const want = cols === columns ? target[k] : mean;
+      // smallest alpha scale that reaches the wanted coverage (coverage grows with the scale)
+      let lo = 0.25;
+      let hi = 16;
+      for (let it = 0; it < 14; it++) {
+        const mid = Math.sqrt(lo * hi);
+        if (coverage(img.data, w, h, x0, x1, mid) < want) lo = mid;
+        else hi = mid;
+      }
+      for (let y = 0; y < h; y++)
+        for (let x = x0; x < x1; x++) {
+          const i = (y * w + x) * 4 + 3;
+          img.data[i] = Math.min(255, img.data[i] * hi);
+        }
+    }
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    c.getContext('2d')!.putImageData(img, 0, 0);
+    out.push(c);
+    prev = raw;
+  }
+  return out;
 }
 
 // ───────────────────────────── plant geometry ─────────────────────────────
@@ -330,13 +401,14 @@ export function buildVegetation(maps: SiteMaps, overlay: Overlay): Vegetation {
   };
 
   const atlas = leafAtlas();
-  const mat = new THREE.MeshStandardMaterial({ map: atlas, color: '#ffffff', roughness: 0.92, metalness: 0, alphaTest: 0.42, side: THREE.DoubleSide });
+  const mat = new THREE.MeshStandardMaterial({ map: atlas, color: '#ffffff', roughness: 0.92, metalness: 0, alphaTest: ALPHA_TEST, side: THREE.DoubleSide });
   // foliage cards are lit by their bent normals on both faces (no back-face flip)
   mat.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize( vNormal );');
   };
-  // distant clumps keep their coverage as the atlas mips thin them out
-  alphaMip(mat, 0.3);
+  // distant clumps keep their coverage through the atlas's coverage-preserving mips (no alpha
+  // to coverage: it resolved partial coverage into pale specks)
+  mat.alphaToCoverage = false;
   withHaze(mat, 'site-haze-foliage');
   mat.name = 'site.foliage';
   const geos: THREE.BufferGeometry[] = [];

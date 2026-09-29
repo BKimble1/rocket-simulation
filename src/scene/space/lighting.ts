@@ -132,8 +132,11 @@ export interface LightingResult {
 
 const result: LightingResult = { sun: new THREE.Vector3(), sky: new THREE.Vector3(), ground: new THREE.Vector3(), camLit: 1, exposure: 1 };
 
-/** Night-time fill so shapes stay faintly readable in Earth's shadow (moonlight, airglow). */
-const NIGHT_FLOOR = 0.012 * 4.4;
+/** Night-time fill so shapes stay faintly readable in Earth's shadow (moonlight, airglow). The
+ *  globe and the clouds get the same fill on their night side (NIGHT_FLOOR_SKY, the share an
+ *  upward-facing surface receives), so a vehicle in shadow and the night Earth below it agree. */
+export const NIGHT_FLOOR = 0.012 * 4.4;
+export const NIGHT_FLOOR_SKY = NIGHT_FLOOR * 0.6;
 
 /**
  * Evaluate the light at the subject and the camera and write skyState.

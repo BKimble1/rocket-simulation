@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { PAD, LANDING_ZONE } from '../../world/site';
 import { siteState, SITE_ANCHORS } from './state';
 import { Batch, Instances, box, materialTag, thermalClass } from './geom';
-import { TOWER, TU } from './layout';
+import { TOWER, TU, MOUNT, DELUGE, TRENCH, deflectorY, toTrench } from './layout';
 
 const named = (name: string) => {
   const m = new THREE.MeshStandardMaterial();
@@ -46,6 +46,36 @@ describe('SITE_ANCHORS', () => {
     const d = Math.hypot(LANDING_ZONE.x, LANDING_ZONE.z);
     expect(SITE_ANCHORS.lzCentre.y).toBeCloseTo((-d * d) / (2 * 6371000), 0);
     expect(SITE_ANCHORS.loxVents.length).toBeGreaterThan(0);
+  });
+
+  it('puts the spray where the hardware is and the plume impact on the vehicle axis', () => {
+    const n = SITE_ANCHORS.delugeNozzles;
+    const deckBot = PAD.deckHeight - MOUNT.thickness;
+    // under-deck ring: the nozzle tips of the spray ring (inside the flared flame hole's rim)
+    for (const z of n.slice(0, DELUGE.ringCount)) {
+      expect(Math.hypot(z.pos.x, z.pos.z)).toBeCloseTo(DELUGE.ringR - DELUGE.tipIn, 6);
+      expect(z.pos.y).toBeCloseTo(deckBot - DELUGE.tipDrop, 6);
+    }
+    // rainbirds: the muzzles, inboard of the deck corners, spraying along the barrel toward the axis
+    for (const z of n.slice(DELUGE.ringCount, DELUGE.ringCount + 4)) {
+      const t = toTrench(z.pos.x, z.pos.z);
+      expect(Math.abs(t.s)).toBeLessThan(MOUNT.halfS);
+      expect(Math.abs(t.v)).toBeLessThan(MOUNT.halfV);
+      expect(z.dir.x * z.pos.x + z.dir.z * z.pos.z).toBeLessThan(0);
+    }
+    // trench wall nozzles: inside the trench, above the deflector face and the floor
+    for (const z of n.slice(DELUGE.ringCount + 4)) {
+      const t = toTrench(z.pos.x, z.pos.z);
+      expect(Math.abs(t.v)).toBeLessThan(TRENCH.halfWidth);
+      expect(z.pos.y).toBeGreaterThan(deflectorY(t.s) + 0.3);
+    }
+    const imp = SITE_ANCHORS.deflectorImpact;
+    expect(Math.hypot(imp.x, imp.z)).toBeLessThan(1e-9);
+    expect(imp.y).toBeCloseTo(deflectorY(0), 9);
+    // the face normal points up and down the trench (the plume turns toward the exit)
+    const nn = SITE_ANCHORS.deflectorNormal;
+    expect(nn.y).toBeGreaterThan(0.5);
+    expect(nn.x * TU.x + nn.z * TU.z).toBeGreaterThan(0.2);
   });
 });
 

@@ -10,7 +10,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { Design } from './design';
 import { BACK, FRONT, FULL, bellowsLoop, hexBolt, merge, revolve, ringOf, roundPoly, type V2 } from './geo';
 import type { Kit, Tag, Thermal } from './kit';
-import { HE_UNION_DROP, TP, routes } from './layout';
+import { TP, routes } from './layout';
 import { MATERIAL_OF, type MaterialSet } from './mats';
 import type { EngineDetail } from './types';
 
