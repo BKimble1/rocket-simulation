@@ -47,6 +47,9 @@ body,
   height: 100%;
   overflow: hidden;
 }
+#root > .fallback {
+  height: 100%;
+}
 
 body {
   background: var(--bg);
@@ -1542,4 +1545,39 @@ code {
     font-size: 16px;
     bottom: calc(130px + var(--safe-bottom));
   }
+}
+
+/* depth tabs: three equal columns, labels may wrap (they are long on purpose) */
+.lesson .seg {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1.35fr;
+  border-radius: 12px;
+}
+.lesson .seg__btn {
+  white-space: normal;
+  line-height: 1.2;
+  border-radius: 9px;
+  padding: 6px 6px;
+  font-size: 12.5px;
+}
+
+.fallback {
+  overflow: auto;
+  max-height: 100vh;
+}
+.textonly details {
+  border-top: 1px solid var(--line);
+  padding: 8px 0;
+}
+.textonly summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.textonly h2 {
+  margin-top: 24px;
+  font-size: 19px;
+}
+.textonly h3 {
+  font-size: 15px;
+  margin-top: 10px;
 }

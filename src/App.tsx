@@ -28,6 +28,10 @@ import { openMissionAt } from './ui/nav';
 import { installAudio } from './audio/engine';
 import { Diag } from './ui/Diag';
 import { useQuality, setManualTier } from './scene/quality';
+import { PART_IDS, PARTS } from './vehicle/parts';
+import { LESSONS } from './content/parts';
+import { PHASE_CARDS } from './content/phaseCards';
+import { MISSION_ORDER, OUTLINES } from './timeline/missions/outline';
 
 function Header() {
   const view = useApp((s) => s.view);
@@ -152,9 +156,40 @@ function NoWebGL() {
 
 function TextOnlyLessons() {
   return (
-    <p className="small muted">
-      A text-only version of the part lessons and mission phases is provided with the source (docs/lessons). The simulator itself needs WebGL 2.
-    </p>
+    <div className="textonly">
+      <h2>Part lessons (text only)</h2>
+      {PART_IDS.filter((id) => LESSONS[id]).map((id) => {
+        const l = LESSONS[id]!;
+        return (
+          <details key={id}>
+            <summary>{PARTS[id].name}</summary>
+            <p>{l.summary}</p>
+            <p>{l.function}</p>
+            {'how' in l && <p>{l.how}</p>}
+            <p>{l.why}</p>
+            {'environment' in l && <p>{l.environment}</p>}
+            {'materialsWhy' in l && <p>{l.materialsWhy}</p>}
+          </details>
+        );
+      })}
+      <h2>Mission phases (text only)</h2>
+      {MISSION_ORDER.map((m) => (
+        <details key={m}>
+          <summary>{OUTLINES[m].title}</summary>
+          {OUTLINES[m].phases.map((ph) => {
+            const c = PHASE_CARDS[`${m}:${ph.id}`];
+            return c ? (
+              <div key={ph.id}>
+                <h3>{ph.title}</h3>
+                <p>{c.what}</p>
+                <p>{c.whyNow}</p>
+                <p>{c.next}</p>
+              </div>
+            ) : null;
+          })}
+        </details>
+      ))}
+    </div>
   );
 }
 
