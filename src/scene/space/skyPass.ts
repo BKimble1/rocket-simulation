@@ -91,7 +91,34 @@ vec3 starsAt(vec3 d) {
   float dx2 = dFdx(u2), dy2 = dFdy(u2);
   if (abs(dx2) < abs(dx.x)) dx.x = dx2;
   if (abs(dy2) < abs(dy.x)) dy.x = dy2;
-  vec3 s = textureGrad(uStars, uv, dx, dy).rgb;
+  vec3 s;
+  // pixels per map texel (the map has 8 texels per degree: a narrow lens magnifies it 2-9x)
+  vec2 ts = vec2(textureSize(uStars, 0));
+  float mag = 1.0 / max(max(length(dx * ts), length(dy * ts)), 1e-6);
+  if (mag < 1.3) {
+    s = textureGrad(uStars, uv, dx, dy).rgb;
+  } else {
+    // magnified, bilinear filtering turns each star into a soft blob several pixels wide (up to
+    // 25 px through a 10 deg lens). Keep stars as points: interpolate the four nearest texels,
+    // then sharpen the profile toward the brightest of them (q = 1 at a star's centre texel,
+    // falling about 0.7 per texel, 0.7 / mag per pixel), so a star stays about 1.5 px across at
+    // any field of view. The peak keeps its brightness; the blob's skirt is removed.
+    vec2 p = uv * ts - 0.5;
+    vec2 f = fract(p);
+    ivec2 i0 = ivec2(floor(p));
+    int W = int(ts.x);
+    int x0 = i0.x < 0 ? W - 1 : min(i0.x, W - 1);
+    int x1 = x0 + 1 >= W ? 0 : x0 + 1;
+    int y0 = clamp(i0.y, 0, int(ts.y) - 1), y1 = clamp(i0.y + 1, 0, int(ts.y) - 1);
+    vec3 a = texelFetch(uStars, ivec2(x0, y0), 0).rgb;
+    vec3 b = texelFetch(uStars, ivec2(x1, y0), 0).rgb;
+    vec3 c = texelFetch(uStars, ivec2(x0, y1), 0).rgb;
+    vec3 e = texelFetch(uStars, ivec2(x1, y1), 0).rgb;
+    s = mix(mix(a, b, f.x), mix(c, e, f.x), f.y);
+    float peak = max(max(max(a.r, a.g), max(b.r, b.g)), max(max(c.r, c.g), max(e.r, e.g)));
+    float q = clamp(max(s.r, s.g) / max(peak, 1e-5), 0.0, 1.0);
+    s *= pow(q, 1.5 * (mag - 1.0));
+  }
   // steepen: keep point stars, drop the scanned background floor
   float l = max(max(s.r, s.g), s.b);
   float k = smoothstep(0.004, 0.08, l);
@@ -118,16 +145,18 @@ vec3 earthSurface(vec3 p, vec3 n, vec3 d, float padDist) {
 
   float muS = dot(n, uSun);
   vec3 Ts = transmittanceSun(A_RB + 2.0, muS);
-  // cloud shadow: where the ray to the Sun crosses the middle of the cloud layer
+  // cloud shadow: where the ray to the Sun crosses the middle of the cloud layer (not over the
+  // local terrain's extent: the cloud-shadow pass of clouds.ts darkens the terrain and the globe
+  // there, handing over to this one across the same 2.5 km at the terrain's outer radius)
   float shadow = 1.0;
-  // (not under the local terrain, which covers the globe there and shades its own ground)
-  if (uCloudsOn > 0.5 && muS > -0.05 && padDist >= uHole.x) {
+  float gW = smoothstep(uHole.y - 2500.0, uHole.y, padDist);
+  if (uCloudsOn > 0.5 && muS > -0.05 && gW > 0.0) {
     float hMid = ${((CLOUD_BASE + CLOUD_TOP) * 0.5).toFixed(1)};
     float ts = hMid / max(muS, 0.08);
     vec3 pc = uToEF * (uCamPos + p + uSun * ts);
     float fp = length(p) * uPixel / max(-dot(n, d), 0.2);
     float lodS = smoothstep(150.0, 1500.0, fp) + smoothstep(3000.0, 12000.0, fp);
-    shadow = 1.0 - 0.8 * cloudColumn(pc, lodS);
+    shadow = 1.0 - 0.8 * cloudColumn(pc, lodS) * gW;
   }
   vec3 Esun = SUN_E * Ts * max(muS, 0.0);
   vec3 Esky = SUN_E * skyIrradiance(muS);
@@ -242,9 +271,12 @@ vec3 skyColor(vec3 d, vec3 dvn, bool hitM, vec2 iM, out float alpha, out float d
     float limb = 1.0 - 0.6 * (1.0 - sqrt(1.0 - rr * rr));
     vec3 sunRad = SUN_E / (PI * A_SUN_R * A_SUN_R) * limb;
     col += min(uSunViewT * sunRad * disk, vec3(90.0));
-    // restrained glare of the optics around the disk
-    float g = 0.0018 * exp(-sinA / 0.006) + 0.00035 * exp(-sinA / 0.05);
-    col += uSunViewT * SUN_E * g * 4.0;
+    // restrained glare of the optics around the disk (no lens-flare ghosts): a core that burns
+    // out to about 0.8 deg, a halo to about 2 deg and a faint wide skirt. Without it the Sun is a
+    // 7-pixel dot pasted on the sky, which reads as a small lamp, not a star 100000 times
+    // brighter than the sky around it.
+    float g = 9.0 * exp(-sinA / 0.0035) + 0.3 * exp(-sinA / 0.012) + 0.05 * exp(-sinA / 0.05);
+    col += uSunViewT * SUN_E * g;
 #endif
   }
   return col;
@@ -357,6 +389,7 @@ export function makeSkyUniforms(): SkyUniforms {
     uCoverage: { value: null },
     uNoise: { value: null },
     uPadEF: { value: new THREE.Vector3(0, 1, 0) },
+    uPadSunEF: { value: new THREE.Vector3(0, 1, 0) },
     uCloudTime: { value: 0 },
     uSunE: { value: new THREE.Vector3(4.4, 4.4, 4.4) },
     uSunViewT: { value: new THREE.Vector3(1, 1, 1) },

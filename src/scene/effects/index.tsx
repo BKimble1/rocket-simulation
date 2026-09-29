@@ -122,7 +122,9 @@ export class EffectsSystem {
     L.sunDir.copy(skyState.sunDir).normalize();
     L.sunCol.copy(skyState.sunColor).multiplyScalar(sunI);
     L.sky.copy(skyState.ambient).multiplyScalar(skyState.ambientIntensity);
-    L.ground.copy(skyState.ground).multiplyScalar(skyState.ambientIntensity * 0.8);
+    // light reflected up from the ground (its own intensity: the sky's would overstate it and
+    // tint the undersides of the clouds with the soil colour)
+    L.ground.copy(skyState.ground).multiplyScalar(skyState.groundIntensity);
     L.up.copy(frame.camUp);
     L.haze.copy(skyState.hazeColor).multiplyScalar(1.3);
     L.hazeDensity = skyState.hazeDensity;
@@ -156,8 +158,12 @@ export class EffectsSystem {
     this.flameLight.intensity = f0.intensity;
     const sf = L.flames;
     sf[0].pos.subVectors(f0.pos, origin);
-    // on the smoke the flame light is kept below the Sun's (daylight launch clouds read white)
-    sf[0].col.copy(f0.col).multiplyScalar(f0.intensity * 0.7);
+    // On the smoke and steam the flame light is kept well below the Sun's in daylight: launch
+    // clouds read white in sunlight (only their parts right beside the flame glow orange), while
+    // at night or at low Sun the flame is what lights them.
+    const day = Math.min(1, (L.sunCol.r * 0.3 + L.sunCol.g * 0.5 + L.sunCol.b * 0.2) / 2.2);
+    const flameOnSmoke = 0.7 - 0.5 * day;
+    sf[0].col.copy(f0.col).multiplyScalar(f0.intensity * flameOnSmoke);
 
     // entry plasma (the secondary light goes to the plasma when there is one)
     const pl = this.nowCache.plasmaAt(t, this.plasmaList);
@@ -186,7 +192,7 @@ export class EffectsSystem {
     this.auxLight.color.copy(auxCol);
     this.auxLight.intensity = auxI;
     sf[1].pos.copy(auxPos);
-    sf[1].col.copy(auxCol).multiplyScalar(auxI * 0.45);
+    sf[1].col.copy(auxCol).multiplyScalar(auxI * (auxCol === f1.col ? 0.45 * (flameOnSmoke / 0.7) : 0.45));
 
     // smoke, steam and spray sprites, layered around the plume
     const n = this.sprites.update(this.particles, origin, camera, this.plumes.splitDepth, L);

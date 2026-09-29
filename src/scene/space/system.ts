@@ -11,7 +11,7 @@ import { LOCAL_TERRAIN } from '../../world/site';
 import { ATMO, SUN_IRRADIANCE, SUN_RGB, integrateRay, makeRayResult } from './atmosphere';
 import { makeSkyViewMaterial } from './skyView';
 import { makeSkyMaterial, makeSkyUniforms, fullScreenGeometry } from './skyPass';
-import { makeCloudMaterial, makeCloudCompositeMaterial, makeCloudUniforms, makeCloudProbeMaterial } from './clouds';
+import { makeCloudMaterial, makeCloudCompositeMaterial, makeCloudUniforms, makeCloudProbeMaterial, makeCloudShadowMaterial } from './clouds';
 import { generateCoverage, generateNoiseVolume } from './cloudGen';
 import { makeMoonMaterial } from './moon';
 import { I_TO_EQUATORIAL, moonQuaternion } from './celestial';
@@ -92,6 +92,14 @@ export function createSpace(opts: SpaceOptions) {
     return mesh;
   });
   const cloudMats = cloudLayers.map((m) => m.material as THREE.ShaderMaterial);
+  // cloud shadows over the local terrain (the globe shades its own beyond it): after the opaque
+  // world and the terrain's fading ring (-600), before the cloud composites
+  const cloudShadowMat = makeCloudShadowMaterial(cloudU, uniforms);
+  const cloudShadow = new THREE.Mesh(cloudGeo, cloudShadowMat);
+  cloudShadow.frustumCulled = false;
+  cloudShadow.renderOrder = -550;
+  cloudShadow.name = 'space.clouds.shadow';
+  root.add(cloudShadow);
 
   // ── in-cloud probe: the cloud density at the camera, read back asynchronously (a few frames
   // late, never stalling the GPU) for skyState.inCloud
@@ -144,6 +152,14 @@ export function createSpace(opts: SpaceOptions) {
 
   const padEF = new THREE.Vector3(Math.cos(deg(SITE.lat)) * Math.cos(deg(SITE.lon)), Math.sin(deg(SITE.lat)), -Math.cos(deg(SITE.lat)) * Math.sin(deg(SITE.lon)));
   uniforms.uPadEF.value.copy(padEF);
+  {
+    // where the pad's line of sight to the Sun at T-0 crosses the middle of the cloud layer
+    // (Earth-fixed, so it is the same at every mission time): the cloud field keeps it clear
+    const toEF0 = new THREE.Matrix3().setFromMatrix4(tmpM4.makeRotationFromQuaternion(earthMeshQuaternion(0, tmpQ).invert()));
+    const sunEF = SUN_DIRECTION.clone().applyMatrix3(toEF0).normalize();
+    const sinEl = Math.max(0.15, sunEF.dot(padEF));
+    uniforms.uPadSunEF.value.copy(padEF).multiplyScalar(R_EARTH).addScaledVector(sunEF, (CLOUD_BASE + CLOUD_TOP) / 2 / sinEl).normalize();
+  }
   uniforms.uToEq.value.copy(I_TO_EQUATORIAL);
   uniforms.uHole.value.set(LOCAL_TERRAIN.innerKm * 1000, LOCAL_TERRAIN.outerKm * 1000 + 6000);
   uniforms.uHoleDebug.value = opts.holeDebug ? 1 : 0;
@@ -285,6 +301,7 @@ export function createSpace(opts: SpaceOptions) {
     cloudLayers[0].visible = haveClouds;
     cloudLayers[1].visible = haveClouds && cloudU.uSplit.value > 0;
     cloudLayers[2].visible = haveClouds;
+    cloudShadow.visible = haveClouds;
     skyState.cloudBase = CLOUD_BASE;
     skyState.cloudTop = CLOUD_TOP;
     if (regime === 1 && haveClouds) {
@@ -512,6 +529,7 @@ export function createSpace(opts: SpaceOptions) {
     cloudMat.dispose();
     cloudGeo.dispose();
     for (const m of cloudMats) m.dispose();
+    cloudShadowMat.dispose();
     probeMat.dispose();
     probeRT?.dispose();
     probeRT = null;

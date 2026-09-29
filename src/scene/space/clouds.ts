@@ -23,7 +23,7 @@
  * into a bright halo.
  */
 import * as THREE from 'three';
-import { ATMOSPHERE_GLSL, NOISE_GLSL, CLOUD_GLSL } from './glsl';
+import { ATMOSPHERE_GLSL, NOISE_GLSL, CLOUD_GLSL, CLOUD_BASE, CLOUD_TOP } from './glsl';
 
 const SCREEN_VERT = /* glsl */ `
 varying vec3 vDir;
@@ -289,6 +289,7 @@ export function makeCloudUniforms(shared: Record<string, THREE.IUniform>): Recor
     uCoverage: shared.uCoverage,
     uNoise: shared.uNoise,
     uPadEF: shared.uPadEF,
+    uPadSunEF: shared.uPadSunEF,
     uCloudTime: shared.uCloudTime,
     uCamPos: shared.uCamPos,
     uCamR: shared.uCamR,
@@ -343,6 +344,95 @@ export function makeCloudCompositeMaterial(uniforms: Record<string, THREE.IUnifo
     depthWrite: depth,
     depthTest: true,
   });
+}
+
+/*
+ * Cloud shadows on the local terrain. Within LOCAL_TERRAIN of the pad the terrain module draws
+ * the ground and the globe (which shades its own cloud shadows) is hidden under it, so this pass
+ * darkens whatever was drawn at the ground there: a full-screen multiply, depth tested at the
+ * ground sphere's distance less a margin (the terrain passes, a vehicle or tower well in front
+ * of it does not). It runs after the opaque world and the terrain's fading ring and before the
+ * cloud composites, so the clouds themselves are not darkened. The shadow is the one the globe
+ * uses (cloudColumn where the ray to the Sun crosses the middle of the layer); the air between
+ * the camera and the ground, which the shadow does not darken, is allowed for with the path's
+ * transmittance. The framebuffer holds display values, so the linear factor is applied through
+ * the display gamma.
+ */
+const SHADOW_FRAG = /* glsl */ `
+#include <common>
+${ATMOSPHERE_GLSL}
+${CLOUD_GLSL}
+#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
+uniform float logDepthBufFC;
+#endif
+varying vec3 vDir;
+varying vec3 vDirView;
+uniform vec3 uCamPos;
+uniform vec4 uCs;
+uniform vec3 uSun;
+uniform mat3 uToEF;
+uniform vec3 uPadRel;
+uniform vec2 uHole;
+uniform float uPixel;
+uniform float uFade;
+void main() {
+  vec3 d = normalize(vDir);
+  float b = dot(uCamPos, d);
+  vec2 iG = raySphere(b, uCs.z);
+  if (iG.x <= 0.0) discard;
+  float t = iG.x;
+  vec3 p = d * t;
+  // the terrain's extent (the globe takes over its own shadows beyond, see skyPass.ts)
+  float w = 1.0 - smoothstep(uHole.y - 2500.0, uHole.y, length(p - uPadRel));
+  if (w <= 0.0) discard;
+  vec3 n = normalize(uCamPos + p);
+  float muS = dot(n, uSun);
+  if (muS <= 0.0) discard;
+  float ts = ${((CLOUD_BASE + CLOUD_TOP) * 0.5).toFixed(1)} / max(muS, 0.08);
+  vec3 pc = uToEF * (uCamPos + p + uSun * ts);
+  float fp = t * uPixel / max(-dot(n, d), 0.2);
+  float lodS = smoothstep(150.0, 1500.0, fp) + smoothstep(3000.0, 12000.0, fp);
+  float sh = cloudColumn(pc, lodS);
+  if (sh <= 0.001) discard;
+  // share of the ground's light that is direct sunlight (the rest, skylight, is dimmed less)
+  float Es = dot(transmittanceSun(A_RB + 2.0, muS), vec3(1.0 / 3.0)) * muS;
+  float Ek = dot(skyIrradiance(muS), vec3(1.0 / 3.0));
+  float keep = (Es * (1.0 - 0.8 * sh) + Ek * (1.0 - 0.2 * sh)) / max(Es + Ek, 1e-6);
+  // the air in front of the ground is not in the cloud's shadow
+  float Tp = dot(integrateTransmittance(uCamPos, d, 0.0, t, 6), vec3(1.0 / 3.0));
+  keep = 1.0 - (1.0 - keep) * Tp * w * uFade;
+  gl_FragColor = vec4(vec3(pow(keep, 1.0 / 2.2)), 1.0);
+  // depth: the ground less a margin, so terrain relief and the foot of the pad structures pass
+  float tz = max(t - max(120.0, 0.08 * t), 0.5 * t);
+  vec3 dv = normalize(vDirView);
+#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
+  gl_FragDepth = log2(1.0 + tz * (-dv.z)) * logDepthBufFC * 0.5;
+#else
+  vec4 clip = projectionMatrix * vec4(dv * tz, 1.0);
+  gl_FragDepth = clamp(0.5 * clip.z / clip.w + 0.5, 0.0, 1.0);
+#endif
+}
+`;
+
+/** Cloud shadows over the local terrain: a depth-tested full-screen multiply (see SHADOW_FRAG). */
+export function makeCloudShadowMaterial(uniforms: Record<string, THREE.IUniform>, shared: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
+  const m = new THREE.ShaderMaterial({
+    name: 'space.clouds.shadow',
+    uniforms: { ...uniforms, uPadRel: shared.uPadRel, uHole: shared.uHole, uPixel: shared.uPixel },
+    vertexShader: SCREEN_VERT,
+    fragmentShader: SHADOW_FRAG,
+    transparent: true,
+    depthTest: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  m.blending = THREE.CustomBlending;
+  m.blendEquation = THREE.AddEquation;
+  m.blendSrc = THREE.ZeroFactor;
+  m.blendDst = THREE.SrcColorFactor;
+  m.blendSrcAlpha = THREE.ZeroFactor;
+  m.blendDstAlpha = THREE.OneFactor;
+  return m;
 }
 
 const PROBE_FRAG = /* glsl */ `

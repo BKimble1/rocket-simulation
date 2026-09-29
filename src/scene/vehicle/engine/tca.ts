@@ -489,7 +489,9 @@ function nozzle(k: Kit, d: Design, segs: number, detail: EngineDetail) {
   const t: Tag = { part: 'nozzle', mat: 'tubes' };
   const uScale = d.tubes / 8;
   const add = (phi: [number, number], front: boolean) => {
-    const res = revolve([{ pts: wallLoop(d, x0 - 0.004, x1, 0, tube) }], phi[0], phi[1], segs, { caps: k.section && phi !== FULL });
+    // starts exactly where the copper liner ends: an overlap would put two gas-side surfaces on
+    // the same contour (z-fighting, a saw-tooth seam seen looking up the nozzle)
+    const res = revolve([{ pts: wallLoop(d, x0, x1, 0, tube) }], phi[0], phi[1], segs, { caps: k.section && phi !== FULL });
     uvAlong(res.surf, yTop, yBot, uScale);
     k.add(res.surf, { ...t, front });
     k.section_(res.caps, { ...t, front });
@@ -601,12 +603,15 @@ function extension(k: Kit, d: Design, segs: number, detail: EngineDetail) {
   const yTop = d.y(x0);
   const yBot = d.y(x1);
   const t: Tag = { part: 'nozzle-extension', mat: 'niobium' };
-  // extension flange (thick ring) + thin wall
+  // extension flange (thick ring) chamfered into the thin wall: one simple (non-self-intersecting)
+  // profile, down the outside and back up the gas side, whose top inner ring meets the regen
+  // tube wall's last ring exactly (a pinched figure-eight profile turns the flange inside out)
   const [r0, y0] = wallPt(d, x0, 0);
-  const X = xs(d, x0 + 0.03, x1);
-  const inner = X.map((x) => wallPt(d, x, 0));
-  const outer = X.map((x) => wallPt(d, x, th)).reverse();
-  const loop: V2[] = [[r0, y0], [r0 + d.tube + 0.03, y0], [r0 + d.tube + 0.03, y0 - 0.012], [r0 + 0.012, y0 - 0.03], ...inner.slice(1).map((p) => p), ...outer];
+  const outer = xs(d, x0 + 0.03, x1).map((x) => wallPt(d, x, th));
+  const inner = xs(d, x0, x1)
+    .map((x) => wallPt(d, x, 0))
+    .reverse();
+  const loop: V2[] = [[r0, y0], [r0 + d.tube + 0.03, y0], [r0 + d.tube + 0.03, y0 - 0.012], ...outer, ...inner.slice(0, -1)];
   // lip at the exit (rolled edge)
   const segsExt = Math.max(segs, detail === 'hangar' ? 144 : segs);
   const add = (phi: [number, number], front: boolean) => {

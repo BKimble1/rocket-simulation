@@ -175,6 +175,8 @@ export const CLOUD_GLSL = /* glsl */ `
 uniform samplerCube uCoverage;
 uniform sampler3D uNoise;
 uniform vec3 uPadEF;          // unit vector to the pad, Earth-fixed
+uniform vec3 uPadSunEF;       // unit vector below where the pad's line of sight to the Sun at T-0
+                              // crosses the middle of the cloud layer (kept clear: a sunlit pad)
 uniform float uCloudTime;     // unused drift hook (clouds are static over a lesson)
 const float C_BASE = ${f(CLOUD_BASE)};
 const float C_TOP = ${f(CLOUD_TOP)};
@@ -200,8 +202,16 @@ vec2 cloudWeather(vec3 pEF, out float padDist) {
   float wPad = 1.0 - smoothstep(50000.0, 420000.0, padDist * (0.4 + 1.3 * cv.b));
   cov = mix(cov, 0.44, wPad);
   top = mix(top, 0.5, wPad);
-  // keep the column over the pad and the first kilometres of the ascent mostly clear
-  cov *= mix(1.0, 0.3 + 0.7 * smoothstep(1800.0, 6500.0, padDist), wPad);
+  // keep the column over the pad and the first kilometres of the ascent mostly clear, and the
+  // pad's view of the Sun at launch (so the pad and the vehicle on it are not in a cloud's
+  // shadow while the directional light says they are sunlit). The clearing's edge is frayed by
+  // the cluster noise, so from orbit it does not read as a round hole punched in the field.
+  float dClear = min(padDist, length(n - uPadSunEF) * A_RB);
+  if (dClear < 9000.0 && wPad > 0.0) {
+    vec4 a = texture(uNoise, pEF * C_CLUSTER * 2.3 + vec3(0.21, 0.63, 0.05));
+    dClear *= 0.6 + 0.8 * a.g;
+    cov *= mix(1.0, 0.3 + 0.7 * smoothstep(1800.0, 6500.0, dClear), wPad);
+  }
   return vec2(cov, top);
 }
 

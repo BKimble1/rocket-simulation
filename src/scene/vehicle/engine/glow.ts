@@ -53,10 +53,12 @@ export function buildGlow(d: Design, segs: number) {
     const x = d.x(y);
     const down = x <= 0 ? 1 : Math.exp(-x / (0.28 * L + 0.2));
     const warm = x <= 0 ? 0 : Math.min(1, x / (0.5 * L + 0.1));
-    return [k * down, k * down * (0.8 - 0.35 * warm), k * down * (0.52 - 0.35 * warm)];
+    return [k * down, k * down * (0.66 - 0.3 * warm), k * down * (0.34 - 0.24 * warm)];
   };
-  const wallGeo = colored(revolve([{ pts: prof(0.965), open: true }], BACK[0], BACK[1], segs).surf!, (y) => tone(y, 0.62));
-  const coreGeo = colored(revolve([{ pts: prof(0.5), open: true }], BACK[0], BACK[1], Math.round(segs / 2)).surf!, (y) => tone(y, 0.9));
+  // additive over a lit copper liner: kept moderate so the section stays legible (golden, not
+  // a blown-out white that hides the liner, the throat and the flow overlay)
+  const wallGeo = colored(revolve([{ pts: prof(0.965), open: true }], BACK[0], BACK[1], segs).surf!, (y) => tone(y, 0.36));
+  const coreGeo = colored(revolve([{ pts: prof(0.5), open: true }], BACK[0], BACK[1], Math.round(segs / 2)).surf!, (y) => tone(y, 0.5));
   const wallMat = mat();
   const coreMat = mat();
   const wall = new THREE.Mesh(wallGeo, wallMat);
@@ -123,7 +125,8 @@ export function buildGlow(d: Design, segs: number) {
   group.add(mouth);
   for (const m of [wall, core, ggGlow, flash, mouth]) m.visible = false;
 
-  const green = new THREE.Color(0.38, 1, 0.5);
+  // TEA-TEB green, scaled up against the warm vertex tint of the gas glow (red > green > blue)
+  const green = new THREE.Color(0.5, 2.3, 1.1);
   const white = new THREE.Color(1, 1, 1);
   return {
     group,
