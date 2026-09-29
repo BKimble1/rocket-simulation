@@ -1,3 +1,250 @@
 import type { Source } from '../types';
-/** Sources cited by the materials, glossary, checks and why-demos (owned by that content). */
-export const MATERIAL_SOURCES: Source[] = [];
+
+/**
+ * Sources cited by the materials index, the glossary, the knowledge checks, the why-demos and
+ * the equation notes (owned by that content). None of these could be opened from the build
+ * environment (no access to nasa.gov and most publisher sites), so every entry is marked
+ * `accessed: 'reference'`: identified by title and publisher, with numbers quoted only where
+ * they are the standard published values for the stated alloy, condition and temperature.
+ */
+export const MATERIAL_SOURCES: Source[] = [
+  // Physics and engines
+  {
+    id: 'sutton-rpe',
+    title: 'Rocket Propulsion Elements, 9th edition (G. P. Sutton and O. Biblarz)',
+    publisher: 'Wiley, 2017',
+    url: 'https://www.wiley.com/en-us/Rocket+Propulsion+Elements%2C+9th+Edition-p-9781118753651',
+    used: 'Thrust and nozzle expansion, flow separation, chamber temperatures, heat transfer and cooling, feed systems, staging',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-sp125',
+    title: 'Design of Liquid Propellant Rocket Engines, NASA SP-125 (D. K. Huzel and D. H. Huang)',
+    publisher: 'NASA, 1971 (NTRS 19710019929)',
+    url: 'https://ntrs.nasa.gov/citations/19710019929',
+    used: 'Pressure-fed versus pump-fed feed systems, regenerative cooling, tube-wall nozzles, engine materials',
+    accessed: 'reference',
+  },
+  {
+    id: 'ussa-1976',
+    title: 'U.S. Standard Atmosphere, 1976 (NASA-TM-X-74335)',
+    publisher: 'NOAA, NASA and U.S. Air Force (NTRS 19770009539)',
+    url: 'https://ntrs.nasa.gov/citations/19770009539',
+    used: 'Air density, pressure and speed of sound for the dynamic-pressure and thrust examples',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-grc-dynamic-pressure',
+    title: 'Dynamic Pressure',
+    publisher: 'NASA Glenn Research Center, Beginner’s Guide to Aeronautics',
+    url: 'https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure/',
+    used: 'Definition of dynamic pressure and its link to aerodynamic force',
+    accessed: 'reference',
+  },
+  // Structures and aluminium alloys
+  {
+    id: 'nasa-sp8007',
+    title: 'Buckling of Thin-Walled Circular Cylinders, NASA SP-8007 (Weingarten, Seide and Peterson)',
+    publisher: 'NASA Langley Research Center, 1968 (NTRS 19690013955)',
+    url: 'https://ntrs.nasa.gov/citations/19690013955',
+    used: 'Classical axial buckling stress, the empirical knockdown factor, and the stabilizing effect of internal pressure',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-isogrid',
+    title: 'Isogrid Design Handbook, NASA CR-124075 (Meyer, Harwood and Orlando)',
+    publisher: 'McDonnell Douglas Astronautics for NASA Marshall Space Flight Center, 1973 (NTRS 19730011184)',
+    url: 'https://ntrs.nasa.gov/citations/19730011184',
+    used: 'Integrally machined grid stiffening (isogrid and orthogrid) of launch-vehicle shells',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-slwt',
+    title: 'Super Lightweight External Tank (NASA facts)',
+    publisher: 'NASA Marshall Space Flight Center',
+    url: 'https://www.nasa.gov/sites/default/files/113020main_shuttle_lightweight.pdf',
+    used: 'Al-Li 2195 versus Al 2219: about 5 % less dense and about 30 % stronger; the tank was about 3,400 kg (7,500 lb) lighter',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-sls-fsw',
+    title: 'First Liquid Hydrogen Tank Barrel Segment for the SLS Core Stage Completed at Michoud',
+    publisher: 'NASA Marshall Space Flight Center',
+    url: 'https://www.nasa.gov/centers-and-facilities/marshall/first-liquid-hydrogen-tank-barrel-segment-for-the-sls-core-stage-completed-at-michoud/',
+    used: 'Friction-stir-welded Al 2219 barrel segments of a large cryogenic core stage',
+    accessed: 'reference',
+  },
+  {
+    id: 'twi-fsw',
+    title: 'FAQ: What is friction stir welding?',
+    publisher: 'TWI Ltd (The Welding Institute)',
+    url: 'https://www.twi-global.com/technical-knowledge/faqs/faq-what-is-friction-stir-welding',
+    used: 'How friction stir welding joins metal in the solid state; invented at TWI in 1991',
+    accessed: 'reference',
+  },
+  {
+    id: 'asm-handbook-v2',
+    title: 'ASM Handbook, Volume 2: Properties and Selection: Nonferrous Alloys and Special-Purpose Materials',
+    publisher: 'ASM International, 1990',
+    url: 'https://www.asminternational.org/',
+    used: 'Typical room-temperature properties of aluminium alloy 2219-T87 (density, elastic modulus, yield and ultimate strength) and of pure copper',
+    accessed: 'reference',
+  },
+  {
+    id: 'mmpds',
+    title: 'Metallic Materials Properties Development and Standardization (MMPDS) Handbook',
+    publisher: 'Battelle for the U.S. Federal Aviation Administration',
+    url: 'https://www.mmpds.org/',
+    used: 'Statistically based design allowables for aerospace metals: why design values are lower than typical values',
+    accessed: 'reference',
+  },
+  // Steels and superalloys
+  {
+    id: 'nasa-centaur',
+    title: 'Taming Liquid Hydrogen: The Centaur Upper Stage Rocket, 1958-2002, NASA SP-2004-4230 (V. P. Dawson and M. D. Bowles)',
+    publisher: 'NASA History Office, 2004 (NTRS 20040084080)',
+    url: 'https://ntrs.nasa.gov/citations/20040084080',
+    used: 'Pressure-stabilized stainless-steel balloon tanks',
+    accessed: 'reference',
+  },
+  {
+    id: 'ss-304-data',
+    title: '304/304L stainless steel data sheet',
+    publisher: 'Rolled Alloys',
+    url: 'https://www.rolledalloys.ca/wp-content/uploads/304-304L_stainless-steel-data-sheet-rolled-alloys.pdf',
+    used: 'Density, melting range and minimum annealed yield strength of type 304 austenitic stainless steel',
+    accessed: 'reference',
+  },
+  {
+    id: 'sm-inconel-718',
+    title: 'INCONEL alloy 718 technical bulletin',
+    publisher: 'Special Metals Corporation',
+    url: 'https://www.specialmetals.com/documents/technical-bulletins/inconel/inconel-alloy-718.pdf',
+    used: 'Density, thermal conductivity, melting range and service temperature range of alloy 718',
+    accessed: 'reference',
+  },
+  {
+    id: 'sm-inconel-625',
+    title: 'INCONEL alloy 625 technical bulletin',
+    publisher: 'Special Metals Corporation',
+    url: 'https://www.specialmetals.com/documents/technical-bulletins/inconel/inconel-alloy-625.pdf',
+    used: 'Density and melting range of alloy 625; solid-solution strengthening, weldability and oxidation resistance',
+    accessed: 'reference',
+  },
+  // Copper, niobium, titanium
+  {
+    id: 'nasa-grcop42-ellis',
+    title: 'GRCop-42: a higher-conductivity variant of GRCop-84 (D. L. Ellis, NTRS 20050192166)',
+    publisher: 'NASA Glenn Research Center',
+    url: 'https://ntrs.nasa.gov/citations/20050192166',
+    used: 'Room-temperature thermal conductivity of GRCop-42 (344 W/(m·K)), GRCop-84 (280 W/(m·K)) and pure copper (about 396 W/(m·K))',
+    accessed: 'reference',
+  },
+  {
+    id: 'c103-data',
+    title: 'C103 niobium alloy (Nb-10Hf-1Ti; AMS 7852, UNS R04295) product data',
+    publisher: 'United Performance Metals',
+    url: 'https://www.upmet.com/products/niobium/c103-niobium',
+    used: 'Composition, density and melting point of C-103',
+    accessed: 'reference',
+  },
+  {
+    id: 'ati-ti64',
+    title: 'ATI 6-4 (Ti-6Al-4V) technical data sheet',
+    publisher: 'ATI',
+    url: 'https://www.atimaterials.com/Products/Documents/datasheets/titanium/alloyed/ati_6-4_tds_en_v1.pdf',
+    used: 'Density and elastic modulus of Ti-6Al-4V',
+    accessed: 'reference',
+  },
+  {
+    id: 'ams-4911',
+    title: 'AMS 4911: Titanium Alloy Sheet, Strip, and Plate, 6Al-4V, Annealed',
+    publisher: 'SAE International',
+    url: 'https://saemobilus.sae.org/standards/ams4911f-titanium-alloy-sheet-strip-plate-6al-4v-annealed',
+    used: 'Minimum yield strength of annealed Ti-6Al-4V sheet and plate',
+    accessed: 'reference',
+  },
+  // Composites
+  {
+    id: 'toray-t700s',
+    title: 'TORAYCA T700S carbon fiber data sheet',
+    publisher: 'Toray Composite Materials America',
+    url: 'https://www.toraycma.com/wp-content/uploads/T700S-Data-Sheet.pdf',
+    used: 'Tensile strength, tensile modulus and density of a standard-modulus carbon fibre',
+    accessed: 'reference',
+  },
+  {
+    id: 'hexcel-honeycomb',
+    title: 'HexWeb CR III aluminium honeycomb data sheet',
+    publisher: 'Hexcel Corporation',
+    url: 'https://hexcel.com/wp-content/uploads/2025/12/HexWeb_CRIII_DataSheet.pdf',
+    used: 'Aluminium (5052) honeycomb core product densities, from 3.1 lb/ft³ (about 50 kg/m³) upward',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-copv-primer',
+    title: 'Composite Overwrapped Pressure Vessels, A Primer, NASA/SP-2011-573 (McLaughlan, Forth and Grimes-Ledesma)',
+    publisher: 'NASA Johnson Space Center, 2011 (NTRS 20110008406)',
+    url: 'https://ntrs.nasa.gov/citations/20110008406',
+    used: 'How liner and overwrap share the load, autofrettage, stress rupture, impact damage and inspection of COPVs',
+    accessed: 'reference',
+  },
+  // Thermal protection and insulation
+  {
+    id: 'nasa-pica-sustain',
+    title: 'Sustaining PICA for Future NASA Robotic Science Missions (NTRS 20180001911)',
+    publisher: 'NASA Ames Research Center',
+    url: 'https://ntrs.nasa.gov/citations/20180001911',
+    used: 'PICA composition (carbon fibre preform with phenolic resin), heritage on the Stardust sample-return capsule',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-orbiter-tps',
+    title: 'Orbiter Thermal Protection System (NASA facts)',
+    publisher: 'NASA Kennedy Space Center',
+    url: 'https://www3.nasa.gov/centers/kennedy/pdf/167473main_TPS-06rev.pdf',
+    used: 'LI-900 silica tiles (about 144 kg/m³), strain isolation pad of Nomex felt bonded with RTV silicone, tile inspection and repair',
+    accessed: 'reference',
+  },
+  {
+    id: 'caib-report',
+    title: 'Columbia Accident Investigation Board Report, Volume I',
+    publisher: 'Columbia Accident Investigation Board, 2003',
+    url: 'https://govinfo.library.unt.edu/caib/',
+    used: 'External-tank spray-on foam insulation (purpose, types, debris shedding) and the foam strike on the wing leading edge',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-mli-guidelines',
+    title: 'Multilayer Insulation Material Guidelines, NASA/TP-1999-209263 (M. M. Finckenor and D. Dooling)',
+    publisher: 'NASA Marshall Space Flight Center, 1999 (NTRS 19990047691)',
+    url: 'https://ntrs.nasa.gov/citations/19990047691',
+    used: 'MLI construction (aluminized polyimide and polyester films, netting spacers), outer-layer durability, flight heritage',
+    accessed: 'reference',
+  },
+  // Textiles
+  {
+    id: 'knacke-parachutes',
+    title: 'Parachute Recovery Systems Design Manual, NWC TP 6575 (T. W. Knacke)',
+    publisher: 'Naval Weapons Center, China Lake, 1991 (DTIC ADA247666)',
+    url: 'https://apps.dtic.mil/sti/pdfs/ADA247666.pdf',
+    used: 'Parachute materials (nylon, aramid), opening shock and reefing',
+    accessed: 'reference',
+  },
+  {
+    id: 'dupont-kevlar',
+    title: 'Kevlar aramid fiber technical guide',
+    publisher: 'DuPont',
+    url: 'https://www.dupont.com/news/kevlar-properties.html',
+    used: 'Density (1.44 g/cm³), tensile strength and decomposition temperature (about 427 to 482 °C) of para-aramid fibre',
+    accessed: 'reference',
+  },
+  {
+    id: 'nasa-spinoff-orion-chutes',
+    title: 'Orion Parachute Innovations Carry Commercial Rockets Back to Earth',
+    publisher: 'NASA Spinoff, 2017',
+    url: 'https://spinoff.nasa.gov/node/10940',
+    used: 'Nylon canopies with Kevlar suspension lines and risers, textile reefing on a crew capsule',
+    accessed: 'reference',
+  },
+];

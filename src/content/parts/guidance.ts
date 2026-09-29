@@ -1,0 +1,80 @@
+/** Guidance and control lessons: thrust vector control actuators and the avionics. */
+import type { PartLesson, PartNote } from '../types';
+import { at, lesson, mats } from './util';
+import { F } from './derived';
+
+export const GUIDANCE: (PartLesson | PartNote)[] = [
+  lesson({
+    id: 'tvc-actuators',
+    summary: `The gimbal and its two hydraulic actuators let each engine swing up to ${F.e1Gimbal}, turning part of the thrust sideways to steer the rocket.`,
+    where: 'At the top of each engine: the gimbal bearing sits on the centre of the injector dome and bolts to the thrust structure; two actuator cylinders, set at 90° to each other, run from attach points on the thrust structure to brackets on the chamber.',
+    connections: ['engine', 'thrust-structure', 'avionics', 's1-engine-cluster', 'vacuum-engine'],
+    function: 'Point the engines on command so the thrust line passes to one side of the centre of mass, creating the turning moment that steers and stabilizes the vehicle.',
+    how: `The flight computer compares the measured attitude and rotation rates with the desired ones and commands gimbal angles many times per second. Servo valves meter high-pressure hydraulic fluid into each actuator; one moves the engine in pitch, the other in yaw. Tilting an E-1 by 5° turns about ${F.sideForcePerEngine} of its thrust sideways; acting over the long distance to the centre of mass, that makes a large turning moment. Roll is controlled by tilting the outer engines tangentially in opposite senses; the single upper-stage engine cannot make roll, so the upper stage uses its small thrusters for that.`,
+    why: 'A launch vehicle without fins is aerodynamically unstable through much of the climb: the centre of pressure lies ahead of the centre of mass, so any small angle to the airflow grows. Active thrust vector control holds it steady and steers it along the planned path, including at liftoff when the air is too slow for any fin to work.',
+    phases: [
+      at('leo', 'liftoff', 'Holds the vehicle upright against wind while it is slow.'),
+      at('leo', 'pitchover', 'Tilts the engines to start the turn toward the east.'),
+      at('leo', 'maxq', 'Counters wind gusts that would raise the angle to the airflow.'),
+      at('leo', 'landing-burn', 'Steers the centre engine to put the booster upright on the pad.'),
+      at('leo', 'upper-burn', 'The E-1V gimbal steers the upper stage along the guidance path.'),
+    ],
+    environment: 'Heavy vibration, heat radiated from the engine bay, the inertia of an engine being swung back and forth, and precise positioning requirements. The actuators must respond within a fraction of a second.',
+    figures: [
+      { label: 'Gimbal range, E-1 / E-1V', value: `${F.e1Gimbal} / ${F.e1vGimbal}` },
+      { label: 'Side force per E-1 at full gimbal', value: F.sideForcePerEngine, note: 'Sea-level thrust × sin 5°, computed' },
+      { label: 'Side force, all seven engines', value: F.sideForceCluster, note: 'Computed' },
+      { label: 'Nozzle-exit swing at full gimbal', value: F.gimbalExitSwing, note: 'Computed from the gimbal height' },
+    ],
+    materials: mats('tvc-actuators'),
+    materialsWhy: 'Actuator rods and cylinders are stainless steel: hard, smooth and corrosion resistant where seals slide, strong enough for the high hydraulic pressure, and tolerant of the heat and vibration near the engines.',
+    manufacturing: 'Precision-ground rods and honed cylinders, assembled with seals and servo valves in a clean room, then tested for leak rate, stroke, speed and frequency response before installation.',
+    inspection: 'Leak and functional tests, a gimbal sweep before every flight (engines are swung through their range on the pad), and seal inspection after recovered flights.',
+    misconception: '"Rockets steer with fins, like arrows." During ascent this vehicle has no fins; it steers by swinging its engines. Its grid fins are used only on the booster\'s return, falling engines-first through the atmosphere.',
+    ifAbsent: 'Without thrust vector control the unstable vehicle would begin to rotate within seconds of liftoff and break up. Fixed fins would add drag and mass and would do nothing at low speed or in vacuum.',
+    depth: {
+      quick: 'The engines can tilt a few degrees, like a hand balancing a broom. Tilting them pushes the bottom of the rocket sideways, which steers the nose.',
+      engineering: `Control moment M = T·sin δ·ℓ, with ℓ the distance from the gimbal to the centre of mass (tens of metres). The control loop must be fast enough to stabilize the unstable airframe but must not excite the vehicle's bending modes or the sloshing propellant, so filters shape the commands. Hydraulic power can come from an engine-driven pump, a separate power unit, or high-pressure fuel tapped from the fuel pump (a documented kerosene first stage used its fuel this way).`,
+      materials: 'Stainless steel for precision sliding surfaces that must seal against high-pressure fluid in a hot, vibrating place.',
+    },
+    demo: 'tvc',
+    sources: ['sutton-rpe', 'nasa-grc-stability', 'saturn-v-flight-manual'],
+  }),
+
+  lesson({
+    id: 'avionics',
+    summary: 'The avionics ring at the top of the upper stage holds the flight computers, inertial measurement unit (IMU), satellite navigation receivers and batteries that navigate, guide and control the whole vehicle.',
+    where: 'On the upper stage\'s forward skirt just below the payload adapter (around 53 m). Look for the ring of equipment boxes on shelves inside the skirt, GNSS antennas on the outside, and cable runs down the stage.',
+    connections: ['tvc-actuators', 'main-valves', 's2-rcs', 'stage-separation', 'payload-adapter', 'fairing', 'vacuum-engine'],
+    function: 'Navigation (where are we and how fast?), guidance (what path reaches the target orbit from here?), control (which gimbal, throttle and thruster commands follow that path?), and sequencing of every event, from engine start to payload separation, plus telemetry to the ground.',
+    how: 'The IMU\'s gyroscopes and accelerometers measure rotation and acceleration hundreds of times per second; integrating them gives attitude, velocity and position. GNSS fixes correct the slow drift of that integration. Guidance recomputes the steering needed to reach the target (on the upper stage, a steering law whose parameters are solved for the target orbit) and control turns it into commands. Redundant computers compare their results so that one fault cannot take over.',
+    why: `Reaching orbit means arriving at the right altitude, with the right speed, moving exactly horizontally: at ${F.leoAlt}, ${F.leoSpeed}. Small errors in direction at cutoff become large errors in the orbit, so guidance must work continuously and precisely.`,
+    phases: [
+      at('leo', 'pad', 'Runs the automatic countdown sequence in the final minutes.'),
+      at('leo', 'pitchover', 'Commands the pitch kick and the gravity turn.'),
+      at('leo', 'staging', 'Sequences cutoff, separation and upper-stage ignition.'),
+      at('leo', 'seco', 'Calls engine cutoff when the target orbit is reached.'),
+      at('leo', 'deploy', 'Commands payload separation at the planned attitude.'),
+      at('station', 'insertion', 'Places the capsule in the planned orbit below the station.'),
+    ],
+    environment: 'Launch vibration and noise, vacuum, radiation in orbit, and temperature swings between sunlight and shadow; on transfer and lunar missions it must keep working for hours.',
+    figures: [
+      { label: 'Orbital speed at 400 km', value: F.leoSpeed, note: 'Circular orbit, computed' },
+      { label: 'Eastward speed from Earth\'s rotation at the pad', value: F.earthRotationSpeed, note: `At ${F.siteLat}, computed` },
+      { label: 'Orbit period at 400 km', value: F.leoPeriod, note: 'Computed' },
+    ],
+    materials: mats('avionics'),
+    materialsWhy: 'Shelves and enclosures are aluminium 2219: conductive (they spread electronics heat), easy to machine and a shield against electrical interference. Equipment panels are carbon-fibre sandwich for stiffness per kilogram, which keeps the IMU mount free of vibration that would corrupt its measurements.',
+    manufacturing: 'Electronics built and tested to spaceflight standards, boxes machined, mounted with vibration isolators where needed, harnesses made and tested wire by wire.',
+    inspection: 'Hardware-in-the-loop simulation of full flights, vibration and thermal-vacuum tests of each unit, IMU calibration, and end-to-end checks of every command path before launch.',
+    misconception: `"Rockets go straight up." To stay in orbit you need sideways speed: about ${F.leoSpeed} at ${F.leoAlt}. The vehicle rises vertically only to clear the tower, then guidance tilts it east and most of the burn builds horizontal speed.`,
+    ifAbsent: 'Without avionics the vehicle would have no sense of attitude or position: it would tumble within seconds, and nothing would sequence staging or release the payload.',
+    depth: {
+      quick: 'The flight computers are the rocket\'s brain: sensors tell them where the rocket is pointing and how fast it goes, and they steer the engines to follow the path to orbit.',
+      engineering: 'Navigation fuses high-rate inertial data with lower-rate GNSS fixes (a Kalman-type filter). Guidance on the upper stage uses a linear-tangent steering law, tan θ = a + b·t, whose parameters are solved repeatedly so the stage reaches the target orbit with zero flight-path angle at cutoff. The booster needs its own navigation and control for its return (not modelled as a separate part here).',
+      materials: 'Aluminium for thermal and electrical paths, composite panels for stiff, quiet mounts; the electronics inside are qualified for vibration, vacuum and radiation.',
+    },
+    demo: 'gnc-loop',
+    sources: ['nasa-bsf-3', 'nasa-bsf-14', 'nasa-sst-soa'],
+  }),
+];
