@@ -68,8 +68,8 @@ export function buildGto(): MissionTimeline {
     rtls: null,
     insertion: { rp: 200e3, ra: 200e3 },
     // warm starts: the converged values of the deterministic searches
-    ltg0: { A: -0.012172, B: 0.00058669 },
-    kick0: 1.14034,
+    ltg0: { A: -0.088433, B: 0.00072872 },
+    kick0: 0.92638,
     gLimitS1: 4.5 * 9.80665,
     gLimitS2: 4.5 * 9.80665,
     s2Keep: 8500,

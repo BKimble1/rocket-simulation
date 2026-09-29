@@ -345,7 +345,7 @@ function avionicsBay(ctx: Ctx, s: Section) {
     if (kit.hangar) {
       const plate = new THREE.CylinderGeometry(0.095, 0.098, 0.005, 28);
       plate.rotateX(Math.PI / 2);
-      kit.add(s.group, plate, { ...spec, look: 'paint', noCast: true }, radialFrame(R + 0.0015, phi, yA));
+      kit.add(s.group, plate, { ...spec, look: 'aluMilled', noCast: true }, radialFrame(R + 0.0015, phi, yA));
       kit.add(s.group, boltRingFlat(0.084, 8), { ...spec, look: 'stainless', noCast: true }, radialFrame(R + 0.004, phi, yA));
     }
   }

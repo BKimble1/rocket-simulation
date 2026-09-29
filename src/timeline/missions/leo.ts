@@ -36,8 +36,8 @@ export function buildLeo(): MissionTimeline {
     rtls: { reserve0: 50_279, bias0: { e: -6287, n: -298 }, margin: 700 },
     insertion: { rp: 200e3, ra: 400e3 },
     // warm starts: the converged values of the deterministic searches (they re-converge in a pass or two)
-    ltg0: { A: 0.90456, B: -0.0027625 },
-    kick0: 0.96222,
+    ltg0: { A: 0.74657, B: -0.0032797 },
+    kick0: 0.77368,
     gLimitS1: 4.5 * 9.80665,
     gLimitS2: 4.5 * 9.80665,
     s2Keep: 450,

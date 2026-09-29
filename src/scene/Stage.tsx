@@ -10,7 +10,7 @@ import { Canvas, createPortal, useFrame, useThree, advance } from '@react-three/
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { FLAGS } from '../config';
-import { director, updateFlight, updateHangar } from '../director/director';
+import { director, updateFlight, updateHangar, viewInsetGoal } from '../director/director';
 import { poseQuaternion, type CamPose } from '../director/pose';
 import { bodyAt } from '../timeline/sample';
 import { R_EARTH } from '../world/frames';
@@ -121,6 +121,21 @@ function Loop() {
     if (cam.fov !== pose.fov || cam.aspect !== director.aspect) {
       cam.fov = pose.fov;
       cam.aspect = director.aspect;
+    }
+    // keep the subject in the part of the screen no panel covers (phone sheets, home card)
+    const goal = viewInsetGoal();
+    const shown = director.viewInsetShown;
+    const k = director.reduced ? 1 : 1 - Math.exp(-frame.dt / 0.4);
+    shown.top += (goal.top - shown.top) * k;
+    shown.bottom += (goal.bottom - shown.bottom) * k;
+    const H = size.height;
+    if (shown.bottom > 1 && H > 0) {
+      const free = Math.max(H * 0.2, H - shown.top - shown.bottom);
+      cam.zoom = free / H;
+      cam.setViewOffset(size.width, H, 0, (shown.bottom - shown.top) / 2, size.width, H);
+    } else if (cam.view?.enabled || cam.zoom !== 1) {
+      cam.zoom = 1;
+      cam.clearViewOffset();
     }
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();

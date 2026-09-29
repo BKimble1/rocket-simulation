@@ -13,32 +13,37 @@ import { resetParams, Volume, type VolumeLight, type VolumeParams } from './volu
 
 const C = (r: number, g: number, b: number) => new THREE.Color(r, g, b);
 
+/**
+ * Emission colours are linear and saturated on purpose: flames go through a per-channel
+ * exposure curve (fxFlame in glsl.ts), so brightness shifts them from red through orange and
+ * yellow toward white, as on film. Absorbing and scattering colours are albedos.
+ */
 const COL = {
-  core: C(1.0, 0.84, 0.6),
-  diamond: C(1.0, 0.93, 0.8),
-  green: C(0.22, 1.0, 0.32),
-  flameA: C(1.0, 0.66, 0.3),
-  flameB: C(1.0, 0.36, 0.09),
-  colFlameA: C(1.0, 0.66, 0.26),
-  colFlameB: C(0.95, 0.27, 0.05),
-  sootA: C(0.14, 0.12, 0.105),
-  sootB: C(0.36, 0.34, 0.31),
+  core: C(1.0, 0.62, 0.24),
+  diamond: C(1.0, 0.86, 0.62),
+  green: C(0.08, 1.0, 0.18),
+  flameA: C(1.0, 0.42, 0.11),
+  flameB: C(1.0, 0.25, 0.045),
+  colFlameA: C(1.0, 0.44, 0.12),
+  colFlameB: C(1.0, 0.2, 0.03),
+  sootA: C(0.1, 0.085, 0.075),
+  sootB: C(0.34, 0.32, 0.3),
   envelope: C(0.86, 0.86, 0.88),
-  balloonGlow: C(1.0, 0.5, 0.22),
-  balloonRim: C(0.95, 0.62, 0.42),
-  vacCore: C(1.0, 0.7, 0.46),
-  vacRim: C(0.5, 0.62, 1.0),
-  hypCore: C(1.0, 0.62, 0.56),
-  hypRim: C(0.95, 0.55, 0.62),
-  solidCore: C(1.0, 0.92, 0.78),
-  solidA: C(1.0, 0.78, 0.5),
-  solidB: C(1.0, 0.46, 0.16),
+  balloonGlow: C(1.0, 0.36, 0.1),
+  balloonRim: C(1.0, 0.46, 0.26),
+  vacCore: C(1.0, 0.55, 0.26),
+  vacRim: C(0.42, 0.52, 1.0),
+  hypCore: C(1.0, 0.5, 0.42),
+  hypRim: C(1.0, 0.44, 0.52),
+  solidCore: C(1.0, 0.8, 0.55),
+  solidA: C(1.0, 0.62, 0.26),
+  solidB: C(1.0, 0.34, 0.08),
   solidSmokeA: C(0.84, 0.82, 0.78),
   solidSmokeB: C(0.9, 0.89, 0.87),
-  ggSoot: C(0.06, 0.05, 0.045),
-  ggSootB: C(0.16, 0.15, 0.14),
-  ggFlameA: C(1.0, 0.52, 0.18),
-  ggFlameB: C(0.7, 0.2, 0.04),
+  ggSoot: C(0.045, 0.04, 0.035),
+  ggSootB: C(0.14, 0.13, 0.12),
+  ggFlameA: C(1.0, 0.34, 0.07),
+  ggFlameB: C(0.9, 0.16, 0.02),
   cold: C(0.96, 0.97, 1.0),
   mono: C(0.92, 0.9, 0.85),
   none: C(0, 0, 0),
@@ -91,20 +96,25 @@ function engineCore(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.steps = steps;
   p.seed = hashId(e.id) * 97;
   p.margin = 1.35;
-  // hot core (slightly green-tinted during the igniter flash)
+  // hot inviscid core, brightest at the exit and fading along its length (slightly green
+  // during the igniter flash). Blob intensities are per metre of line of sight.
   const coreCol = bcol(solid ? COL.solidCore : COL.core).lerp(COL.green, green * 0.7);
-  blob(p, Lcore * 0.4, Lcore * 0.38, re * 0.55 * Math.sqrt(p.Rbal / re), (solid ? 12 : 2.4) * thr * st, coreCol);
-  // shock diamonds: Mach disks in the over-/near-ideally-expanded jet, fading as it balloons
+  const rCore = re * 0.6 * Math.sqrt(p.Rbal / re);
+  const coreI = (solid ? 16 : 3.6) * thr * st;
+  blob(p, Lcore * 0.1, Lcore * 0.3, rCore, coreI, coreCol);
+  blob(p, Lcore * 0.55, Lcore * 0.34, rCore * 0.8, coreI * 0.55, bcol(coreCol));
+  // shock diamonds: Mach disks in the over- or near-ideally-expanded jet, fading as it balloons
   const vis = Math.exp(-(ln * ln) / 3) * (solid ? 0.35 : 1) * st;
   const s = D * 0.95 * Math.max(0.85, Math.sqrt(Math.max(pr, 0.5)));
   for (let n = 0; n < 5; n++) {
     const y = s * (0.62 + n);
     if (y > Lcore * 1.5) break;
-    blob(p, y, 0.12 * s, re * (0.4 - 0.03 * n), 11 * thr * vis * Math.pow(0.7, n), bcol(COL.diamond).lerp(COL.green, green * 0.8));
+    blob(p, y, 0.11 * s, re * (0.42 - 0.035 * n), 26 * thr * vis * Math.pow(0.72, n), bcol(COL.diamond).lerp(COL.green, green * 0.8));
   }
-  blob(p, 0.6 * D, 1.2 * D, 1.1 * re, 70 * green, bcol(COL.green));
+  // TEA-TEB: the pyrophoric igniter burns bright green at the exit for a fraction of a second
+  blob(p, 0.6 * D, 1.2 * D, 1.1 * re, 2.6 * green, bcol(COL.green));
   // flame envelope around the core
-  p.flameI = (solid ? 5 : 1.15) * thr * lumAir * (0.3 + 0.7 * st);
+  p.flameI = (solid ? 5 : 1.5) * thr * lumAir * (0.3 + 0.7 * st);
   p.flameSigma = solid ? 2.5 : 0.9;
   p.flameIn = [0.15 * D, 1.1 * D];
   p.flameLen = Lcore * 1.4;
@@ -132,7 +142,7 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   p.seed = 13.7;
   p.margin = 1.25;
   const sq = Math.sqrt(s.throttle);
-  p.flameI = (solid ? 4 : 1.35) * s.lum * sq * st;
+  p.flameI = (solid ? 4 : 2.4) * s.lum * sq * st;
   p.flameSigma = (solid ? 2 : 1.1) * (0.4 + 0.6 * Math.min(1, s.rhoRatio * 3));
   p.flameIn = [1.2, solid ? 2 : 6];
   p.flameLen = s.flameLen * (0.4 + 0.6 * st);
@@ -214,7 +224,7 @@ function vacuumPlume(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.steps = steps;
   p.seed = hashId(e.id) * 17;
   p.margin = 1.3;
-  p.glowI = (hyp ? 1.3 : 3.8) * thr * st;
+  p.glowI = (hyp ? 0.9 : 1.2) * thr * st;
   p.glowDecay = D * (hyp ? 2.6 : 3.2);
   p.glowCore.copy(hyp ? COL.hypCore : COL.vacCore).lerp(COL.green, green * 0.8);
   p.glowRim.copy(hyp ? COL.hypRim : COL.vacRim);
@@ -222,8 +232,8 @@ function vacuumPlume(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.turb = 0.25;
   p.flow = 900;
   p.noiseK = 0.9;
-  blob(p, 0.25 * D, 0.5 * D, 0.55 * re, (hyp ? 2.2 : 6) * thr * st, bcol(hyp ? COL.hypCore : COL.vacCore).lerp(COL.green, green));
-  blob(p, 0.5 * D, 1.1 * D, 1.0 * re, 45 * green, bcol(COL.green));
+  blob(p, 0.25 * D, 0.5 * D, 0.55 * re, (hyp ? 0.5 : 1.2) * thr * st, bcol(hyp ? COL.hypCore : COL.vacCore).lerp(COL.green, green));
+  blob(p, 0.5 * D, 1.1 * D, 1.0 * re, 1.3 * green, bcol(COL.green));
   // exhaust products scattering sunlight (very faint)
   p.scatSigma = 0.05 * thr * st;
   p.scatAlb.copy(COL.envelope);

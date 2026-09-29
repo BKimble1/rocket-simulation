@@ -182,7 +182,7 @@ void main() {
     col += field(p) * dw;
   }
   col *= uI;
-  gl_FragColor = vec4(fxOut(col), 1.0);
+  gl_FragColor = vec4(fxFlame(col), 1.0);
 }
 `;
 

@@ -1,6 +1,6 @@
 {
  "version": "film-1",
- "generatedAt": "2026-09-29T07:40:19Z",
+ "generatedAt": "2026-09-29T15:32:35Z",
  "voice": "bm_george",
  "speed": 1.0,
  "fingerprint": {
@@ -36,17 +36,17 @@
  "summary": {
   "segments": 77,
   "cues": 88,
-  "audioSeconds": 670.52,
-  "modelAudioSeconds": 677.98,
-  "synthSeconds": 246.99,
-  "rtf": 0.364,
-  "cacheHits": 0,
+  "audioSeconds": 670.6,
+  "modelAudioSeconds": 678.05,
+  "synthSeconds": 298.94,
+  "rtf": 0.441,
+  "cacheHits": 87,
   "medianPhonemesPerS": 10.215,
   "medianSpeechWpm": 164.2,
-  "flags": 1,
+  "flags": 2,
   "hardFlags": 0,
-  "bytes": 5415744,
-  "asrWer": null
+  "bytes": 5416320,
+  "asrWer": 0.028
  },
  "segments": [
   {
@@ -96,7 +96,7 @@
      "tokens": 70,
      "chunks": 1,
      "synthS": 1.621,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.525,
      "pauses": [
@@ -148,6 +148,14 @@
       "rawPeakDbfs": -5.38,
       "phonemesPerS": 9.31
      },
+     "asr": {
+      "hypothesis": "This is the K1, a two-stage rocket standing on its launch pad.",
+      "reference": "this is the kone a two stage rocket standing on its launch pad",
+      "errors": 0,
+      "refWords": 13,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     },
     {
@@ -165,7 +173,7 @@
      "tokens": 177,
      "chunks": 1,
      "synthS": 3.06,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.525,
      "pauses": [
@@ -231,6 +239,14 @@
       "rawPeakDbfs": -3.71,
       "phonemesPerS": 9.75
      },
+     "asr": {
+      "hypothesis": "Its tanks hold liquid oxygen and R. P. one, a refined kerosene. A rocket carries its oxidizer as well as its fuel, because there is no air to burn where it is going.",
+      "reference": "its tanks hold liquid oxygen rp one a refined kerosene a rocket carries its oxidizer as well as its fuel because there is no air to burn where it is going",
+      "errors": 0,
+      "refWords": 31,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -280,7 +296,7 @@
      "tokens": 182,
      "chunks": 1,
      "synthS": 2.532,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.475,
      "pauses": [
@@ -356,6 +372,19 @@
       "rawPeakDbfs": -6.33,
       "phonemesPerS": 10.67
      },
+     "asr": {
+      "hypothesis": "The access arms swing back. The white vapour is liquid oxygen boiling at minus one hundred and eighty three degrees Celsius. It is vented and topped up until the final minutes.",
+      "reference": "the access arms swing back the white vapor is liquid oxygen boiling at minus one hundred eighty three degrees celsius it is vented topped up until the final minutes",
+      "errors": 1,
+      "refWords": 29,
+      "wer": 0.034,
+      "diffs": [
+       [
+        "vapor",
+        "vapour"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -409,7 +438,7 @@
      "tokens": 147,
      "chunks": 1,
      "synthS": 2.099,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.51,
      "pauses": [
@@ -477,6 +506,27 @@
       "rawPeakDbfs": -3.41,
       "phonemesPerS": 9.47
      },
+     "asr": {
+      "hypothesis": "Engine start, a self igniting fluid called TE-E-A-T-E-B flashes green, the turbopump spin-up and seven engines build thrust.",
+      "reference": "engine start a self igniting fluid called te a te b flashes green the turbopumps spin up seven engines build thrust",
+      "errors": 4,
+      "refWords": 21,
+      "wer": 0.19,
+      "diffs": [
+       [
+        "∅",
+        "e"
+       ],
+       [
+        "te",
+        "t e"
+       ],
+       [
+        "turbopumps",
+        "turbopump"
+       ]
+      ]
+     },
      "flags": []
     },
     {
@@ -492,7 +542,7 @@
      "tokens": 98,
      "chunks": 1,
      "synthS": 1.376,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.505,
      "pauses": [],
@@ -531,6 +581,14 @@
       "rawPeakDbfs": -6.0,
       "phonemesPerS": 11.56
      },
+     "asr": {
+      "hypothesis": "Clamps still hold the rocket down, while the flight computers confirm that every engine is healthy.",
+      "reference": "clamps still hold the rocket down while the flight computers confirm that every engine is healthy",
+      "errors": 0,
+      "refWords": 16,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -538,81 +596,81 @@
   {
    "id": "leo-liftoff",
    "file": "leo-liftoff.mp3",
-   "durationMs": 10180,
+   "durationMs": 10260,
    "loudness": {
-    "inputLufs": -21.6,
-    "inputTruePeakDb": -4.7,
-    "gainDb": 3.2,
-    "outputLufs": -18.4,
+    "inputLufs": -21.5,
+    "inputTruePeakDb": -4.8,
+    "gainDb": 3.3,
+    "outputLufs": -18.2,
     "outputTruePeakDb": -1.5
    },
    "encoded": {
-    "bytes": 82176,
-    "decodedSamples": 244320,
-    "sourceSamples": 244320,
-    "durationMs": 10180,
+    "bytes": 82752,
+    "decodedSamples": 246240,
+    "sourceSamples": 246240,
+    "durationMs": 10260,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 427,
-     "bytes": 82176,
+     "frames": 430,
+     "bytes": 82752,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 1056
+     "paddingSamples": 864
     },
-    "decodedPeakDbfs": -1.96
+    "decodedPeakDbfs": -2.12
    },
-   "decodedPeakDbfs": -1.96,
+   "decodedPeakDbfs": -2.12,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "Release, and liftoff. Five point three meganewtons of thrust lift about four hundred and forty tonnes, so the rocket accelerates slowly at first.",
+     "text": "Release, and liftoff. Five point two meganewtons of thrust lift about four hundred and forty tonnes, so the rocket accelerates slowly at first.",
      "startMs": 0,
-     "endMs": 9580,
-     "audioText": "Release, and liftoff. Five point three mega newtons of thrust lift about four hundred and forty tonnes, so the rocket accelerates slowly at first.",
-     "phonemes": "ɹɪlˈiːs, and lˈɪftɒf. fˈIv pˈYnt θɹˈiː mˈɛɡə njˈuːtᵊnz ɒv θɹˈʌst lˈɪft əbˈWt fˈɔː hˈʌndɹəd and fˈɔːti tˈʌnz, sˌQ ðə ɹˈɒkɪt əksˈɛləɹAts slˈQli at fˈɜːst.",
+     "endMs": 9660,
+     "audioText": "Release, and liftoff. Five point two mega newtons of thrust lift about four hundred and forty tonnes, so the rocket accelerates slowly at first.",
+     "phonemes": "ɹɪlˈiːs, and lˈɪftɒf. fˈIv pˈYnt tˈuː mˈɛɡə njˈuːtᵊnz ɒv θɹˈʌst lˈɪft əbˈWt fˈɔː hˈʌndɹəd and fˈɔːti tˈʌnz, sˌQ ðə ɹˈɒkɪt əksˈɛləɹAts slˈQli at fˈɜːst.",
      "dictionary": [
       "meganewtons"
      ],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 152,
+     "tokens": 151,
      "chunks": 1,
-     "synthS": 2.094,
+     "synthS": 54.044,
      "cached": false,
      "modelLeadS": 0.28,
-     "modelTailS": 0.51,
+     "modelTailS": 0.505,
      "pauses": [
       {
        "mark": ",",
        "pauseS": 0.1,
-       "depthDb": -43.8,
+       "depthDb": -33.7,
        "t": 0.585
       },
       {
        "mark": ".",
        "pauseS": 0.15,
-       "depthDb": -69.1,
+       "depthDb": -69.2,
        "t": 1.71
       },
       {
        "mark": ",",
        "pauseS": 0.125,
-       "depthDb": -65.9,
-       "t": 6.885
+       "depthDb": -67.3,
+       "t": 6.985
       }
      ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 9.58,
-      "peakDbfs": -1.56,
+      "durationS": 9.66,
+      "peakDbfs": -1.51,
       "clippedSamples": 0,
       "dcOffset": -0.00019,
       "leadingSilenceS": 0.05,
-      "trailingSilenceS": 0.1,
+      "trailingSilenceS": 0.11,
       "longestInternalSilenceS": 0.47,
       "pauses": [
        [
@@ -620,29 +678,46 @@
         0.47
        ],
        [
-        4.46,
-        0.22
+        4.48,
+        0.3
        ],
        [
-        6.59,
+        6.69,
         0.36
        ]
       ],
-      "speechSpanS": 9.43,
-      "f0MedianHz": 140.1,
-      "f0RangeSemitones": 8.1,
+      "speechSpanS": 9.5,
+      "f0MedianHz": 140.9,
+      "f0RangeSemitones": 8.8,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.363,
-      "burstDb": 6.4,
+      "voicedShare": 0.361,
+      "burstDb": 6.2,
       "burstAtS": 0.05,
-      "onsetBurstDb": 6.4,
+      "onsetBurstDb": 6.2,
       "spikes": 0,
-      "hfShareDb": -28.9,
+      "hfShareDb": -28.8,
       "words": 24,
-      "wpm": 150.3,
-      "speechWpm": 152.7,
-      "rawPeakDbfs": -4.76,
-      "phonemesPerS": 10.6
+      "wpm": 149.1,
+      "speechWpm": 151.6,
+      "rawPeakDbfs": -4.81,
+      "phonemesPerS": 10.42
+     },
+     "asr": {
+      "hypothesis": "Release and lift off, five point two megan mutins of thrust lift about four hundred and forty tons, so the rocket accelerates slowly at first.",
+      "reference": "release liftoff five point two mega newtons of thrust lift about four hundred forty tonnes so the rocket accelerates slowly at first",
+      "errors": 3,
+      "refWords": 22,
+      "wer": 0.136,
+      "diffs": [
+       [
+        "mega newtons",
+        "megan mutins"
+       ],
+       [
+        "tonnes",
+        "tons"
+       ]
+      ]
      },
      "flags": []
     }
@@ -693,7 +768,7 @@
      "tokens": 71,
      "chunks": 1,
      "synthS": 1.063,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.505,
      "pauses": [
@@ -751,6 +826,14 @@
       "rawPeakDbfs": -6.22,
       "phonemesPerS": 9.78
      },
+     "asr": {
+      "hypothesis": "Tower cleared, the rocket now tips over just slightly toward the east.",
+      "reference": "tower cleared the rocket now tips over just slightly toward the east",
+      "errors": 0,
+      "refWords": 12,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -800,7 +883,7 @@
      "tokens": 141,
      "chunks": 1,
      "synthS": 1.973,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.5,
      "pauses": [
@@ -856,6 +939,14 @@
       "rawPeakDbfs": -5.78,
       "phonemesPerS": 9.93
      },
+     "asr": {
+      "hypothesis": "From here it does not fight the air. It keeps its nose along the airflow, and lets gravity bend its path into a curve, a gravity turn.",
+      "reference": "from here it does not fight the air it keeps its nose along the airflow lets gravity bend its path into a curve a gravity turn",
+      "errors": 0,
+      "refWords": 26,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     },
     {
@@ -871,7 +962,7 @@
      "tokens": 105,
      "chunks": 1,
      "synthS": 1.498,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.53,
      "pauses": [
@@ -916,6 +1007,19 @@
       "speechWpm": 153.8,
       "rawPeakDbfs": -5.01,
       "phonemesPerS": 10.11
+     },
+     "asr": {
+      "hypothesis": "Heading east also borrows the Earth's own spin about four hundred metres per second at this latitude.",
+      "reference": "heading east also borrows the earths own spin about four hundred meters per second at this latitude",
+      "errors": 1,
+      "refWords": 17,
+      "wer": 0.059,
+      "diffs": [
+       [
+        "meters",
+        "metres"
+       ]
+      ]
      },
      "flags": []
     }
@@ -966,7 +1070,7 @@
      "tokens": 131,
      "chunks": 1,
      "synthS": 1.911,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.46,
      "pauses": [
@@ -1038,6 +1142,14 @@
       "rawPeakDbfs": -5.21,
       "phonemesPerS": 9.56
      },
+     "asr": {
+      "hypothesis": "The air is thinning, but the rocket is going faster. Dynamic pressure half the air density times the speed squared is at its peak.",
+      "reference": "the air is thinning but the rocket is going faster dynamic pressure half the air density times the speed squared is at its peak",
+      "errors": 0,
+      "refWords": 24,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     },
     {
@@ -1053,7 +1165,7 @@
      "tokens": 95,
      "chunks": 1,
      "synthS": 1.502,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.51,
      "pauses": [
@@ -1098,6 +1210,14 @@
       "speechWpm": 162.2,
       "rawPeakDbfs": -5.8,
       "phonemesPerS": 10.17
+     },
+     "asr": {
+      "hypothesis": "This is the moment of greatest aerodynamic load and the engines throttle back to ease through it.",
+      "reference": "this is the moment of greatest aerodynamic load the engines throttle back to ease through it",
+      "errors": 0,
+      "refWords": 16,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -1147,8 +1267,8 @@
      "g2pWarnings": [],
      "tokens": 111,
      "chunks": 1,
-     "synthS": 1.676,
-     "cached": false,
+     "synthS": 1.677,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.51,
      "pauses": [
@@ -1200,6 +1320,14 @@
       "rawPeakDbfs": -5.35,
       "phonemesPerS": 10.28
      },
+     "asr": {
+      "hypothesis": "Main engine cutoff, the first stage has used most of its propellant, keeping a reserve to fly itself home.",
+      "reference": "main engine cutoff the first stage has used most of its propellant keeping a reserve to fly itself home",
+      "errors": 0,
+      "refWords": 19,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -1249,7 +1377,7 @@
      "tokens": 127,
      "chunks": 1,
      "synthS": 2.047,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.25,
      "modelTailS": 0.495,
      "pauses": [
@@ -1311,6 +1439,19 @@
       "rawPeakDbfs": -5.58,
       "phonemesPerS": 10.11
      },
+     "asr": {
+      "hypothesis": "Stage separation, pneumatic pushes ease the stages apart, both are still climbing at the same speed, they drift apart gently.",
+      "reference": "stage separation pneumatic pushers ease the stages apart both are still climbing at the same speed they drift apart gently",
+      "errors": 1,
+      "refWords": 20,
+      "wer": 0.05,
+      "diffs": [
+       [
+        "pushers",
+        "pushes"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -1364,7 +1505,7 @@
      "tokens": 165,
      "chunks": 1,
      "synthS": 2.293,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.5,
      "pauses": [
@@ -1424,6 +1565,14 @@
       "rawPeakDbfs": -5.63,
       "phonemesPerS": 10.21
      },
+     "asr": {
+      "hypothesis": "The upper stage engine lights once it is clear of the interstage. Its huge nozzle extension would not work at sea level. It is shaped for the near vacuum up here.",
+      "reference": "the upper stage engine lights once it is clear of the interstage its huge nozzle extension would not work at sea level it is shaped for the near vacuum up here",
+      "errors": 0,
+      "refWords": 31,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -1473,7 +1622,7 @@
      "tokens": 171,
      "chunks": 1,
      "synthS": 2.128,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.53,
      "pauses": [
@@ -1535,6 +1684,14 @@
       "rawPeakDbfs": -4.77,
       "phonemesPerS": 11.23
      },
+     "asr": {
+      "hypothesis": "Meanwhile, the booster has flipped around with small nitrogen thrusters and relights three engines to head back toward the coast. You can follow it in the mission explorer.",
+      "reference": "meanwhile the booster has flipped around with small nitrogen thrusters relights three engines to head back toward the coast you can follow it in the mission explorer",
+      "errors": 0,
+      "refWords": 27,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -1584,7 +1741,7 @@
      "tokens": 188,
      "chunks": 1,
      "synthS": 2.74,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.495,
      "pauses": [
@@ -1650,6 +1807,19 @@
       "rawPeakDbfs": -6.74,
       "phonemesPerS": 10.54
      },
+     "asr": {
+      "hypothesis": "Above about a hundred and ten kilometres, the air is too thin to heat or batter the satellite, the faring halves swing open and fall away, carrying them higher would only waste propellant.",
+      "reference": "above about a hundred ten kilometers the air is too thin to heat or batter the satellite the fairing halves swing open fall away carrying them higher would only waste propellant",
+      "errors": 1,
+      "refWords": 31,
+      "wer": 0.032,
+      "diffs": [
+       [
+        "fairing",
+        "faring"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -1699,7 +1869,7 @@
      "tokens": 83,
      "chunks": 1,
      "synthS": 1.303,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.51,
      "pauses": [
@@ -1745,6 +1915,14 @@
       "rawPeakDbfs": -6.44,
       "phonemesPerS": 10.74
      },
+     "asr": {
+      "hypothesis": "The upper stage now burns for several minutes, pointing more and more horizontally.",
+      "reference": "the upper stage now burns for several minutes pointing more more horizontally",
+      "errors": 0,
+      "refWords": 12,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     },
     {
@@ -1760,7 +1938,7 @@
      "tokens": 173,
      "chunks": 1,
      "synthS": 2.407,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.53,
      "pauses": [
@@ -1822,6 +2000,14 @@
       "rawPeakDbfs": -5.04,
       "phonemesPerS": 10.18
      },
+     "asr": {
+      "hypothesis": "Orbit is not about height. It is about going sideways so fast about seven point seven kilometres per second here that the ground curves away as quickly as you fall.",
+      "reference": "orbit is not about height it is about going sideways so fast about seven point seven kilometers per second here that the ground curves away as quickly as you fall",
+      "errors": 0,
+      "refWords": 30,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -1871,7 +2057,7 @@
      "tokens": 121,
      "chunks": 1,
      "synthS": 1.882,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.48,
      "pauses": [
@@ -1943,6 +2129,14 @@
       "rawPeakDbfs": -6.25,
       "phonemesPerS": 9.34
      },
+     "asr": {
+      "hypothesis": "Engine cut off, the vehicle is in orbit. Nothing pushes it now, and it does not slow down. It is falling around the earth.",
+      "reference": "engine cutoff the vehicle is in orbit nothing pushes it now it does not slow down it is falling around the earth",
+      "errors": 0,
+      "refWords": 22,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -1992,7 +2186,7 @@
      "tokens": 145,
      "chunks": 1,
      "synthS": 2.057,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.51,
      "pauses": [
@@ -2048,6 +2242,14 @@
       "rawPeakDbfs": -5.42,
       "phonemesPerS": 10.22
      },
+     "asr": {
+      "hypothesis": "This coast is shown sped up, the stage and its satellite keep moving at nearly eight kilometres per second on a path set by gravity alone.",
+      "reference": "this coast is shown sped up the stage its satellite keep moving at nearly eight kilometers per second on a path set by gravity alone",
+      "errors": 0,
+      "refWords": 25,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -2097,7 +2299,7 @@
      "tokens": 102,
      "chunks": 1,
      "synthS": 1.48,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.51,
      "pauses": [
@@ -2149,6 +2351,19 @@
       "rawPeakDbfs": -5.6,
       "phonemesPerS": 10.85
      },
+     "asr": {
+      "hypothesis": "Paloed separation, a clamp band lets go and springs push the satellite gently away from the stage.",
+      "reference": "payload separation a clamp band lets go springs push the satellite gently away from the stage",
+      "errors": 1,
+      "refWords": 16,
+      "wer": 0.062,
+      "diffs": [
+       [
+        "payload",
+        "paloed"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -2198,7 +2413,7 @@
      "tokens": 137,
      "chunks": 1,
      "synthS": 2.125,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.5,
      "pauses": [
@@ -2260,6 +2475,14 @@
       "rawPeakDbfs": -3.49,
       "phonemesPerS": 10.21
      },
+     "asr": {
+      "hypothesis": "The satellite unfolds its solar arrays, turns them toward the sun, and raises its antenna to contact the ground. The rocket's job is done.",
+      "reference": "the satellite unfolds its solar arrays turns them toward the sun raises its antenna to contact the ground the rockets job is done",
+      "errors": 0,
+      "refWords": 23,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -2309,7 +2532,7 @@
      "tokens": 105,
      "chunks": 1,
      "synthS": 1.678,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.505,
      "pauses": [
@@ -2359,6 +2582,14 @@
       "rawPeakDbfs": -5.0,
       "phonemesPerS": 9.96
      },
+     "asr": {
+      "hypothesis": "A suborbital research flight uses the booster alone with a capsule on top instead of an upper stage.",
+      "reference": "a suborbital research flight uses the booster alone with a capsule on top instead of an upper stage",
+      "errors": 0,
+      "refWords": 18,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     },
     {
@@ -2373,8 +2604,8 @@
      "g2pWarnings": [],
      "tokens": 78,
      "chunks": 1,
-     "synthS": 1.6,
-     "cached": false,
+     "synthS": 1.599,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.525,
      "pauses": [
@@ -2426,6 +2657,14 @@
       "rawPeakDbfs": -6.23,
       "phonemesPerS": 10.29
      },
+     "asr": {
+      "hypothesis": "It carries a reduced propellant load. The goal is height, not orbital speed.",
+      "reference": "it carries a reduced propellant load the goal is height not orbital speed",
+      "errors": 0,
+      "refWords": 13,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -2475,7 +2714,7 @@
      "tokens": 73,
      "chunks": 1,
      "synthS": 1.581,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.525,
      "pauses": [
@@ -2520,6 +2759,23 @@
       "speechWpm": 143.5,
       "rawPeakDbfs": -6.19,
       "phonemesPerS": 10.65
+     },
+     "asr": {
+      "hypothesis": "Engines start and the whole down clamps release when thrust is confirmed.",
+      "reference": "engine start the hold down clamps release when thrust is confirmed",
+      "errors": 2,
+      "refWords": 11,
+      "wer": 0.182,
+      "diffs": [
+       [
+        "engine",
+        "engines"
+       ],
+       [
+        "hold",
+        "whole"
+       ]
+      ]
      },
      "flags": []
     }
@@ -2570,7 +2826,7 @@
      "tokens": 121,
      "chunks": 1,
      "synthS": 2.156,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.505,
      "pauses": [
@@ -2626,6 +2882,14 @@
       "rawPeakDbfs": -4.91,
       "phonemesPerS": 10.94
      },
+     "asr": {
+      "hypothesis": "Lift off, the rocket climbs almost straight up, tilted a little to the east, so the capsule will come down over the ocean.",
+      "reference": "liftoff the rocket climbs almost straight up tilted a little to the east so the capsule will come down over the ocean",
+      "errors": 0,
+      "refWords": 22,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -2675,7 +2939,7 @@
      "tokens": 118,
      "chunks": 1,
      "synthS": 1.855,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.505,
      "pauses": [
@@ -2737,6 +3001,19 @@
       "rawPeakDbfs": -5.96,
       "phonemesPerS": 10.25
      },
+     "asr": {
+      "hypothesis": "Engine cut off early. The booster has enough speed to throw the capsule above 100 km and no more.",
+      "reference": "engine cutoff early the booster has enough speed to throw the capsule above one hundred kilometers no more",
+      "errors": 1,
+      "refWords": 18,
+      "wer": 0.056,
+      "diffs": [
+       [
+        "kilometers",
+        "km"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -2786,7 +3063,7 @@
      "tokens": 100,
      "chunks": 1,
      "synthS": 2.048,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.495,
      "pauses": [
@@ -2854,6 +3131,14 @@
       "rawPeakDbfs": -5.21,
       "phonemesPerS": 10.03
      },
+     "asr": {
+      "hypothesis": "The capsule separates from here both are simply coasting, rising, slowing, and about to fall back.",
+      "reference": "the capsule separates from here both are simply coasting rising slowing about to fall back",
+      "errors": 0,
+      "refWords": 15,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -2903,7 +3188,7 @@
      "tokens": 131,
      "chunks": 1,
      "synthS": 4.669,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.495,
      "pauses": [
@@ -2965,6 +3250,19 @@
       "rawPeakDbfs": -4.1,
       "phonemesPerS": 10.32
      },
+     "asr": {
+      "hypothesis": "The capsule crosses 100 km, a common definition of the edge of space. Inside, experiments are in free fall.",
+      "reference": "the capsule crosses one hundred kilometers a common definition of the edge of space inside experiments are in free fall",
+      "errors": 1,
+      "refWords": 20,
+      "wer": 0.05,
+      "diffs": [
+       [
+        "kilometers",
+        "km"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -3014,7 +3312,7 @@
      "tokens": 139,
      "chunks": 1,
      "synthS": 7.88,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.505,
      "pauses": [
@@ -3076,6 +3374,14 @@
       "rawPeakDbfs": -5.06,
       "phonemesPerS": 9.98
      },
+     "asr": {
+      "hypothesis": "The top of the arc, the capsule is barely moving sideways, so it cannot stay up here. Reaching space is not the same as staying in orbit.",
+      "reference": "the top of the arc the capsule is barely moving sideways so it cannot stay up here reaching space is not the same as staying in orbit",
+      "errors": 0,
+      "refWords": 27,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -3125,7 +3431,7 @@
      "tokens": 127,
      "chunks": 1,
      "synthS": 6.794,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.49,
      "pauses": [
@@ -3183,6 +3489,14 @@
       "rawPeakDbfs": -6.17,
       "phonemesPerS": 9.79
      },
+     "asr": {
+      "hypothesis": "Falling back, it gains speed again, with no sideways speed to spare, the path returns to Earth a few minutes after launch.",
+      "reference": "falling back it gains speed again with no sideways speed to spare the path returns to earth a few minutes after launch",
+      "errors": 0,
+      "refWords": 22,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -3232,7 +3546,7 @@
      "tokens": 159,
      "chunks": 1,
      "synthS": 4.936,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.525,
      "pauses": [
@@ -3288,6 +3602,14 @@
       "rawPeakDbfs": -5.59,
       "phonemesPerS": 10.48
      },
+     "asr": {
+      "hypothesis": "The heat-shield leads entry from a suborbital arc is gentler than from orbit, but the capsule still meets the air at several times the speed of sound.",
+      "reference": "the heat shield leads entry from a suborbital arc is gentler than from orbit but the capsule still meets the air at several times the speed of sound",
+      "errors": 0,
+      "refWords": 28,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -3337,7 +3659,7 @@
      "tokens": 65,
      "chunks": 1,
      "synthS": 2.14,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.52,
      "pauses": [],
@@ -3371,6 +3693,19 @@
       "speechWpm": 169.7,
       "rawPeakDbfs": -5.58,
       "phonemesPerS": 11.31
+     },
+     "asr": {
+      "hypothesis": "Drove parachutes steady the capsule and slow it before the mains.",
+      "reference": "drogue parachutes steady the capsule slow it before the mains",
+      "errors": 1,
+      "refWords": 10,
+      "wer": 0.1,
+      "diffs": [
+       [
+        "drogue",
+        "drove"
+       ]
+      ]
      },
      "flags": []
     }
@@ -3421,7 +3756,7 @@
      "tokens": 118,
      "chunks": 1,
      "synthS": 4.125,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.535,
      "pauses": [
@@ -3473,6 +3808,14 @@
       "rawPeakDbfs": -5.93,
       "phonemesPerS": 9.94
      },
+     "asr": {
+      "hypothesis": "Main parachutes open in stages, reefing lines hold each canopy partly closed at first, limiting the opening shock.",
+      "reference": "main parachutes open in stages reefing lines hold each canopy partly closed at first limiting the opening shock",
+      "errors": 0,
+      "refWords": 18,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -3521,8 +3864,8 @@
      "g2pWarnings": [],
      "tokens": 74,
      "chunks": 1,
-     "synthS": 2.626,
-     "cached": false,
+     "synthS": 2.627,
+     "cached": true,
      "modelLeadS": 0.24,
      "modelTailS": 0.475,
      "pauses": [
@@ -3574,6 +3917,23 @@
       "rawPeakDbfs": -6.09,
       "phonemesPerS": 10.24
      },
+     "asr": {
+      "hypothesis": "Splashstone at a few metres per second, recovery crews are on the way.",
+      "reference": "splashdown at a few meters per second recovery crews are on the way",
+      "errors": 2,
+      "refWords": 13,
+      "wer": 0.154,
+      "diffs": [
+       [
+        "splashdown",
+        "splashstone"
+       ],
+       [
+        "meters",
+        "metres"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -3623,7 +3983,7 @@
      "tokens": 80,
      "chunks": 1,
      "synthS": 3.075,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.52,
      "pauses": [],
@@ -3657,6 +4017,14 @@
       "speechWpm": 191.9,
       "rawPeakDbfs": -6.2,
       "phonemesPerS": 11.3
+     },
+     "asr": {
+      "hypothesis": "The booster has flown its own path back and lights its centre engine for landing.",
+      "reference": "the booster has flown its own path back lights its center engine for landing",
+      "errors": 0,
+      "refWords": 14,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -3707,7 +4075,7 @@
      "tokens": 145,
      "chunks": 1,
      "synthS": 4.786,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.495,
      "pauses": [
@@ -3757,6 +4125,27 @@
       "rawPeakDbfs": -5.73,
       "phonemesPerS": 10.85
      },
+     "asr": {
+      "hypothesis": "This mission carries a communication satellite toward Geostationary orbit, 35,786 km up.",
+      "reference": "this mission carries a communications satellite toward geostationary orbit thirty five thousand seven hundred eighty six kilometers up",
+      "errors": 3,
+      "refWords": 18,
+      "wer": 0.167,
+      "diffs": [
+       [
+        "communications",
+        "communication"
+       ],
+       [
+        "thousand",
+        "∅"
+       ],
+       [
+        "kilometers",
+        "km"
+       ]
+      ]
+     },
      "flags": []
     },
     {
@@ -3772,7 +4161,7 @@
      "tokens": 82,
      "chunks": 1,
      "synthS": 2.855,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.5,
      "pauses": [
@@ -3813,6 +4202,23 @@
       "speechWpm": 177.9,
       "rawPeakDbfs": -6.02,
       "phonemesPerS": 9.88
+     },
+     "asr": {
+      "hypothesis": "The rocket will not take it all the way, which which vehicle performs each manoeuvre.",
+      "reference": "the rocket will not take it all the way watch which vehicle performs each maneuver",
+      "errors": 2,
+      "refWords": 15,
+      "wer": 0.133,
+      "diffs": [
+       [
+        "watch",
+        "which"
+       ],
+       [
+        "maneuver",
+        "manoeuvre"
+       ]
+      ]
      },
      "flags": []
     }
@@ -3863,7 +4269,7 @@
      "tokens": 127,
      "chunks": 1,
      "synthS": 4.585,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.495,
      "pauses": [
@@ -3919,6 +4325,14 @@
       "rawPeakDbfs": -6.74,
       "phonemesPerS": 10.33
      },
+     "asr": {
+      "hypothesis": "Lift off, this time the booster is not recovered. The energy for a high orbit uses the propellant that would otherwise bring it home.",
+      "reference": "liftoff this time the booster is not recovered the energy for a high orbit uses the propellant that would otherwise bring it home",
+      "errors": 0,
+      "refWords": 23,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -3968,7 +4382,7 @@
      "tokens": 61,
      "chunks": 1,
      "synthS": 2.796,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.495,
      "pauses": [
@@ -4009,6 +4423,14 @@
       "speechWpm": 159.8,
       "rawPeakDbfs": -6.74,
       "phonemesPerS": 9.69
+     },
+     "asr": {
+      "hypothesis": "Maximum dynamic pressure, then the climb out of the dense air.",
+      "reference": "maximum dynamic pressure then the climb out of the dense air",
+      "errors": 0,
+      "refWords": 11,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -4059,7 +4481,7 @@
      "tokens": 48,
      "chunks": 1,
      "synthS": 2.481,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.24,
      "modelTailS": 0.5,
      "pauses": [
@@ -4100,6 +4522,14 @@
       "speechWpm": 146.3,
       "rawPeakDbfs": -6.24,
       "phonemesPerS": 9.76
+     },
+     "asr": {
+      "hypothesis": "Stage separation and the upper stage takes over.",
+      "reference": "stage separation the upper stage takes over",
+      "errors": 0,
+      "refWords": 7,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -4150,7 +4580,7 @@
      "tokens": 42,
      "chunks": 1,
      "synthS": 2.065,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.505,
      "pauses": [],
@@ -4184,6 +4614,14 @@
       "speechWpm": 145.8,
       "rawPeakDbfs": -5.96,
       "phonemesPerS": 9.72
+     },
+     "asr": {
+      "hypothesis": "The fairing falls away above the atmosphere.",
+      "reference": "the fairing falls away above the atmosphere",
+      "errors": 0,
+      "refWords": 7,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -4234,7 +4672,7 @@
      "tokens": 88,
      "chunks": 1,
      "synthS": 3.139,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.495,
      "pauses": [
@@ -4286,6 +4724,14 @@
       "rawPeakDbfs": -5.75,
       "phonemesPerS": 9.5
      },
+     "asr": {
+      "hypothesis": "First cut off, the stage and satellite are in a low parking orbit, coasting around the Earth.",
+      "reference": "first cutoff the stage satellite are in a low parking orbit coasting around the earth",
+      "errors": 0,
+      "refWords": 15,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -4335,7 +4781,7 @@
      "tokens": 167,
      "chunks": 1,
      "synthS": 5.005,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.515,
      "pauses": [
@@ -4391,6 +4837,14 @@
       "rawPeakDbfs": -5.07,
       "phonemesPerS": 10.05
      },
+     "asr": {
+      "hypothesis": "They coast until they reach the right point. The next burn must happen where the orbit crosses the equator, so the high point of the new orbit lies over the equator, too.",
+      "reference": "they coast until they reach the right point the next burn must happen where the orbit crosses the equator so the high point of the new orbit lies over the equator too",
+      "errors": 0,
+      "refWords": 32,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -4440,7 +4894,7 @@
      "tokens": 142,
      "chunks": 1,
      "synthS": 4.218,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.46,
      "pauses": [
@@ -4506,6 +4960,14 @@
       "rawPeakDbfs": -6.1,
       "phonemesPerS": 10.31
      },
+     "asr": {
+      "hypothesis": "Before the engine restarts, small thrusters nudge the stage forward. In free-fall the propellant floats, this settles it over the tank outlets.",
+      "reference": "before the engine restarts small thrusters nudge the stage forward in free fall the propellant floats this settles it over the tank outlets",
+      "errors": 0,
+      "refWords": 23,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -4555,7 +5017,7 @@
      "tokens": 88,
      "chunks": 1,
      "synthS": 2.773,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.5,
      "pauses": [
@@ -4607,6 +5069,14 @@
       "rawPeakDbfs": -5.71,
       "phonemesPerS": 9.73
      },
+     "asr": {
+      "hypothesis": "Restart the upper stage engine burns again, adding speed at the low point of the orbit.",
+      "reference": "restart the upper stage engine burns again adding speed at the low point of the orbit",
+      "errors": 0,
+      "refWords": 16,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -4656,7 +5126,7 @@
      "tokens": 144,
      "chunks": 1,
      "synthS": 4.519,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.485,
      "pauses": [
@@ -4722,6 +5192,23 @@
       "rawPeakDbfs": -5.78,
       "phonemesPerS": 10.22
      },
+     "asr": {
+      "hypothesis": "Cut off, the orbit now stretches from about 200 km to 36,000. This is a transfer orbit, not the final orbit.",
+      "reference": "cutoff the orbit now stretches from about two hundred kilometers to thirty six thousand this is a transfer orbit not the final orbit",
+      "errors": 2,
+      "refWords": 23,
+      "wer": 0.087,
+      "diffs": [
+       [
+        "kilometers",
+        "km"
+       ],
+       [
+        "thousand",
+        "zero"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -4771,7 +5258,7 @@
      "tokens": 73,
      "chunks": 1,
      "synthS": 2.763,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.5,
      "pauses": [
@@ -4823,6 +5310,14 @@
       "rawPeakDbfs": -4.93,
       "phonemesPerS": 10.53
      },
+     "asr": {
+      "hypothesis": "The satellite separates from here the satellite's own engine does the rest.",
+      "reference": "the satellite separates from here the satellites own engine does the rest",
+      "errors": 0,
+      "refWords": 12,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -4872,7 +5367,7 @@
      "tokens": 138,
      "chunks": 1,
      "synthS": 4.908,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.535,
      "pauses": [
@@ -4934,6 +5429,23 @@
       "rawPeakDbfs": -4.84,
       "phonemesPerS": 9.94
      },
+     "asr": {
+      "hypothesis": "The long climb to the high point takes about five hours, shown he had greatly sped up the satellite's slows as it rises, trading speed for height.",
+      "reference": "the long climb to the high point takes about five hours shown here greatly sped up the satellite slows as it rises trading speed for height",
+      "errors": 3,
+      "refWords": 26,
+      "wer": 0.115,
+      "diffs": [
+       [
+        "here",
+        "he had"
+       ],
+       [
+        "satellite",
+        "satellites"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -4983,7 +5495,7 @@
      "tokens": 122,
      "chunks": 1,
      "synthS": 4.38,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.5,
      "pauses": [
@@ -5043,6 +5555,19 @@
       "rawPeakDbfs": -4.06,
       "phonemesPerS": 9.5
      },
+     "asr": {
+      "hypothesis": "At the high point, the satellite fires its aperture engine sideways to raise the low point and to remove the tilt of the orbit.",
+      "reference": "at the high point the satellite fires its apogee engine sideways to raise the low point to remove the tilt of the orbit",
+      "errors": 1,
+      "refWords": 23,
+      "wer": 0.043,
+      "diffs": [
+       [
+        "apogee",
+        "aperture"
+       ]
+      ]
+     },
      "flags": []
     },
     {
@@ -5058,7 +5583,7 @@
      "tokens": 95,
      "chunks": 1,
      "synthS": 3.221,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.52,
      "pauses": [
@@ -5109,6 +5634,14 @@
       "speechWpm": 167.8,
       "rawPeakDbfs": -7.14,
       "phonemesPerS": 10.36
+     },
+     "asr": {
+      "hypothesis": "In reality, this takes several burns over days. It is shown here as one as an explanation.",
+      "reference": "in reality this takes several burns over days it is shown here as one as an explanation",
+      "errors": 0,
+      "refWords": 17,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -5161,7 +5694,7 @@
      "tokens": 147,
      "chunks": 1,
      "synthS": 4.776,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.485,
      "pauses": [
@@ -5231,6 +5764,19 @@
       "rawPeakDbfs": -5.04,
       "phonemesPerS": 9.68
      },
+     "asr": {
+      "hypothesis": "A crew capsule on the K-1 above it the aboard tower, a solid rocket motor that can pull the capsule clear of a failing booster in seconds.",
+      "reference": "a crew capsule on the k one above it the abort tower a solid rocket motor that can pull the capsule clear of a failing booster in seconds",
+      "errors": 1,
+      "refWords": 28,
+      "wer": 0.036,
+      "diffs": [
+       [
+        "abort",
+        "aboard"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -5280,7 +5826,7 @@
      "tokens": 162,
      "chunks": 1,
      "synthS": 5.05,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.52,
      "pauses": [
@@ -5340,6 +5886,14 @@
       "rawPeakDbfs": -5.63,
       "phonemesPerS": 10.59
      },
+     "asr": {
+      "hypothesis": "Lift off, timed for the moment, the launch site passes under the station's orbital plane. launching into the right plane saves an expensive change of direction later.",
+      "reference": "liftoff timed for the moment the launch site passes under the stations orbital plane launching into the right plane saves an expensive change of direction later",
+      "errors": 0,
+      "refWords": 26,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -5389,7 +5943,7 @@
      "tokens": 68,
      "chunks": 1,
      "synthS": 2.962,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.505,
      "pauses": [
@@ -5430,6 +5984,19 @@
       "speechWpm": 135.5,
       "rawPeakDbfs": -4.98,
       "phonemesPerS": 9.45
+     },
+     "asr": {
+      "hypothesis": "Maximum dynamic pressure, the aboard tower is ready throughout this phase.",
+      "reference": "maximum dynamic pressure the abort tower is ready throughout this phase",
+      "errors": 1,
+      "refWords": 11,
+      "wer": 0.091,
+      "diffs": [
+       [
+        "abort",
+        "aboard"
+       ]
+      ]
      },
      "flags": []
     }
@@ -5480,7 +6047,7 @@
      "tokens": 18,
      "chunks": 1,
      "synthS": 0.922,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.25,
      "modelTailS": 0.455,
      "pauses": [],
@@ -5509,6 +6076,14 @@
       "speechWpm": 82.2,
       "rawPeakDbfs": -5.19,
       "phonemesPerS": 8.9
+     },
+     "asr": {
+      "hypothesis": "Stage separation.",
+      "reference": "stage separation",
+      "errors": 0,
+      "refWords": 2,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": [
       "rate-outlier"
@@ -5561,7 +6136,7 @@
      "tokens": 100,
      "chunks": 1,
      "synthS": 3.228,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.505,
      "pauses": [
@@ -5613,6 +6188,14 @@
       "rawPeakDbfs": -6.55,
       "phonemesPerS": 9.74
      },
+     "asr": {
+      "hypothesis": "With the dense air behind, the abort tower is no longer needed. Its jettison motor carries it away.",
+      "reference": "with the dense air behind the abort tower is no longer needed its jettison motor carries it away",
+      "errors": 0,
+      "refWords": 18,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -5662,7 +6245,7 @@
      "tokens": 84,
      "chunks": 1,
      "synthS": 2.685,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.5,
      "pauses": [
@@ -5718,6 +6301,14 @@
       "rawPeakDbfs": -5.16,
       "phonemesPerS": 10.69
      },
+     "asr": {
+      "hypothesis": "Cut off, the capsule is in orbit, lower than the station and some distance behind it.",
+      "reference": "cutoff the capsule is in orbit lower than the station some distance behind it",
+      "errors": 0,
+      "refWords": 14,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -5767,7 +6358,7 @@
      "tokens": 69,
      "chunks": 1,
      "synthS": 2.301,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.525,
      "pauses": [],
@@ -5801,6 +6392,14 @@
       "speechWpm": 171.0,
       "rawPeakDbfs": -4.38,
       "phonemesPerS": 11.64
+     },
+     "asr": {
+      "hypothesis": "The capsule separates from the upper stage and opens its solar arrays.",
+      "reference": "the capsule separates from the upper stage opens its solar arrays",
+      "errors": 0,
+      "refWords": 11,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -5851,7 +6450,7 @@
      "tokens": 154,
      "chunks": 1,
      "synthS": 2.816,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.525,
      "pauses": [
@@ -5913,6 +6512,14 @@
       "rawPeakDbfs": -3.91,
       "phonemesPerS": 10.32
      },
+     "asr": {
+      "hypothesis": "Why not point at the station and fly straight to it, because pushing forward raises your orbit and a higher orbit is slower? You would climb and fall behind.",
+      "reference": "why not point at the station fly straight to it because pushing forward raises your orbit a higher orbit is slower you would climb fall behind",
+      "errors": 0,
+      "refWords": 26,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     },
     {
@@ -5928,7 +6535,7 @@
      "tokens": 136,
      "chunks": 1,
      "synthS": 2.076,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.51,
      "pauses": [
@@ -5996,6 +6603,14 @@
       "rawPeakDbfs": -5.88,
       "phonemesPerS": 9.85
      },
+     "asr": {
+      "hypothesis": "Instead, the capsule stays lower, where orbits are faster and catches up gradually. This phase is shown with long, quiet intervals omitted.",
+      "reference": "instead the capsule stays lower where orbits are faster catches up gradually this phase is shown with long quiet intervals omitted",
+      "errors": 0,
+      "refWords": 21,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -6045,7 +6660,7 @@
      "tokens": 72,
      "chunks": 1,
      "synthS": 1.272,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.53,
      "pauses": [],
@@ -6079,6 +6694,14 @@
       "speechWpm": 170.3,
       "rawPeakDbfs": -4.77,
       "phonemesPerS": 10.26
+     },
+     "asr": {
+      "hypothesis": "A burn raises the high point of the orbit toward the station's altitude.",
+      "reference": "a burn raises the high point of the orbit toward the stations altitude",
+      "errors": 0,
+      "refWords": 13,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -6129,7 +6752,7 @@
      "tokens": 83,
      "chunks": 1,
      "synthS": 2.396,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.495,
      "pauses": [],
@@ -6167,6 +6790,14 @@
       "speechWpm": 192.0,
       "rawPeakDbfs": -5.34,
       "phonemesPerS": 11.0
+     },
+     "asr": {
+      "hypothesis": "A second burn at the top, rounds out the orbit just below and behind the station.",
+      "reference": "a second burn at the top rounds out the orbit just below behind the station",
+      "errors": 0,
+      "refWords": 15,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -6217,7 +6848,7 @@
      "tokens": 197,
      "chunks": 1,
      "synthS": 3.871,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.52,
      "pauses": [
@@ -6299,6 +6930,19 @@
       "rawPeakDbfs": -5.24,
       "phonemesPerS": 10.76
      },
+     "asr": {
+      "hypothesis": "Final approach along the line toward the Earth centre from below here, orbital motion helps small thrusts, holds at fixed distances, and a closing speed of a few centimetres per second.",
+      "reference": "final approach along the line toward the earths center from below here orbital motion helps small thrusts holds at fixed distances a closing speed of a few centimeters per second",
+      "errors": 1,
+      "refWords": 30,
+      "wer": 0.033,
+      "diffs": [
+       [
+        "earths",
+        "earth"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -6348,7 +6992,7 @@
      "tokens": 81,
      "chunks": 1,
      "synthS": 1.473,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.24,
      "modelTailS": 0.5,
      "pauses": [
@@ -6400,6 +7044,14 @@
       "rawPeakDbfs": -4.1,
       "phonemesPerS": 10.2
      },
+     "asr": {
+      "hypothesis": "Soft capture latches catch the docking ring and springs absorb the remaining motion.",
+      "reference": "soft capture latches catch the docking ring springs absorb the remaining motion",
+      "errors": 0,
+      "refWords": 12,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -6449,7 +7101,7 @@
      "tokens": 87,
      "chunks": 1,
      "synthS": 1.178,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.25,
      "modelTailS": 0.49,
      "pauses": [
@@ -6501,6 +7153,14 @@
       "rawPeakDbfs": -5.35,
       "phonemesPerS": 10.4
      },
+     "asr": {
+      "hypothesis": "Hard capture hooks pull the two vehicles into an airtight seal, delivery complete.",
+      "reference": "hard capture hooks pull the two vehicles into an airtight seal delivery complete",
+      "errors": 0,
+      "refWords": 13,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -6550,7 +7210,7 @@
      "tokens": 80,
      "chunks": 1,
      "synthS": 1.27,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.5,
      "pauses": [],
@@ -6588,6 +7248,19 @@
       "speechWpm": 153.2,
       "rawPeakDbfs": -4.09,
       "phonemesPerS": 11.2
+     },
+     "asr": {
+      "hypothesis": "The capsule undocks and backs away from the station with small thrust of firings.",
+      "reference": "the capsule undocks backs away from the station with small thruster firings",
+      "errors": 2,
+      "refWords": 12,
+      "wer": 0.167,
+      "diffs": [
+       [
+        "thruster",
+        "thrust of"
+       ]
+      ]
      },
      "flags": []
     }
@@ -6642,7 +7315,7 @@
      "tokens": 86,
      "chunks": 1,
      "synthS": 1.326,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.495,
      "pauses": [
@@ -6688,6 +7361,19 @@
       "rawPeakDbfs": -5.84,
       "phonemesPerS": 10.58
      },
+     "asr": {
+      "hypothesis": "The D orbit burn, the service modules engine fires against the direction of travel.",
+      "reference": "the deorbit burn the service modules engine fires against the direction of travel",
+      "errors": 2,
+      "refWords": 13,
+      "wer": 0.154,
+      "diffs": [
+       [
+        "deorbit",
+        "d orbit"
+       ]
+      ]
+     },
      "flags": []
     },
     {
@@ -6703,7 +7389,7 @@
      "tokens": 111,
      "chunks": 1,
      "synthS": 2.895,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.5,
      "pauses": [
@@ -6748,6 +7434,19 @@
       "speechWpm": 174.2,
       "rawPeakDbfs": -5.69,
       "phonemesPerS": 10.45
+     },
+     "asr": {
+      "hypothesis": "Losing about a hundred metres per second is enough, the low point of the orbit now dips into the atmosphere.",
+      "reference": "losing about a hundred meters per second is enough the low point of the orbit now dips into the atmosphere",
+      "errors": 1,
+      "refWords": 20,
+      "wer": 0.05,
+      "diffs": [
+       [
+        "meters",
+        "metres"
+       ]
+      ]
      },
      "flags": []
     }
@@ -6798,7 +7497,7 @@
      "tokens": 156,
      "chunks": 1,
      "synthS": 4.332,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.475,
      "pauses": [
@@ -6876,6 +7575,14 @@
       "rawPeakDbfs": -6.3,
       "phonemesPerS": 10.37
      },
+     "asr": {
+      "hypothesis": "The service module is no longer needed. It separates and will burn up. Only the capsule with its heat shield is built to survive what comes next.",
+      "reference": "the service module is no longer needed it separates will burn up only the capsule with its heat shield is built to survive what comes next",
+      "errors": 0,
+      "refWords": 26,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -6925,7 +7632,7 @@
      "tokens": 151,
      "chunks": 1,
      "synthS": 2.008,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.505,
      "pauses": [
@@ -6987,6 +7694,14 @@
       "rawPeakDbfs": -4.35,
       "phonemesPerS": 10.91
      },
+     "asr": {
+      "hypothesis": "Entry interface about a hundred and twenty kilometres up. The capsule meets the air at nearly eight kilometres per second, heat-shield first.",
+      "reference": "entry interface about a hundred twenty kilometers up the capsule meets the air at nearly eight kilometers per second heat shield first",
+      "errors": 0,
+      "refWords": 22,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -7036,7 +7751,7 @@
      "tokens": 81,
      "chunks": 1,
      "synthS": 1.355,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.515,
      "pauses": [
@@ -7078,6 +7793,14 @@
       "rawPeakDbfs": -4.55,
       "phonemesPerS": 10.9
      },
+     "asr": {
+      "hypothesis": "Peak heating, the shock layer in front of the shield glows at thousands of degrees.",
+      "reference": "peak heating the shock layer in front of the shield glows at thousands of degrees",
+      "errors": 0,
+      "refWords": 15,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     },
     {
@@ -7093,7 +7816,7 @@
      "tokens": 115,
      "chunks": 1,
      "synthS": 4.528,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.535,
      "pauses": [
@@ -7145,6 +7868,19 @@
       "rawPeakDbfs": -5.36,
       "phonemesPerS": 10.11
      },
+     "asr": {
+      "hypothesis": "The ablative shield chairs and slowly erodes, carrying heat away as it does while the structure behind it stays cool.",
+      "reference": "the ablative shield chars slowly erodes carrying heat away as it does while the structure behind it stays cool",
+      "errors": 1,
+      "refWords": 19,
+      "wer": 0.053,
+      "diffs": [
+       [
+        "chars",
+        "chairs"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -7194,7 +7930,7 @@
      "tokens": 85,
      "chunks": 1,
      "synthS": 5.492,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.475,
      "pauses": [
@@ -7235,6 +7971,19 @@
       "speechWpm": 168.2,
       "rawPeakDbfs": -5.92,
       "phonemesPerS": 9.72
+     },
+     "asr": {
+      "hypothesis": "The air takes away the orbital energy. The crew feels several times their normal weight.",
+      "reference": "the air takes away the orbital energy the crew feel several times their normal weight",
+      "errors": 1,
+      "refWords": 15,
+      "wer": 0.067,
+      "diffs": [
+       [
+        "feel",
+        "feels"
+       ]
+      ]
      },
      "flags": []
     }
@@ -7285,7 +8034,7 @@
      "tokens": 52,
      "chunks": 1,
      "synthS": 3.964,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.505,
      "pauses": [],
@@ -7319,6 +8068,19 @@
       "speechWpm": 149.1,
       "rawPeakDbfs": -5.79,
       "phonemesPerS": 11.49
+     },
+     "asr": {
+      "hypothesis": "Drove parachutes stabilize the capsule and slow it.",
+      "reference": "drogue parachutes stabilize the capsule slow it",
+      "errors": 1,
+      "refWords": 7,
+      "wer": 0.143,
+      "diffs": [
+       [
+        "drogue",
+        "drove"
+       ]
+      ]
      },
      "flags": []
     }
@@ -7369,7 +8131,7 @@
      "tokens": 58,
      "chunks": 1,
      "synthS": 3.394,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.49,
      "pauses": [
@@ -7416,6 +8178,14 @@
       "speechWpm": 144.4,
       "rawPeakDbfs": -6.17,
       "phonemesPerS": 9.36
+     },
+     "asr": {
+      "hypothesis": "Three main parachutes open, reefed at first, then fully.",
+      "reference": "three main parachutes open reefed at first then fully",
+      "errors": 0,
+      "refWords": 9,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -7466,7 +8236,7 @@
      "tokens": 101,
      "chunks": 1,
      "synthS": 4.655,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.24,
      "modelTailS": 0.48,
      "pauses": [
@@ -7528,6 +8298,14 @@
       "rawPeakDbfs": -6.22,
       "phonemesPerS": 9.68
      },
+     "asr": {
+      "hypothesis": "Splash down in the Atlantic, the mission ends where it began on Earth, a short way from the launch site.",
+      "reference": "splashdown in the atlantic the mission ends where it began on earth a short way from the launch site",
+      "errors": 0,
+      "refWords": 19,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -7577,7 +8355,7 @@
      "tokens": 109,
      "chunks": 1,
      "synthS": 5.213,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.485,
      "pauses": [
@@ -7639,6 +8417,14 @@
       "rawPeakDbfs": -5.41,
       "phonemesPerS": 9.7
      },
+     "asr": {
+      "hypothesis": "This rocket carries a small probe to fly past the moon. It will not stop there, a flyby, not an orbit.",
+      "reference": "this rocket carries a small probe to fly past the moon it will not stop there a flyby not an orbit",
+      "errors": 0,
+      "refWords": 21,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -7688,7 +8474,7 @@
      "tokens": 8,
      "chunks": 1,
      "synthS": 1.164,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.23,
      "modelTailS": 0.385,
      "pauses": [],
@@ -7718,7 +8504,22 @@
       "rawPeakDbfs": -7.22,
       "phonemesPerS": 7.14
      },
-     "flags": []
+     "asr": {
+      "hypothesis": "Lift oven.",
+      "reference": "liftoff",
+      "errors": 2,
+      "refWords": 1,
+      "wer": 2.0,
+      "diffs": [
+       [
+        "liftoff",
+        "lift oven"
+       ]
+      ]
+     },
+     "flags": [
+      "asr-mismatch"
+     ]
     }
    ]
   },
@@ -7767,7 +8568,7 @@
      "tokens": 59,
      "chunks": 1,
      "synthS": 3.153,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.25,
      "modelTailS": 0.495,
      "pauses": [
@@ -7808,6 +8609,14 @@
       "speechWpm": 139.9,
       "rawPeakDbfs": -5.77,
       "phonemesPerS": 10.62
+     },
+     "asr": {
+      "hypothesis": "Stage separation, the booster is expended on this mission.",
+      "reference": "stage separation the booster is expended on this mission",
+      "errors": 0,
+      "refWords": 9,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -7858,7 +8667,7 @@
      "tokens": 87,
      "chunks": 1,
      "synthS": 4.668,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.525,
      "pauses": [
@@ -7903,6 +8712,14 @@
       "speechWpm": 170.2,
       "rawPeakDbfs": -6.35,
       "phonemesPerS": 9.75
+     },
+     "asr": {
+      "hypothesis": "The upper stage reaches a parking orbit and coasts, waiting for the right moment to leave.",
+      "reference": "the upper stage reaches a parking orbit coasts waiting for the right moment to leave",
+      "errors": 0,
+      "refWords": 15,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -7953,7 +8770,7 @@
      "tokens": 81,
      "chunks": 1,
      "synthS": 3.648,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.25,
      "modelTailS": 0.525,
      "pauses": [],
@@ -7991,6 +8808,14 @@
       "speechWpm": 170.0,
       "rawPeakDbfs": -5.27,
       "phonemesPerS": 11.34
+     },
+     "asr": {
+      "hypothesis": "Settling thrusters push the propellant to the back of the tanks before the restart.",
+      "reference": "settling thrusters push the propellant to the back of the tanks before the restart",
+      "errors": 0,
+      "refWords": 14,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }
@@ -8041,7 +8866,7 @@
      "tokens": 123,
      "chunks": 1,
      "synthS": 2.035,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.55,
      "pauses": [
@@ -8093,6 +8918,19 @@
       "rawPeakDbfs": -5.93,
       "phonemesPerS": 10.95
      },
+     "asr": {
+      "hypothesis": "Transluner injection, the engine burns for several minutes, raising the speed to nearly eleven kilometres per second.",
+      "reference": "trans lunar injection the engine burns for several minutes raising the speed to nearly eleven kilometers per second",
+      "errors": 2,
+      "refWords": 18,
+      "wer": 0.111,
+      "diffs": [
+       [
+        "trans lunar",
+        "transluner"
+       ]
+      ]
+     },
      "flags": []
     }
    ]
@@ -8142,7 +8980,7 @@
      "tokens": 88,
      "chunks": 1,
      "synthS": 1.789,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.5,
      "pauses": [
@@ -8194,6 +9032,14 @@
       "rawPeakDbfs": -5.54,
       "phonemesPerS": 9.98
      },
+     "asr": {
+      "hypothesis": "Cut off, the probe is now on a long stretched path that reaches out to the moon's distance.",
+      "reference": "cutoff the probe is now on a long stretched path that reaches out to the moons distance",
+      "errors": 0,
+      "refWords": 17,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -8243,7 +9089,7 @@
      "tokens": 96,
      "chunks": 1,
      "synthS": 1.64,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.505,
      "pauses": [
@@ -8305,6 +9151,14 @@
       "rawPeakDbfs": -5.92,
       "phonemesPerS": 10.21
      },
+     "asr": {
+      "hypothesis": "The probe separates from here it coasts. No engine is running, yet it is moving the whole time.",
+      "reference": "the probe separates from here it coasts no engine is running yet it is moving the whole time",
+      "errors": 0,
+      "refWords": 18,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -8354,7 +9208,7 @@
      "tokens": 95,
      "chunks": 1,
      "synthS": 1.382,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.495,
      "pauses": [
@@ -8410,6 +9264,14 @@
       "rawPeakDbfs": -5.56,
       "phonemesPerS": 9.68
      },
+     "asr": {
+      "hypothesis": "Three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
+      "reference": "three days of coasting shown greatly sped up earths gravity slows the probe as it climbs away",
+      "errors": 0,
+      "refWords": 17,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -8459,7 +9321,7 @@
      "tokens": 120,
      "chunks": 1,
      "synthS": 1.606,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.27,
      "modelTailS": 0.515,
      "pauses": [
@@ -8515,6 +9377,14 @@
       "rawPeakDbfs": -5.38,
       "phonemesPerS": 10.47
      },
+     "asr": {
+      "hypothesis": "The probe crosses into the region where the moon's gravity dominates. Seen from the moon, it is now falling toward it.",
+      "reference": "the probe crosses into the region where the moons gravity dominates seen from the moon it is now falling toward it",
+      "errors": 0,
+      "refWords": 21,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -8563,8 +9433,8 @@
      "g2pWarnings": [],
      "tokens": 89,
      "chunks": 1,
-     "synthS": 1.271,
-     "cached": false,
+     "synthS": 1.272,
+     "cached": true,
      "modelLeadS": 0.26,
      "modelTailS": 0.505,
      "pauses": [
@@ -8616,6 +9486,14 @@
       "rawPeakDbfs": -5.32,
       "phonemesPerS": 10.04
      },
+     "asr": {
+      "hypothesis": "Closest approach over the far side, the moon bends the probe's path and swings it onward.",
+      "reference": "closest approach over the far side the moon bends the probes path swings it onward",
+      "errors": 0,
+      "refWords": 15,
+      "wer": 0.0,
+      "diffs": []
+     },
      "flags": []
     }
    ]
@@ -8665,7 +9543,7 @@
      "tokens": 187,
      "chunks": 1,
      "synthS": 2.67,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.29,
      "modelTailS": 0.5,
      "pauses": [
@@ -8728,6 +9606,19 @@
       "speechWpm": 165.1,
       "rawPeakDbfs": -5.96,
       "phonemesPerS": 10.51
+     },
+     "asr": {
+      "hypothesis": "Leaving the moon's sphere of influence on an outbound trajectory, a flyby changes direction and speed without an engine burn, but to stay in lunar orbit the probe would have had to break.",
+      "reference": "leaving the moons sphere of influence on an outbound trajectory a flyby changes direction speed without an engine burn but to stay in lunar orbit the probe would have had to brake",
+      "errors": 1,
+      "refWords": 32,
+      "wer": 0.031,
+      "diffs": [
+       [
+        "brake",
+        "break"
+       ]
+      ]
      },
      "flags": []
     }

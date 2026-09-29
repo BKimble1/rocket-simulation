@@ -71,8 +71,8 @@ export function buildLunar(): MissionTimeline {
     rtls: null,
     insertion: { rp: 200e3, ra: 200e3 },
     // warm starts: the converged values of the deterministic searches
-    ltg0: { A: -0.080951, B: 0.0008736 },
-    kick0: 1.21273,
+    ltg0: { A: -0.14665, B: 0.0010442 },
+    kick0: 0.97544,
     gLimitS1: 4.5 * 9.80665,
     gLimitS2: 4.5 * 9.80665,
     s2Keep: 10_000,

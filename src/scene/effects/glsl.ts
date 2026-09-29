@@ -50,4 +50,17 @@ vec3 fxOut(vec3 c) {
 #endif
   return linearToOutputTexel(vec4(c, 1.0)).rgb;
 }
+/**
+ * Emission (flames, glowing gas) through a per-channel exposure curve instead of the scene's
+ * tone mapper: AgX keeps hue but turns bright saturated light pastel, while film and eyes see
+ * a hot flame shift from red through orange and yellow to white as it brightens, because the
+ * red channel saturates first. Same exposure as the rest of the scene.
+ */
+vec3 fxFlame(vec3 e) {
+#ifdef TONE_MAPPING
+  e *= toneMappingExposure;
+#endif
+  vec3 m = 1.0 - exp(-max(e, vec3(0.0)));
+  return linearToOutputTexel(vec4(m, 1.0)).rgb;
+}
 `;

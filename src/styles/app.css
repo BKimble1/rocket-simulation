@@ -154,6 +154,10 @@ a {
 .brand__sub .onefab {
   color: var(--ink-2);
 }
+.brand__mark,
+.home__word {
+  display: none;
+}
 
 .nav {
   display: flex;
@@ -1487,10 +1491,29 @@ code {
     display: flex;
   }
   .header {
-    gap: 8px;
+    gap: 6px;
+    padding-left: calc(10px + var(--safe-left));
+    padding-right: calc(10px + var(--safe-right));
   }
-  .brand .kimble-logo {
-    height: 18px;
+  /* the compact K in the header; the full KIMBLE lockup moves onto the home card */
+  .brand .kimble-logo,
+  .home__k {
+    display: none;
+  }
+  .brand__mark,
+  .home__word {
+    display: block;
+  }
+  .brand {
+    padding: 6px 2px;
+  }
+  .header .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+  .nav button {
+    padding: 6px 9px;
+    font-size: 13px;
   }
   .seg__btn {
     padding: 6px 9px;

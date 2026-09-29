@@ -3,7 +3,8 @@
  * vehicle (click to select the part) separately from other documented designs, compares its
  * properties against requirements, and shows manufacturing and inspection.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useStageInset } from '../hooks/useStageInset';
 import { MATERIAL_IDS, type MaterialId } from '../../content/materials/ids';
 import { MATERIALS } from '../../content/materials';
 import { partsUsing } from '../../content/materials/assignments';
@@ -18,6 +19,8 @@ export function MaterialPanel({ onClose }: { onClose: () => void }) {
   const set = useApp((s) => s.set);
   const [q, setQ] = useState('');
   const mark = useProgress((s) => s.markExplored);
+  const ref = useRef<HTMLElement>(null);
+  useStageInset('materials', ref);
   useEffect(() => {
     if (material) mark(exploredKey.material(material));
   }, [material, mark]);
@@ -33,7 +36,7 @@ export function MaterialPanel({ onClose }: { onClose: () => void }) {
   const m = material ? MATERIALS[material] : null;
   const uses = material ? partsUsing(material) : [];
   return (
-    <aside className="panel lesson matpanel" aria-label="Materials">
+    <aside className="panel lesson matpanel" aria-label="Materials" ref={ref}>
       <header className="lesson__head">
         <div>
           <div className="eyebrow">Materials view</div>

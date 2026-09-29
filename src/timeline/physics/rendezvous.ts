@@ -60,7 +60,12 @@ export function lvlh(o: CircularOrbit, t: number): Lvlh {
   return { r, s, w: o.h };
 }
 
-/** Station attitude: body +Y zenith, +X along the velocity, +Z = X x Y (= -normal). */
+/**
+ * Local-vertical attitude (the station model frame of scene/spacecraft/types.ts): body +Y zenith
+ * (away from the Earth), +X along the velocity, +Z = X x Y (= minus the orbit normal). The
+ * station's docking port faces nadir (-Y, STATION_DOCK); a capsule in this same attitude below
+ * it points its docking system (its +Y model axis) up at the port for the R-bar approach.
+ */
 export function lvlhAttitude(b: Lvlh): Q {
   return qfromBasis(b.s, b.r, vscale(b.w, -1));
 }

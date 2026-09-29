@@ -81,7 +81,33 @@ export const director = {
 
   /** Callbacks the UI listens to (camera took over, location waiting). */
   onUserCamera: null as null | (() => void),
+
+  /**
+   * Screen area hidden by interface panels that span the width (phone bottom sheets, the phone
+   * home card), in CSS px, by panel key. The stage moves the projection centre into the free area
+   * and widens the view to fit it (see viewInsetShown), so the subject is never behind a panel.
+   */
+  insets: {} as Record<string, { top: number; bottom: number }>,
+  /** Smoothed inset actually applied this frame. */
+  viewInsetShown: { top: 0, bottom: 0 },
 };
+
+/** Register (or clear, with null) the screen area a panel hides. */
+export function setViewInset(key: string, inset: { top: number; bottom: number } | null) {
+  if (inset) director.insets[key] = inset;
+  else delete director.insets[key];
+}
+
+/** The inset to apply now: the largest of the registered ones. */
+export function viewInsetGoal(): { top: number; bottom: number } {
+  let top = 0;
+  let bottom = 0;
+  for (const k in director.insets) {
+    top = Math.max(top, director.insets[k].top);
+    bottom = Math.max(bottom, director.insets[k].bottom);
+  }
+  return { top, bottom };
+}
 
 export function goLocation(loc: Location) {
   director.wantLocation = loc;

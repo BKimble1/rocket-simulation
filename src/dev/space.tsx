@@ -17,6 +17,8 @@
  *   clouds=0               hide the cloud layer
  *   exp=<x>                force the exposure (disables automatic exposure)
  *   debug=textures         show the generated cloud noise slices and the weather coverage map
+ *
+ * window.__spaceBench(n) returns the average cost (ms) of each space pass at the current view.
  */
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
@@ -190,6 +192,19 @@ function TextureDebug() {
 }
 
 function Debug() {
+  const { gl, scene, camera } = useThree();
+  useEffect(() => {
+    // timing of the space passes at the current view: window.__spaceBench(n) (see system.ts)
+    const w = window as unknown as Record<string, unknown>;
+    w.__spaceBench = (n = 3) => {
+      const root = scene.getObjectByName('space');
+      const fn = root?.userData.bench as ((g: THREE.WebGLRenderer, s: THREE.Scene, c: THREE.Camera, n: number) => unknown) | undefined;
+      return fn ? fn(gl, scene, camera, n) : null;
+    };
+    return () => {
+      delete w.__spaceBench;
+    };
+  }, [gl, scene, camera]);
   useFrame(() => {
     (window as unknown as Record<string, unknown>).__spaceDebug = { ready: spaceAssets.ready && spaceAssets.cloudsReady && spaceAssets.envReady, n: frame.n, ms: perf.recent.slice(-4).map((x) => Math.round(x)), exposure: +skyState.exposure.toFixed(2), sun: +skyState.sunIntensity.toFixed(2), amb: +skyState.ambientIntensity.toFixed(3), gnd: +skyState.groundIntensity.toFixed(3), haze: skyState.hazeDensity.toExponential(2), hazeC: skyState.hazeColor.toArray().map((x) => +x.toFixed(3)) };
   }, 2);

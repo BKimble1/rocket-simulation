@@ -169,7 +169,7 @@ export default function Dev() {
     }
     const t = frame.decor;
     const anim = q.get('anim') === '1';
-    const cut = anim ? 0.5 - 0.5 * Math.cos(Math.min(1, t / 6) * Math.PI) : num('cut', 0);
+    const cut = anim ? 0.5 - 0.5 * Math.cos((t / 6) * Math.PI) : num('cut', 0);
     const flowOn = q.get('flow') === '1';
     const run = num('run', flowOn ? 1 : 0);
     const rpm = num('spin', 0);

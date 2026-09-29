@@ -3,7 +3,8 @@
  * depths (Quick explanation, Engineering detail, Materials & manufacturing), linked to the
  * geometry (connections), the materials index, demonstrations and mission phases.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useStageInset } from '../hooks/useStageInset';
 import { PARTS, SYSTEMS, type PartId } from '../../vehicle/parts';
 import { useApp, type Depth } from '../../state/store';
 import { LESSONS } from '../../content/parts';
@@ -100,9 +101,11 @@ export function LessonPanel({ id, onClose }: { id: PartId; onClose: () => void }
   const d = PARTS[id];
   const l = LESSONS[id];
   useEffect(() => mark(exploredKey.part(id)), [id, mark]);
+  const ref = useRef<HTMLElement>(null);
+  useStageInset('lesson', ref);
   const demo = isFull(l) && l.demo ? DEMOS[l.demo] : null;
   return (
-    <aside className="panel lesson" aria-label={`${d.name} lesson`}>
+    <aside className="panel lesson" aria-label={`${d.name} lesson`} ref={ref}>
       <header className="lesson__head">
         <div>
           <div className="eyebrow" style={{ color: SYSTEMS[d.system].color }}>

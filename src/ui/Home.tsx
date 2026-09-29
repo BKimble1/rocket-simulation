@@ -2,19 +2,26 @@
  * First screen: the vehicle in the hangar, a short title and three clear actions. The
  * recommended path (satellite mission) is one click away.
  */
+import { useRef } from 'react';
 import { useApp } from '../state/store';
+import { useStageInset } from './hooks/useStageInset';
 import { openMissionAt } from './nav';
-import { KimbleMark } from '../brand/Logo';
+import { KimbleLogo, KimbleMark } from '../brand/Logo';
 import { Icon } from './icons';
 
 export function Home() {
   const go = useApp((s) => s.go);
   const set = useApp((s) => s.set);
+  const ref = useRef<HTMLElement>(null);
+  useStageInset('home', ref);
   return (
-    <section className="home" aria-labelledby="home-title">
+    <section className="home" aria-labelledby="home-title" ref={ref}>
       <div className="home__card panel">
         <div className="home__mark">
-          <KimbleMark size={34} />
+          <KimbleMark size={34} className="home__k" />
+          <span className="home__word">
+            <KimbleLogo height={24} />
+          </span>
           <span className="eyebrow">Rocket Engineering</span>
         </div>
         <h1 id="home-title">Understand a rocket, part by part and phase by phase.</h1>

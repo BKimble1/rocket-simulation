@@ -238,7 +238,7 @@ void main() {
   float a = (1.0 - T) * uOpacity;
   emit *= uOpacity;
   vec3 sc = a > 1e-4 ? scat * uOpacity / a : vec3(0.0);
-  gl_FragColor = vec4(fxOut(sc) * a + fxOut(emit), a);
+  gl_FragColor = vec4(fxOut(sc) * a + fxFlame(emit), a);
 }
 `;
 

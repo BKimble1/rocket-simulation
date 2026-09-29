@@ -11,7 +11,7 @@
     "engine": "float-conv",
     "engineSha256": "2e83328bed32c73a02614d7405cc78a8f9e5ad9588c5f179e34569c99cdc949d"
   },
-  "generatedAt": "2026-09-29T07:40:19Z",
+  "generatedAt": "2026-09-29T15:32:35Z",
   "audio": {
     "codec": "mp3",
     "sampleRate": 24000,
@@ -83,15 +83,15 @@
     {
       "id": "leo-liftoff",
       "file": "leo-liftoff.mp3",
-      "bytes": 82176,
-      "sha256": "a416cbae866954081cb6eca42d60fccf6ad67fb46b0f8c0287c9cc0ae53bdcdc",
-      "durationMs": 10180,
+      "bytes": 82752,
+      "sha256": "6767c2f2e8c887ffa3a662d5a4434f25bffccce0cc227e0014411e39c64a2bdb",
+      "durationMs": 10260,
       "cues": [
         {
           "id": "a",
-          "text": "Release, and liftoff. Five point three meganewtons of thrust lift about four hundred and forty tonnes, so the rocket accelerates slowly at first.",
+          "text": "Release, and liftoff. Five point two meganewtons of thrust lift about four hundred and forty tonnes, so the rocket accelerates slowly at first.",
           "startMs": 0,
-          "endMs": 9580
+          "endMs": 9660
         }
       ]
     },

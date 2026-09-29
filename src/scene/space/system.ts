@@ -450,6 +450,49 @@ export function createSpace(opts: SpaceOptions) {
     scene.environmentIntensity = 1 - HEMI_SHARE;
   }
 
+  /**
+   * Development timing (not used by the product): average milliseconds of each pass over n
+   * runs at the current view, each run synchronised by a 1-pixel read-back of the canvas (GPU
+   * commands complete in order). `sky` is the full-screen sky and globe pass, `skyView` the
+   * sky-view table, `cloudMarch` the reduced-resolution cloud march, `cloudComposite` the three
+   * full-resolution cloud composites, `env` one PMREM environment regeneration.
+   */
+  function bench(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, n = 3) {
+    const ctx = gl.getContext();
+    const px = new Uint8Array(4);
+    const prev = gl.getRenderTarget();
+    const sync = () => {
+      gl.setRenderTarget(null);
+      ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, px);
+    };
+    const time = (fn: () => void) => {
+      fn(); // warm-up (program compilation, target allocation)
+      sync();
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) {
+        fn();
+        sync();
+      }
+      return (performance.now() - t0) / n;
+    };
+    const base = time(() => undefined);
+    const clouds = opts.clouds && !!coverRT;
+    const r = (x: number) => Math.round(Math.max(0, x - base) * 10) / 10;
+    const out = {
+      tier: useQuality.getState().tier,
+      size: [gl.domElement.width, gl.domElement.height],
+      atmoSteps: uniforms.uSteps.value as number,
+      sky: r(time(() => gl.render(sky, camera))),
+      skyView: r(time(() => renderSkyView(gl))),
+      cloudMarch: clouds ? r(time(() => renderClouds(gl, camera))) : 0,
+      cloudComposite: clouds ? r(time(() => cloudLayers.forEach((m) => gl.render(m, camera)))) : 0,
+      env: 0,
+    };
+    out.env = r(time(() => ((env.key = ''), updateEnv(gl, scene, skyState.camAltitude, skyState.sunVisible))));
+    gl.setRenderTarget(prev);
+    return out;
+  }
+
   /** Free GPU resources. The system stays usable (React StrictMode re-mounts it): generated
    *  textures are rebuilt on the next update. */
   function dispose(scene: THREE.Scene) {
@@ -491,6 +534,7 @@ export function createSpace(opts: SpaceOptions) {
     if (prevExposure !== null) prevExposure = null;
   }
 
-  return { root, update, dispose, uniforms, cloudU, sun, hemi, moon };
+  root.userData.bench = bench;
+  return { root, update, dispose, bench, uniforms, cloudU, sun, hemi, moon };
 }
 

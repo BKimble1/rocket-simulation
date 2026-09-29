@@ -1,6 +1,6 @@
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { Stage } from './scene/Stage';
-import { KimbleLogo, OneFab } from './brand/Logo';
+import { KimbleLogo, KimbleMark, OneFab } from './brand/Logo';
 import { useApp, type View } from './state/store';
 import { director, goLocation, hangarHome } from './director/director';
 import { devName } from './dev/index';
@@ -46,6 +46,7 @@ function Header() {
     <header className="header">
       <button className="brand" onClick={() => go('home')} aria-label="KIMBLE Rocket Engineering, home">
         <KimbleLogo height={22} />
+        <KimbleMark size={26} className="brand__mark" />
         <span className="brand__sub">
           <span>Rocket Engineering</span>
           <OneFab height={8} />

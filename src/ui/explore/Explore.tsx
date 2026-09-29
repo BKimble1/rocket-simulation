@@ -54,7 +54,7 @@ export function Explore() {
           <div className="eyebrow">Thermal load (qualitative)</div>
           <ul>
             {THERMAL_CLASSES.map((c) => (
-              <li key={c.label}>
+              <li key={c.label} title={c.detail}>
                 <span className="legend__swatch" style={{ background: c.color }} />
                 {c.label}
               </li>

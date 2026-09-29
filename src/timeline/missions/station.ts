@@ -68,11 +68,11 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
   const a = flyOrbitalAscent(ctx, {
     spec: SPEC,
     gammaMeco: recovery ? 36 : 30,
-    rtls: recovery ? { reserve0: 50_000, bias0: { e: -6347, n: -314 }, margin: 700 } : null,
+    rtls: recovery ? { reserve0: 49_780, bias0: { e: -6541, n: -332 }, margin: 700 } : null,
     insertion: { rp: 200e3, ra: 250e3 },
     // warm starts: the converged values of the deterministic searches
-    ltg0: recovery ? { A: 0.92165, B: -0.0027867 } : { A: 0.5, B: -0.002 },
-    kick0: recovery ? 0.93437 : 1.0,
+    ltg0: recovery ? { A: 0.74432, B: -0.0032145 } : { A: 0.5, B: -0.002 },
+    kick0: recovery ? 0.74551 : 1.0,
     gLimitS1: 4.5 * 9.80665,
     gLimitS2: 4.0 * 9.80665,
     s2Keep: 300,
@@ -132,8 +132,9 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
   hold(cap, tSep + 60);
   const el1 = elements(cap.r, cap.v, MU_EARTH);
   const tPeri = cap.t + timeToAnomaly(cap.r, cap.v, MU_EARTH, 0) + (PHASING_REVS - 1) * el1.period;
-  const smBurn = (id: string, tMid: number, done: (r: V3, v: V3) => number) => {
-    const dur = 12;
+  // a service-module burn centred on tMid, its length estimated from the impulsive step dvEst
+  const smBurn = (id: string, tMid: number, dvEst: number, done: (r: V3, v: V3) => number) => {
+    const dur = (cap.mass * dvEst) / ENG_SM.thrustVac;
     const t0 = Math.round(tMid - dur / 2);
     coastKepler(ctx, cap, t0 - 90, 60, (r, v) => progradeAttitude(r, v));
     hold(cap, t0);
@@ -147,16 +148,22 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
     void id;
     return { ...b, dv: vlen(cap.v) - vStart };
   };
-  const pb1 = smBurn('pb1', tPeri, (r, v) => {
+  const vis = (r: number, a: number) => Math.sqrt(MU_EARTH * (2 / r - 1 / a));
+  const rP1 = el1.a * (1 - el1.e);
+  const pb1 = smBurn('pb1', tPeri, vis(rP1, (rP1 + R_EARTH + H2) / 2) - vis(rP1, el1.a), (r, v) => {
     const e = elements(r, v, MU_EARTH);
     return e.ra - (R_EARTH + H2);
   });
   const dv1 = pb1.dv;
   ctx.ev('phasing-burn-1', pb1.start, `Phasing burn 1 at perigee: +${dv1.toFixed(0)} m/s raises the far side of the orbit to ${(H2 / 1000).toFixed(0)} km`, 'burn', ['capsule', 'service'], 'ignition');
   const tApo = cap.t + timeToAnomaly(cap.r, cap.v, MU_EARTH, Math.PI);
-  const pb2 = smBurn('pb2', tApo, (r, v) => {
+  const el2 = elements(cap.r, cap.v, MU_EARTH);
+  const rA2 = el2.a * (1 + el2.e);
+  // cut when the perigee reaches 3 km below the station, or (burning a little below apogee,
+  // where the perigee cannot rise above the current radius) when the orbit is circular there
+  const pb2 = smBurn('pb2', tApo, Math.sqrt(MU_EARTH / rA2) - vis(rA2, el2.a), (r, v) => {
     const e = elements(r, v, MU_EARTH);
-    return e.rp - (R_EARTH + H2);
+    return e.rp - Math.min(R_EARTH + H2, vlen(r) - 30);
   });
   const dv2 = pb2.dv;
   ctx.ev('phasing-burn-2', pb2.start, `Phasing burn 2 at apogee: +${dv2.toFixed(0)} m/s rounds the orbit off 3 km below the station`, 'burn', ['capsule', 'service'], 'ignition');

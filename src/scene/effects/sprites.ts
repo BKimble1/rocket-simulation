@@ -291,7 +291,7 @@ void main() {
   float fog = 1.0 - exp(-dist * uHazeDensity);
   col = mix(col, uHaze, fog);
   emitT *= 1.0 - fog;
-  gl_FragColor = vec4(fxOut(col) * a + fxOut(emitT), a);
+  gl_FragColor = vec4(fxOut(col) * a + fxFlame(emitT), a);
 }
 `;
 

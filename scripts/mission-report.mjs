@@ -6,6 +6,7 @@
  *   node scripts/mission-report.mjs            all six missions
  *   node scripts/mission-report.mjs leo gto    selected missions
  *   node scripts/mission-report.mjs leo --events --pres --json
+ *   node scripts/mission-report.mjs --about      each fact with its unit and meaning (missions/facts.ts)
  *
  * The TypeScript sources are loaded through Vite's SSR module loader (no extra dependency).
  */
@@ -21,6 +22,7 @@ const server = await createServer({ server: { middlewareMode: true, hmr: false, 
 try {
   const { buildMission } = await server.ssrLoadModule('/src/timeline/build.ts');
   const { presDuration } = await server.ssrLoadModule('/src/timeline/sample.ts');
+  const { FACTS } = await server.ssrLoadModule('/src/timeline/missions/facts.ts');
   const json = {};
   for (const id of missions) {
     const t0 = performance.now();
@@ -44,7 +46,8 @@ try {
     for (const k of keys) {
       const v = tl.facts[k];
       const s = Math.abs(v) >= 1e5 ? v.toExponential(4) : Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(3);
-      console.log(`  ${k.padEnd(w)}  ${s}`);
+      const doc = FACTS[k];
+      console.log(`  ${k.padEnd(w)}  ${s.padStart(12)} ${(doc?.unit ?? '?').padEnd(8)} ${flags.has('--about') ? (doc?.about ?? 'UNDOCUMENTED') : ''}`);
     }
     if (flags.has('--events')) {
       console.log('  events:');

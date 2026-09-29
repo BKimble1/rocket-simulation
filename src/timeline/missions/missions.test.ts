@@ -14,6 +14,7 @@ import { BODY_SIZE } from '../../director/shots';
 import { PART_IDS, type BodyId } from '../../vehicle/parts';
 import { ABORT_TOWER, CAPSULE, E1, E1V, S1, SERVICE_MODULE } from '../../vehicle/spec';
 import { buildStation } from './station';
+import { FACTS, factKeys } from './facts';
 import { MU_EARTH, R_EARTH, R_MOON, latLonOf, moonPosition } from '../../world/frames';
 import { LANDING_ZONE } from '../../world/site';
 import { kepler } from '../physics/kepler';
@@ -358,6 +359,15 @@ describe.each(MISSION_ORDER)('%s timeline', (id) => {
     }
   });
 
+  it('reports exactly its documented, stable facts (missions/facts.ts)', () => {
+    const m = tl(id);
+    expect(Object.keys(m.facts).sort()).toEqual(factKeys(id).sort());
+    for (const k of factKeys(id)) {
+      expect(FACTS[k].unit.length, k).toBeGreaterThan(0);
+      expect(Number.isFinite(m.facts[k]), k).toBe(true);
+    }
+  });
+
   it('gives finite telemetry along the storyline', () => {
     const m = tl(id);
     for (const ph of m.phases) {
@@ -467,6 +477,21 @@ describe('mission targets', () => {
     expect(v).toBeGreaterThan(0.03);
     expect(v).toBeLessThanOrEqual(0.12);
     expect(gap(tc + 30)).toBeLessThan(0.05);
+    // station frame: +Y zenith, +X along the velocity, the docking port below it (nadir); the
+    // capsule approaches from below with its docking system (+Y) pointing up at the port
+    for (const t of [m.start + 10, tc - 600, tc + 60]) {
+      bodyAt(st, t, S);
+      const up = S.pos.clone().normalize();
+      const vh = S.vel.clone().addScaledVector(up, -S.vel.dot(up)).normalize();
+      const stPos = S.pos.clone();
+      expect(new THREE.Vector3(0, 1, 0).applyQuaternion(S.quat).dot(up)).toBeGreaterThan(0.9999);
+      expect(new THREE.Vector3(1, 0, 0).applyQuaternion(S.quat).dot(vh)).toBeGreaterThan(0.9999);
+      expect(port(st, -3.24, t).sub(stPos).dot(up)).toBeLessThan(-3);
+    }
+    bodyAt(cap, tc - 60, S);
+    const upC = S.pos.clone().normalize();
+    expect(new THREE.Vector3(0, 1, 0).applyQuaternion(S.quat).dot(upC)).toBeGreaterThan(0.999);
+    expect(port(cap, m.facts['docking.capsulePortY'], tc - 60).sub(port(st, -3.24, tc - 60)).dot(upC)).toBeLessThan(0);
     expect(gap(tc - 600)).toBeGreaterThan(5);
     expect(m.facts['insertion.incDeg']).toBeCloseTo(28.5, 1);
   });
@@ -507,6 +532,19 @@ describe('mission targets', () => {
     const soiLead = (tc - ev(m, 'soi-enter')) / 86400;
     expect(soiLead).toBeGreaterThan(0.3);
     expect(soiLead).toBeLessThan(1);
+  });
+
+  it('telemetry: 1 g sensed on the pad, ground distance and acceleration during the ascent', () => {
+    const m = tl('leo');
+    expect(telemetryAt(m, 'booster', -30)!.acceleration / 9.80665).toBeCloseTo(1, 1);
+    const tm = m.facts['meco.t'];
+    const s = telemetryAt(m, 'booster', tm - 1)!;
+    expect(Math.abs(s.downrange / 1000 - m.facts['meco.downrangeKm'])).toBeLessThan(3);
+    // 7 engines near the end of the burn, g-limited: 3 to 5 g
+    expect(s.acceleration / 9.80665).toBeGreaterThan(3);
+    expect(s.acceleration / 9.80665).toBeLessThan(5);
+    // coasting in orbit: weightless
+    expect(telemetryAt(m, 'satellite', m.end - 10)!.acceleration).toBeLessThan(0.05);
   });
 
   it('interpolates LEO coasts to within 5 m', () => {

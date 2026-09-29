@@ -3,7 +3,8 @@
  * now, which parts, which forces, what enables the next phase", camera modes, the booster /
  * main-vehicle focus switch (time is shared), optional reference telemetry, chapters.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useStageInset } from '../hooks/useStageInset';
 import { useApp, type CamMode } from '../../state/store';
 import { usePlayback, playback, seekPres } from '../../state/playback';
 import { PHASE_CARDS } from '../../content/phaseCards';
@@ -43,10 +44,12 @@ export function PhaseCardPanel({ onClose }: { onClose?: () => void }) {
       syncChapter(phase.id);
     }
   }, [pb.mission, phase, mark]);
+  const ref = useRef<HTMLElement>(null);
+  useStageInset('phasecard', ref, !!phase);
   if (!phase) return null;
   const eq = card?.equation ? EQUATIONS[card.equation] : null;
   return (
-    <aside className="panel phasecard" aria-label="What is happening">
+    <aside className="panel phasecard" aria-label="What is happening" ref={ref}>
       <header className="lesson__head">
         <div>
           <div className="eyebrow">{focus === 'booster' && pb.branchPhase ? 'Booster storyline' : 'Mission phase'}</div>
