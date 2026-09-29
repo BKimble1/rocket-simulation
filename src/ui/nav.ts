@@ -7,6 +7,8 @@ import type { PartId } from '../vehicle/parts';
 import { routeExtras } from '../state/route';
 import { watch, seekFilm } from '../watch/watchState';
 import { watchRef } from '../state/playback';
+import { OUTLINES } from '../timeline/missions/outline';
+import { inConfig } from './explore/config';
 
 /** Open the Mission explorer at the start of a phase (paused, so the learner can look). */
 export function openMissionAt(mission: MissionId, phase: string | null, play = false) {
@@ -29,6 +31,13 @@ export function openMissionAt(mission: MissionId, phase: string | null, play = f
 }
 
 /** "Show the part": pause the mission, remember where we were, inspect in the hangar. */
+/** The hangar configuration that shows a part as flown on a mission. */
+export function hangarConfigFor(part: PartId, mission: MissionId): 'satellite' | 'capsule' {
+  const byMission = OUTLINES[mission].payload === 'capsule' || OUTLINES[mission].payload === 'researchCapsule' ? 'capsule' : 'satellite';
+  if (inConfig(part, byMission)) return byMission;
+  return inConfig(part, 'satellite') ? 'satellite' : 'capsule';
+}
+
 export function inspectPart(part: PartId) {
   const app = useApp.getState();
   const fp = watch.player;
@@ -36,7 +45,7 @@ export function inspectPart(part: PartId) {
     const wasPlaying = fp.playing;
     fp.pause();
     fp.hold('inspect', true);
-    app.go('explore', { part, exploreView: 'intact', inspect: { part, from: { view: 'watch', mission: fp.film.mission as MissionId, p: fp.p, cam: app.cam, wasPlaying } } });
+    app.go('explore', { part, exploreView: 'intact', hangarConfig: hangarConfigFor(part, fp.film.mission as MissionId), inspect: { part, from: { view: 'watch', mission: fp.film.mission as MissionId, p: fp.p, cam: app.cam, wasPlaying } } });
     return;
   }
   const pl = playback.player;
@@ -48,7 +57,7 @@ export function inspectPart(part: PartId) {
   pl.pause();
   pl.hold('inspect', true);
   const from = { view: app.view === 'watch' ? ('watch' as const) : ('mission' as const), mission: pl.tl.id, p: pl.p, cam: app.cam, wasPlaying };
-  app.go('explore', { part, inspect: { part, from }, exploreView: 'intact' });
+  app.go('explore', { part, inspect: { part, from }, exploreView: 'intact', hangarConfig: hangarConfigFor(part, pl.tl.id) });
 }
 
 /** "Return to mission": restore exactly the paused point, camera mode and play state. */

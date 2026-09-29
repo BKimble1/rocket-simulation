@@ -5,6 +5,7 @@ import { useApp } from '../../state/store';
 import { LESSONS } from '../../content/parts';
 import { useProgress, exploredKey } from '../../state/progress';
 import { Icon } from '../icons';
+import { inConfig } from './config';
 
 function matches(id: PartId, q: string): boolean {
   if (!q) return true;
@@ -27,8 +28,7 @@ export function PartFinder({ onClose }: { onClose?: () => void }) {
     for (const id of PART_IDS) {
       const d = PARTS[id];
       if (d.body === 'ground' || d.id === 'station') continue;
-      if (cfg === 'satellite' && d.variants.length && !d.variants.some((v) => v === 'satellite' || v === 'recovery' || v === 'expendable')) continue;
-      if (cfg === 'capsule' && d.variants.length && !d.variants.some((v) => v === 'capsule' || v === 'recovery' || v === 'expendable')) continue;
+      if (!inConfig(id, cfg)) continue;
       if (!matches(id, q)) continue;
       const arr = g.get(d.system) ?? [];
       arr.push(id);

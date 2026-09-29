@@ -23,7 +23,8 @@ import { HangarOverlays } from './HangarOverlays';
 import { applyThermal } from './thermal';
 
 function configFor(c: 'satellite' | 'capsule'): VehicleConfig {
-  return c === 'capsule' ? { payload: 'capsule', recovery: true, stack: 'full', detail: 'hangar' } : { payload: 'leoSat', recovery: true, stack: 'full', detail: 'hangar' };
+  // the crew configuration is the station flight's: the crew stack needs the whole booster, so it flies without recovery hardware
+  return c === 'capsule' ? { payload: 'capsule', recovery: false, stack: 'full', detail: 'hangar' } : { payload: 'leoSat', recovery: true, stack: 'full', detail: 'hangar' };
 }
 
 function partOf(o: THREE.Object3D | null): PartId | null {
