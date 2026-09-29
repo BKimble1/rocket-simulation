@@ -104,11 +104,12 @@ export function latLonOf(p: THREE.Vector3, t: number): { lat: number; lon: numbe
 export const SUN_DIRECTION = new THREE.Vector3(0.62, 0.66, 0.42).normalize();
 
 /**
- * The Moon on a circular orbit whose plane contains the pad's eastward direction at T-0
- * inclined like the parking orbit (simplification stated in ACCURACY.md). `phase0` is the
- * Moon's angle at T-0, chosen per mission so the lunar flyby geometry works.
+ * The Moon on a circular orbit in the same plane as a due-east parking orbit from the pad
+ * (inclination 28.5 deg; the launch is assumed timed for this geometry, a simplification stated
+ * in ACCURACY.md). A prograde orbit through the pad's zenith at T-0 moving east has angular
+ * momentum along -Z. `phase0` is the Moon's angle from +X at T-0, chosen per mission.
  */
-export const MOON_ORBIT_NORMAL = new THREE.Vector3(0, Math.cos(deg(SITE.lat)), Math.sin(deg(SITE.lat))).normalize();
+export const MOON_ORBIT_NORMAL = new THREE.Vector3(0, 0, -1);
 export function moonPosition(t: number, phase0 = 0, out = new THREE.Vector3()): THREE.Vector3 {
   const n = (2 * Math.PI) / MOON_PERIOD;
   const a = phase0 + n * t;

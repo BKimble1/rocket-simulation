@@ -14,5 +14,6 @@ export const MATERIAL_IDS = [
   'mli',
   'cryo-foam',
   'honeycomb-core',
+  'textiles',
 ] as const;
 export type MaterialId = (typeof MATERIAL_IDS)[number];

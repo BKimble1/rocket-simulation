@@ -3,7 +3,9 @@
  * Geometry is authored in the vehicle MODEL FRAME (see scene/vehicle/types.ts), stacked with
  * its base on the payload interface plane at y = mountY (53.9 on the upper stage; the top of
  * the booster's capsule adapter for the suborbital stack). The station is authored about its
- * own centre (mountY ignored) with its docking port facing -X... see STATION_PORT.
+ * own centre (mountY ignored) in a local-vertical frame: +Y zenith (away from Earth), +X along
+ * its velocity; its capsule docking port faces nadir (-Y), for an approach from below along the
+ * radial line. anchors.dockPort gives the exact point and axis.
  */
 import type * as THREE from 'three';
 import type { BodyId, PartId } from '../../vehicle/parts';

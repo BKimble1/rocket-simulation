@@ -27,3 +27,10 @@ export const GROUND_CAMS = {
   tracking: { x: -5200, y: 45, z: 3600 },
   landing: { x: -1020, y: 12, z: 8980 },
 };
+
+/**
+ * The detailed local terrain covers a disk around the pad; the globe does not draw inside
+ * `innerKm` and the local terrain fades out between innerKm and outerKm, sampling the same
+ * Earth imagery at its edge so the two meet without a seam.
+ */
+export const LOCAL_TERRAIN = { innerKm: 42, outerKm: 50 };
