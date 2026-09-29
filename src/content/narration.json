@@ -1,0 +1,9 @@
+{
+  "version": "film-1",
+  "voice": "bm_george",
+  "speed": 1.0,
+  "note": "Watch-mode narration. Each segment carries its mission and anchor (event or phase, plus an offset in mission seconds). Built to public/narration/<version>/ by tools/narration/build.sh.",
+  "segments": [
+    { "id": "leo-intro", "mission": "leo", "anchor": { "phase": "pad" }, "offset": 0, "cues": [ { "id": "a", "text": "This is the K-1, a two-stage rocket fuelled with liquid oxygen and kerosene, on the pad before launch." } ] }
+  ]
+}

@@ -28,6 +28,13 @@ scenes.flight.name = 'flight';
 scenes.map.name = 'map';
 
 /** Called once per frame before sampling (the active player advances mission time here). */
+/** The stage camera and canvas, for the interface (projecting hotspots, measuring). */
+export const stageRefs = {
+  camera: null as THREE.PerspectiveCamera | null,
+  canvas: null as HTMLCanvasElement | null,
+  gl: null as THREE.WebGLRenderer | null,
+};
+
 export const stageHooks = {
   tick: null as null | ((dt: number) => void),
   afterRender: null as null | (() => void),
@@ -234,8 +241,11 @@ function Input({ el }: { el: HTMLElement | null }) {
 }
 
 function Setup() {
-  const { gl } = useThree();
+  const { gl, camera } = useThree();
   useEffect(() => {
+    stageRefs.camera = camera as THREE.PerspectiveCamera;
+    stageRefs.canvas = gl.domElement;
+    stageRefs.gl = gl;
     const ctx = gl.getContext() as WebGL2RenderingContext;
     const dbg = ctx.getExtension('WEBGL_debug_renderer_info');
     const renderer = dbg ? String(ctx.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : String(ctx.getParameter(ctx.RENDERER));
@@ -247,7 +257,7 @@ function Setup() {
     gl.toneMappingExposure = 1;
     gl.outputColorSpace = THREE.SRGBColorSpace;
     gl.shadowMap.enabled = true;
-    gl.shadowMap.type = THREE.PCFSoftShadowMap;
+    gl.shadowMap.type = THREE.PCFShadowMap;
     if (FLAGS.hooks) {
       const w = window as unknown as Record<string, unknown>;
       w.__rocketAdvance = (n = 1) => {
@@ -257,7 +267,7 @@ function Setup() {
       w.__rocketDirector = director;
       w.__rocketGL = gl;
     }
-  }, [gl]);
+  }, [gl, camera]);
   return null;
 }
 
