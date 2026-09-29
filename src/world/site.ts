@@ -24,7 +24,9 @@ export const GROUND_CAMS = {
   padWide: { x: -260, y: 18, z: 330 },
   padClose: { x: -48, y: 4, z: 58 },
   towerTop: { x: -16, y: 82, z: -14 },
-  tracking: { x: -5200, y: 45, z: 3600 },
+  // on scrubland about 5 km south-south-west of the pad (1.3 km from the nearest water in the
+  // coastline map): a side-on view of the eastward climb
+  tracking: { x: -1300, y: 45, z: 4830 },
   landing: { x: -1020, y: 12, z: 8980 },
 };
 
