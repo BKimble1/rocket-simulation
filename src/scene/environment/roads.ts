@@ -9,6 +9,43 @@ import { SITE_ROADS } from './layout';
 import { REGIONAL_ROADS } from './generated/regionalMap';
 import { coastDist, groundH, seaLevel, sphereY, type SiteMaps } from './map';
 import { normalizeGeo } from './geom';
+import { withHaze } from './haze';
+import { asphaltTexture } from './textures';
+
+/**
+ * The regional network's surfaces fade toward the average ground tone once a road is narrower
+ * than a pixel: seen from altitude a 12 m highway is a faint trace, not a bright aliased line.
+ */
+function farFade<T extends THREE.MeshStandardMaterial>(m: T, widthM: number, tone: THREE.ColorRepresentation, key: string): T {
+  const c = new THREE.Color(tone);
+  m.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `#include <map_fragment>
+{
+  float fpx = length( fwidth( vHazePos ) );
+  float cov = clamp( ${widthM.toFixed(1)} / max( fpx, 1e-3 ), 0.0, 1.0 );
+  diffuseColor.rgb = mix( vec3( ${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)} ), diffuseColor.rgb, cov * cov );
+}`,
+    );
+  };
+  m.customProgramCacheKey = () => key;
+  return withHaze(m, `site-haze-${key}`);
+}
+
+let regionalMats: { asphalt: THREE.MeshStandardMaterial; bank: THREE.MeshStandardMaterial } | null = null;
+function regionalMaterials() {
+  if (!regionalMats) {
+    const tone = new THREE.Color().setRGB(0.05, 0.058, 0.034); // scrub and pine flatwoods, linear
+    regionalMats = {
+      asphalt: farFade(new THREE.MeshStandardMaterial({ map: asphaltTexture(), roughness: 0.92, metalness: 0 }), 9, tone, 'road-far-asphalt'),
+      bank: farFade(new THREE.MeshStandardMaterial({ color: '#7d7462', roughness: 0.97, metalness: 0 }), 20, tone, 'road-far-bank'),
+    };
+    regionalMats.asphalt.name = 'site.asphaltRegional';
+    regionalMats.bank.name = 'site.soilRegional';
+  }
+  return regionalMats;
+}
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 interface Sample {
@@ -129,6 +166,8 @@ export function buildRoads(maps: SiteMaps): THREE.Group {
   const concrete: THREE.BufferGeometry[] = [];
   const paint: THREE.BufferGeometry[] = [];
   const bank: THREE.BufferGeometry[] = [];
+  const regional: THREE.BufferGeometry[] = [];
+  const regionalPaint: THREE.BufferGeometry[] = [];
 
   const sampleRoad = (pts: [number, number][], step: number | ((x: number, z: number) => number)): Sample[] =>
     resample(pts, step).map(([x, z]) => {
@@ -170,7 +209,7 @@ export function buildRoads(maps: SiteMaps): THREE.Group {
     }
     // lifted a little more with distance: the coarser terrain cells there sag between vertices
     const lift = (p: Sample) => p.h + 0.2 + Math.hypot(p.x, p.z) * 3e-5;
-    asphalt.push(ribbon(causeway, r.w / 2, lift, 8, 0.2, r.w / 2 + 0.6));
+    regional.push(ribbon(causeway, r.w / 2, lift, 8, 0.2, r.w / 2 + 0.6));
     // embankments along wet spans
     let run: Sample[] = [];
     const flush = () => {
@@ -186,11 +225,11 @@ export function buildRoads(maps: SiteMaps): THREE.Group {
     flush();
     if (r.kind === 'highway') {
       const c = markings(causeway, 0, 0.2, lift, 0, 0);
-      if (c) paint.push(c);
+      if (c) regionalPaint.push(c);
     }
   }
 
-  const add = (list: THREE.BufferGeometry[], m: THREE.Material, name: string, receive = true) => {
+  const add = (list: THREE.BufferGeometry[], m: THREE.Material, name: string, receive = true, lod?: { max?: number; maxH?: number }) => {
     if (!list.length) return;
     const g = mergeGeometries(list.map(normalizeGeo), false);
     list.forEach((x) => x.dispose());
@@ -200,9 +239,16 @@ export function buildRoads(maps: SiteMaps): THREE.Group {
     mesh.name = name;
     mesh.receiveShadow = receive;
     mesh.frustumCulled = false;
+    // distance culling (read by the site's update): see LOD_MAX in site.ts
+    if (lod?.max !== undefined) mesh.userData.lodMax = lod.max;
+    if (lod?.maxH !== undefined) mesh.userData.lodMaxH = lod.maxH;
     group.add(mesh);
   };
-  add(bank, SM('soil'), 'road-embankments');
+  const rm = regionalMaterials();
+  // the regional network is drawn up to 14 km above it (its traces have faded out by then)
+  add(bank, rm.bank, 'road-embankments', true, { maxH: 14000 });
+  add(regional, rm.asphalt, 'roads-regional', true, { maxH: 14000 });
+  add(regionalPaint, SM('roadPaint'), 'road-markings-regional', true, { max: 3500 });
   add(asphalt, SM('asphalt'), 'roads-asphalt');
   add(concrete, SM('concreteRoad'), 'roads-concrete');
   add(paint, SM('roadPaint'), 'road-markings');

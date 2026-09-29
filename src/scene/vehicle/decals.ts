@@ -23,6 +23,8 @@ export interface DecalSpec {
   key: string;
   /** Band radius (skin radius + 2.5 mm). */
   r: number;
+  /** Band radius at y1 for a conical skin (default r: a cylinder band). */
+  r1?: number;
   /** Centre azimuth (rad, from +Z toward +X). */
   phiC: number;
   /** Band half-width as arc length at r (m), and height range. */
@@ -94,8 +96,11 @@ function paint(spec: DecalSpec): HTMLCanvasElement {
 }
 
 /** Curved band geometry with UVs 0..1 (u with azimuth, v with height). */
-export function bandGeometry(r: number, phiC: number, halfW: number, y0: number, y1: number, rows = 2): THREE.BufferGeometry {
+export function bandGeometry(r: number, phiC: number, halfW: number, y0: number, y1: number, rows = 2, r1 = r): THREE.BufferGeometry {
   const half = halfW / r;
+  // conical band (r at y0 to r1 at y1): the normal leans against the radius change
+  const slope = (r1 - r) / (y1 - y0);
+  const nl = 1 / Math.sqrt(1 + slope * slope);
   const seg = Math.max(8, Math.ceil(((half * 2) / Math.PI) * 180 / 1.2));
   const pos: number[] = [];
   const nor: number[] = [];
@@ -103,11 +108,12 @@ export function bandGeometry(r: number, phiC: number, halfW: number, y0: number,
   for (let j = 0; j <= rows; j++) {
     const v = j / rows;
     const y = y0 + (y1 - y0) * v;
+    const rr = r + (r1 - r) * v;
     for (let i = 0; i <= seg; i++) {
       const u = i / seg;
       const phi = phiC - half + 2 * half * u;
-      pos.push(r * Math.sin(phi), y, r * Math.cos(phi));
-      nor.push(Math.sin(phi), 0, Math.cos(phi));
+      pos.push(rr * Math.sin(phi), y, rr * Math.cos(phi));
+      nor.push(Math.sin(phi) * nl, -slope * nl, Math.cos(phi) * nl);
       uv.push(u, v);
     }
   }
@@ -156,5 +162,5 @@ export function makeDecal(mats: VehicleMats, spec: DecalSpec): { look: string; g
     s.fragmentShader = s.fragmentShader.replace('#include <alphamap_fragment>', SHARPEN);
   });
   mats.register(look, m, [tex]);
-  return { look, geom: bandGeometry(spec.r, spec.phiC, spec.halfW, spec.y0, spec.y1) };
+  return { look, geom: bandGeometry(spec.r, spec.phiC, spec.halfW, spec.y0, spec.y1, spec.r1 !== undefined ? 8 : 2, spec.r1 ?? spec.r) };
 }

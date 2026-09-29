@@ -11,7 +11,7 @@
     "engine": "float-conv",
     "engineSha256": "2e83328bed32c73a02614d7405cc78a8f9e5ad9588c5f179e34569c99cdc949d"
   },
-  "generatedAt": "2026-09-29T15:32:35Z",
+  "generatedAt": "2026-09-29T20:01:00Z",
   "audio": {
     "codec": "mp3",
     "sampleRate": 24000,
@@ -698,21 +698,21 @@
     {
       "id": "gto-apogee",
       "file": "gto-apogee.mp3",
-      "bytes": 125568,
-      "sha256": "0e678ba1215b8fe78b865b660bc6b7551bfab38b4a09d7cb7e7e95c709e4827a",
-      "durationMs": 15620,
+      "bytes": 165120,
+      "sha256": "bd0b488560f26f52d73315285dc191a99227b14a4275f022b2deffac169452e5",
+      "durationMs": 20550,
       "cues": [
         {
           "id": "a",
-          "text": "At the high point the satellite fires its apogee engine, sideways, to raise the low point and to remove the tilt of the orbit.",
+          "text": "Near each high point the satellite fires its small apogee engine, partly forward and partly sideways, raising the low point and removing the tilt of the orbit.",
           "startMs": 0,
-          "endMs": 8450
+          "endMs": 10910
         },
         {
           "id": "b",
-          "text": "In reality this takes several burns over days. It is shown here as one, as an explanation.",
-          "startMs": 8800,
-          "endMs": 15020
+          "text": "It takes three burns, the first nearly an hour and a half long, spread over about thirty hours. The long coasts between them are skipped here.",
+          "startMs": 11260,
+          "endMs": 19950
         }
       ]
     },
@@ -764,15 +764,15 @@
     {
       "id": "station-sep",
       "file": "station-sep.mp3",
-      "bytes": 18240,
-      "sha256": "3345cf8d64fad0132a6dca39af69c82a8ad74b5431c293024ce08d7aa2851161",
-      "durationMs": 2190,
+      "bytes": 82752,
+      "sha256": "d458551f5362366ca1cb238213e1dfa9e7aeba662b32eea9687c978b370f8987",
+      "durationMs": 10270,
       "cues": [
         {
           "id": "a",
-          "text": "Stage separation.",
+          "text": "Stage separation. The booster has used all of its propellant: with a crew capsule and its abort tower on top, there was none to spare for flying home.",
           "startMs": 0,
-          "endMs": 1590
+          "endMs": 9670
         }
       ]
     },
@@ -1052,15 +1052,15 @@
     {
       "id": "return-splash",
       "file": "return-splash.mp3",
-      "bytes": 58752,
-      "sha256": "da7816e1c5603957c099b3631ff6fdd976fd8d3002cc48ea8558818255ec1abf",
-      "durationMs": 7250,
+      "bytes": 75648,
+      "sha256": "14f46d6eb78de94c1b38e6ea0272903d3fedee113ef8e8ffc331cf3df1015bfd",
+      "durationMs": 9370,
       "cues": [
         {
           "id": "a",
-          "text": "Splashdown in the Atlantic. The mission ends where it began: on Earth, a short way from the launch site.",
+          "text": "Splashdown in the Atlantic, about two hundred and seventy kilometers east of the launch site. The mission ends where it began: on Earth.",
           "startMs": 0,
-          "endMs": 6650
+          "endMs": 8770
         }
       ]
     },
@@ -1082,15 +1082,15 @@
     {
       "id": "lunar-liftoff",
       "file": "lunar-liftoff.mp3",
-      "bytes": 13248,
-      "sha256": "297d2b85186f204fbb1a6532e17a4a14e2ede6d12cb541407496774271fef82c",
-      "durationMs": 1580,
+      "bytes": 23232,
+      "sha256": "a459abf33c6d0bfcee448c7dfbe00c40d592f9628f1bb77ae4a35a1bd10982cf",
+      "durationMs": 2830,
       "cues": [
         {
           "id": "a",
-          "text": "Liftoff.",
+          "text": "Liftoff, on the way to the Moon.",
           "startMs": 0,
-          "endMs": 980
+          "endMs": 2230
         }
       ]
     },
@@ -1142,15 +1142,15 @@
     {
       "id": "lunar-tli",
       "file": "lunar-tli.mp3",
-      "bytes": 67968,
-      "sha256": "ff4e8b9f40d3ec80eeafe06507803d651e45523e9d720d3a27120f854f7ad414",
-      "durationMs": 8410,
+      "bytes": 67200,
+      "sha256": "e71007bf42d2efd73c2c38307bae6f8ac18b8029c417febccc1d0e3b82b5b38c",
+      "durationMs": 8310,
       "cues": [
         {
           "id": "a",
-          "text": "Trans-lunar injection. The engine burns for several minutes, raising the speed to nearly eleven kilometers per second.",
+          "text": "Trans-lunar injection. The engine burns for about a minute, raising the speed to nearly eleven kilometers per second.",
           "startMs": 0,
-          "endMs": 7810
+          "endMs": 7710
         }
       ]
     },
@@ -1187,15 +1187,15 @@
     {
       "id": "lunar-cruise",
       "file": "lunar-cruise.mp3",
-      "bytes": 57024,
-      "sha256": "863a68bdb6c7a5eab8bcd94c84d11384d6079c402a99aa16645c26907c9a956a",
-      "durationMs": 7040,
+      "bytes": 59328,
+      "sha256": "9acfc831808321399020b4215842fc149bff8f2eae2c58fe5cdd0dc25ebb80ed",
+      "durationMs": 7330,
       "cues": [
         {
           "id": "a",
-          "text": "Three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
+          "text": "Nearly three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
           "startMs": 0,
-          "endMs": 6440
+          "endMs": 6730
         }
       ]
     },
@@ -1217,30 +1217,30 @@
     {
       "id": "lunar-flyby",
       "file": "lunar-flyby.mp3",
-      "bytes": 52032,
-      "sha256": "f87fadd48332e2b29e3fddfba24cb60842020c8051089ff688b71c1077bca0e0",
-      "durationMs": 6430,
+      "bytes": 89856,
+      "sha256": "1b47062dee068ca5252cb77c60e4a4a32d8e3197d376321d43a5cfb61e93bae5",
+      "durationMs": 11140,
       "cues": [
         {
           "id": "a",
-          "text": "Closest approach, over the far side. The Moon bends the probe's path and swings it onward.",
+          "text": "Closest approach, fifteen hundred kilometers up, passing behind the Moon as it moves along its orbit. The Moon's pull bends the probe's path and swings it onward.",
           "startMs": 0,
-          "endMs": 5830
+          "endMs": 10540
         }
       ]
     },
     {
       "id": "lunar-outbound",
       "file": "lunar-outbound.mp3",
-      "bytes": 102528,
-      "sha256": "cafab2f215608e1df9ad535276f36dc65fe0f9432aea47642e4b309513de2c90",
-      "durationMs": 12730,
+      "bytes": 118272,
+      "sha256": "a3af1d7409816694f01e0cfc3428c7ff6949dfb1d7bb91fba2d49e939b9ac7ec",
+      "durationMs": 14700,
       "cues": [
         {
           "id": "a",
-          "text": "Leaving the Moon's sphere of influence on an outbound trajectory. A flyby changes direction and speed without an engine burn, but to stay in lunar orbit the probe would have had to brake.",
+          "text": "Leaving the Moon's sphere of influence. Seen from the Moon, the probe leaves as fast as it arrived, only turned. Seen from Earth, it now moves faster than escape speed and will not come back. That is a gravity assist.",
           "startMs": 0,
-          "endMs": 12130
+          "endMs": 14100
         }
       ]
     }

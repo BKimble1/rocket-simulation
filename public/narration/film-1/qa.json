@@ -1,6 +1,6 @@
 {
  "version": "film-1",
- "generatedAt": "2026-09-29T15:32:35Z",
+ "generatedAt": "2026-09-29T20:01:00Z",
  "voice": "bm_george",
  "speed": 1.0,
  "fingerprint": {
@@ -36,17 +36,17 @@
  "summary": {
   "segments": 77,
   "cues": 88,
-  "audioSeconds": 670.6,
-  "modelAudioSeconds": 678.05,
-  "synthSeconds": 298.94,
-  "rtf": 0.441,
-  "cacheHits": 87,
-  "medianPhonemesPerS": 10.215,
-  "medianSpeechWpm": 164.2,
-  "flags": 2,
+  "audioSeconds": 693.85,
+  "modelAudioSeconds": 701.48,
+  "synthSeconds": 486.87,
+  "rtf": 0.694,
+  "cacheHits": 79,
+  "medianPhonemesPerS": 10.22,
+  "medianSpeechWpm": 163.7,
+  "flags": 0,
   "hardFlags": 0,
-  "bytes": 5416320,
-  "asrWer": 0.028
+  "bytes": 5602368,
+  "asrWer": 0.027
  },
  "segments": [
   {
@@ -640,7 +640,7 @@
      "tokens": 151,
      "chunks": 1,
      "synthS": 54.044,
-     "cached": false,
+     "cached": true,
      "modelLeadS": 0.28,
      "modelTailS": 0.505,
      "pauses": [
@@ -5453,118 +5453,122 @@
   {
    "id": "gto-apogee",
    "file": "gto-apogee.mp3",
-   "durationMs": 15620,
+   "durationMs": 20550,
    "loudness": {
-    "inputLufs": -21.8,
-    "inputTruePeakDb": -4.1,
-    "gainDb": 2.6,
-    "outputLufs": -19.2,
-    "outputTruePeakDb": -1.5
+    "inputLufs": -21.7,
+    "inputTruePeakDb": -5.3,
+    "gainDb": 3.7,
+    "outputLufs": -18.0,
+    "outputTruePeakDb": -1.6
    },
    "encoded": {
-    "bytes": 125568,
-    "decodedSamples": 374880,
-    "sourceSamples": 374880,
-    "durationMs": 15620,
+    "bytes": 165120,
+    "decodedSamples": 493200,
+    "sourceSamples": 493200,
+    "durationMs": 20550,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 653,
-     "bytes": 125568,
+     "frames": 859,
+     "bytes": 165120,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 672
+     "paddingSamples": 1008
     },
-    "decodedPeakDbfs": -1.88
+    "decodedPeakDbfs": -2.12
    },
-   "decodedPeakDbfs": -1.88,
+   "decodedPeakDbfs": -2.12,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "At the high point the satellite fires its apogee engine, sideways, to raise the low point and to remove the tilt of the orbit.",
+     "text": "Near each high point the satellite fires its small apogee engine, partly forward and partly sideways, raising the low point and removing the tilt of the orbit.",
      "startMs": 0,
-     "endMs": 8450,
-     "audioText": "At the high point the satellite fires its apogee engine, sideways, to raise the low point and to remove the tilt of the orbit.",
-     "phonemes": "ˌat ðə hˈI pˈYnt ðə sˈatəlIt fˈIəz ɪts ˈapəʤiː ˈɛnʤɪn, sˈIdwAz, tə ɹˈAz ðə lˈQ pˈYnt and tə ɹɪmˈuːv ðə tˈɪlt ɒv ði ˈɔːbɪt.",
+     "endMs": 10910,
+     "audioText": "Near each high point the satellite fires its small apogee engine, partly forward and partly sideways, raising the low point and removing the tilt of the orbit.",
+     "phonemes": "nˌɪə ˈiːʧ hˈI pˈYnt ðə sˈatəlIt fˈIəz ɪts smˈɔːl ˈapəʤiː ˈɛnʤɪn, pˈɑːtli fˈɔːwəd and pˈɑːtli sˈIdwAz, ɹˈAzɪŋ ðə lˈQ pˈYnt and ɹɪmˈuːvɪŋ ðə tˈɪlt ɒv ði ˈɔːbɪt.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 122,
+     "tokens": 158,
      "chunks": 1,
-     "synthS": 4.38,
-     "cached": true,
-     "modelLeadS": 0.27,
-     "modelTailS": 0.5,
+     "synthS": 25.4,
+     "cached": false,
+     "modelLeadS": 0.28,
+     "modelTailS": 0.505,
      "pauses": [
       {
        "mark": ",",
-       "pauseS": 0.175,
-       "depthDb": -67.9,
-       "t": 3.62
+       "pauseS": 0.15,
+       "depthDb": -67.4,
+       "t": 4.36
       },
       {
        "mark": ",",
-       "pauseS": 0.125,
-       "depthDb": -66.0,
-       "t": 4.62
+       "pauseS": 0.175,
+       "depthDb": -67.8,
+       "t": 7.11
       }
      ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 8.45,
-      "peakDbfs": -1.46,
+      "durationS": 10.91,
+      "peakDbfs": -2.62,
       "clippedSamples": 0,
-      "dcOffset": -0.00022,
+      "dcOffset": -0.00025,
       "leadingSilenceS": 0.04,
       "trailingSilenceS": 0.09,
-      "longestInternalSilenceS": 0.37,
+      "longestInternalSilenceS": 0.44,
       "pauses": [
        [
-        0.87,
+        1.11,
         0.31
        ],
        [
-        3.44,
-        0.24
+        4.15,
+        0.32
        ],
        [
-        4.42,
-        0.28
+        6.78,
+        0.44
        ],
        [
-        5.98,
-        0.37
+        8.44,
+        0.32
+       ],
+       [
+        9.93,
+        0.16
        ]
       ],
-      "speechSpanS": 8.32,
-      "f0MedianHz": 137.6,
-      "f0RangeSemitones": 9.2,
+      "speechSpanS": 10.78,
+      "f0MedianHz": 139.2,
+      "f0RangeSemitones": 6.3,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.376,
-      "burstDb": 5.7,
-      "burstAtS": 4.75,
-      "onsetBurstDb": 3.7,
+      "voicedShare": 0.363,
+      "burstDb": 6.5,
+      "burstAtS": 0.05,
+      "onsetBurstDb": 6.5,
       "spikes": 0,
       "hfShareDb": -27.9,
-      "words": 24,
-      "wpm": 170.4,
-      "speechWpm": 173.1,
-      "rawPeakDbfs": -4.06,
-      "phonemesPerS": 9.5
+      "words": 27,
+      "wpm": 148.5,
+      "speechWpm": 150.3,
+      "rawPeakDbfs": -6.32,
+      "phonemesPerS": 9.46
      },
      "asr": {
-      "hypothesis": "At the high point, the satellite fires its aperture engine sideways to raise the low point and to remove the tilt of the orbit.",
-      "reference": "at the high point the satellite fires its apogee engine sideways to raise the low point to remove the tilt of the orbit",
+      "hypothesis": "Near each high point, the satellite fires its small, aperthe engine, partly forward and partly sideways, raising the low point and removing the tilt of the orbit.",
+      "reference": "near each high point the satellite fires its small apogee engine partly forward partly sideways raising the low point removing the tilt of the orbit",
       "errors": 1,
-      "refWords": 23,
-      "wer": 0.043,
+      "refWords": 25,
+      "wer": 0.04,
       "diffs": [
        [
         "apogee",
-        "aperture"
+        "aperthe"
        ]
       ]
      },
@@ -5572,74 +5576,84 @@
     },
     {
      "id": "b",
-     "text": "In reality this takes several burns over days. It is shown here as one, as an explanation.",
-     "startMs": 8800,
-     "endMs": 15020,
-     "audioText": "In reality this takes several burns over days. It is shown here as one, as an explanation.",
-     "phonemes": "ɪn ɹɪˈalɪti ðɪs tˈAks sˈɛvəɹəl bˈɜːnz ˈQvə dˈAz. ˌɪt ɪz ʃˈQn hˈɪə az wˈʌn, az ɐn ˌɛksplənˈAʃᵊn.",
+     "text": "It takes three burns, the first nearly an hour and a half long, spread over about thirty hours. The long coasts between them are skipped here.",
+     "startMs": 11260,
+     "endMs": 19950,
+     "audioText": "It takes three burns, the first nearly an hour and a half long, spread over about thirty hours. The long coasts between them are skipped here.",
+     "phonemes": "ˌɪt tˈAks θɹˈiː bˈɜːnz, ðə fˈɜːst nˈɪəli ɐn ˈWə and ɐ hˈɑːf lˈɒŋ, spɹˈɛd ˈQvə əbˈWt θˈɜːti ˈWəz. ðə lˈɒŋ kˈQsts bɪtwˈiːn ðˌɛm ɑː skˈɪpt hˈɪə.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 95,
+     "tokens": 141,
      "chunks": 1,
-     "synthS": 3.221,
-     "cached": true,
+     "synthS": 21.829,
+     "cached": false,
      "modelLeadS": 0.28,
-     "modelTailS": 0.52,
+     "modelTailS": 0.525,
      "pauses": [
       {
-       "mark": ".",
+       "mark": ",",
        "pauseS": 0.125,
-       "depthDb": -68.6,
-       "t": 3.31
+       "depthDb": -68.8,
+       "t": 1.485
       },
       {
        "mark": ",",
        "pauseS": 0.15,
-       "depthDb": -68.3,
-       "t": 4.96
+       "depthDb": -65.4,
+       "t": 3.985
+      },
+      {
+       "mark": ".",
+       "pauseS": 0.125,
+       "depthDb": -68.7,
+       "t": 6.26
       }
      ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 6.22,
-      "peakDbfs": -4.54,
+      "durationS": 8.69,
+      "peakDbfs": -1.72,
       "clippedSamples": 0,
-      "dcOffset": -0.00023,
-      "leadingSilenceS": 0.04,
-      "trailingSilenceS": 0.1,
-      "longestInternalSilenceS": 0.43,
+      "dcOffset": -0.00015,
+      "leadingSilenceS": 0.05,
+      "trailingSilenceS": 0.09,
+      "longestInternalSilenceS": 0.44,
       "pauses": [
        [
-        2.99,
-        0.43
+        1.27,
+        0.32
        ],
        [
-        4.81,
-        0.23
+        3.77,
+        0.28
+       ],
+       [
+        5.92,
+        0.44
        ]
       ],
-      "speechSpanS": 6.08,
-      "f0MedianHz": 142.0,
-      "f0RangeSemitones": 7.7,
+      "speechSpanS": 8.55,
+      "f0MedianHz": 141.2,
+      "f0RangeSemitones": 7.5,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.409,
-      "burstDb": 6.2,
-      "burstAtS": 3.5,
-      "onsetBurstDb": 5.6,
+      "voicedShare": 0.398,
+      "burstDb": 7.1,
+      "burstAtS": 0.2,
+      "onsetBurstDb": 7.1,
       "spikes": 0,
-      "hfShareDb": -27.8,
-      "words": 17,
-      "wpm": 164.0,
-      "speechWpm": 167.8,
-      "rawPeakDbfs": -7.14,
-      "phonemesPerS": 10.36
+      "hfShareDb": -28.0,
+      "words": 26,
+      "wpm": 179.5,
+      "speechWpm": 182.5,
+      "rawPeakDbfs": -5.42,
+      "phonemesPerS": 9.94
      },
      "asr": {
-      "hypothesis": "In reality, this takes several burns over days. It is shown here as one as an explanation.",
-      "reference": "in reality this takes several burns over days it is shown here as one as an explanation",
+      "hypothesis": "It takes three burns, the first nearly an hour and a half long, spread over about thirty hours, the long coasts between them are skipped here.",
+      "reference": "it takes three burns the first nearly an hour a half long spread over about thirty hours the long coasts between them are skipped here",
       "errors": 0,
-      "refWords": 17,
+      "refWords": 25,
       "wer": 0.0,
       "diffs": []
      },
@@ -6005,89 +6019,123 @@
   {
    "id": "station-sep",
    "file": "station-sep.mp3",
-   "durationMs": 2190,
+   "durationMs": 10270,
    "loudness": {
-    "inputLufs": -20.7,
-    "inputTruePeakDb": -5.2,
-    "gainDb": 2.7,
+    "inputLufs": -21.5,
+    "inputTruePeakDb": -6.3,
+    "gainDb": 3.5,
     "outputLufs": -18.0,
-    "outputTruePeakDb": -2.5
+    "outputTruePeakDb": -2.8
    },
    "encoded": {
-    "bytes": 18240,
-    "decodedSamples": 52560,
-    "sourceSamples": 52560,
-    "durationMs": 2190,
+    "bytes": 82752,
+    "decodedSamples": 246480,
+    "sourceSamples": 246480,
+    "durationMs": 10270,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 94,
-     "bytes": 18240,
+     "frames": 430,
+     "bytes": 82752,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 1008
+     "paddingSamples": 624
     },
-    "decodedPeakDbfs": -2.92
+    "decodedPeakDbfs": -3.24
    },
-   "decodedPeakDbfs": -2.92,
+   "decodedPeakDbfs": -3.24,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "Stage separation.",
+     "text": "Stage separation. The booster has used all of its propellant: with a crew capsule and its abort tower on top, there was none to spare for flying home.",
      "startMs": 0,
-     "endMs": 1590,
-     "audioText": "Stage separation.",
-     "phonemes": "stˈAʤ sˌɛpəɹˈAʃᵊn.",
+     "endMs": 9670,
+     "audioText": "Stage separation. The booster has used all of its propellant: with a crew capsule and its abort tower on top, there was none to spare for flying home.",
+     "phonemes": "stˈAʤ sˌɛpəɹˈAʃᵊn. ðə bˈuːstə haz jˈuːzd ˈɔːl ɒv ɪts pɹəpˈɛlənt: wɪð ɐ kɹˈuː kˈapsjuːl and ɪts əbˈɔːt tˈWə ˌɒn tˈɒp, ðɛː wɒz nˈʌn tə spˈɛː fɔː flˈIɪŋ hˈQm.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 18,
+     "tokens": 155,
      "chunks": 1,
-     "synthS": 0.922,
-     "cached": true,
+     "synthS": 23.734,
+     "cached": false,
      "modelLeadS": 0.25,
-     "modelTailS": 0.455,
-     "pauses": [],
+     "modelTailS": 0.5,
+     "pauses": [
+      {
+       "mark": ".",
+       "pauseS": 0.125,
+       "depthDb": -68.2,
+       "t": 1.64
+      },
+      {
+       "mark": ":",
+       "pauseS": 0.125,
+       "depthDb": -67.7,
+       "t": 4.34
+      },
+      {
+       "mark": ",",
+       "pauseS": 0.125,
+       "depthDb": -68.0,
+       "t": 7.465
+      }
+     ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 1.59,
-      "peakDbfs": -2.49,
+      "durationS": 9.67,
+      "peakDbfs": -2.82,
       "clippedSamples": 0,
-      "dcOffset": -0.0003,
+      "dcOffset": -0.00022,
       "leadingSilenceS": 0.04,
       "trailingSilenceS": 0.09,
-      "longestInternalSilenceS": 0.02,
-      "pauses": [],
-      "speechSpanS": 1.46,
-      "f0MedianHz": 156.5,
-      "f0RangeSemitones": 6.8,
+      "longestInternalSilenceS": 0.41,
+      "pauses": [
+       [
+        1.33,
+        0.41
+       ],
+       [
+        4.06,
+        0.37
+       ],
+       [
+        5.55,
+        0.22
+       ],
+       [
+        7.23,
+        0.34
+       ]
+      ],
+      "speechSpanS": 9.54,
+      "f0MedianHz": 140.8,
+      "f0RangeSemitones": 8.6,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.41,
-      "burstDb": 4.7,
-      "burstAtS": 0.7,
-      "onsetBurstDb": 4.2,
+      "voicedShare": 0.337,
+      "burstDb": 5.5,
+      "burstAtS": 4.75,
+      "onsetBurstDb": 4.4,
       "spikes": 0,
-      "hfShareDb": -28.3,
-      "words": 2,
-      "wpm": 75.5,
-      "speechWpm": 82.2,
-      "rawPeakDbfs": -5.19,
-      "phonemesPerS": 8.9
+      "hfShareDb": -27.7,
+      "words": 28,
+      "wpm": 173.7,
+      "speechWpm": 176.1,
+      "rawPeakDbfs": -6.32,
+      "phonemesPerS": 10.27
      },
      "asr": {
-      "hypothesis": "Stage separation.",
-      "reference": "stage separation",
+      "hypothesis": "Stage separation, the booster has used all of its propellant with a crew capsule and its abort tower on top. There was none to spare for flying home.",
+      "reference": "stage separation the booster has used all of its propellant with a crew capsule its abort tower on top there was none to spare for flying home",
       "errors": 0,
-      "refWords": 2,
+      "refWords": 27,
       "wer": 0.0,
       "diffs": []
      },
-     "flags": [
-      "rate-outlier"
-     ]
+     "flags": []
     }
    ]
   },
@@ -8194,117 +8242,122 @@
   {
    "id": "return-splash",
    "file": "return-splash.mp3",
-   "durationMs": 7250,
+   "durationMs": 9370,
    "loudness": {
-    "inputLufs": -21.5,
-    "inputTruePeakDb": -6.2,
-    "gainDb": 3.5,
+    "inputLufs": -21.6,
+    "inputTruePeakDb": -5.4,
+    "gainDb": 3.6,
     "outputLufs": -18.0,
-    "outputTruePeakDb": -2.7
+    "outputTruePeakDb": -1.8
    },
    "encoded": {
-    "bytes": 58752,
-    "decodedSamples": 174000,
-    "sourceSamples": 174000,
-    "durationMs": 7250,
+    "bytes": 75648,
+    "decodedSamples": 224880,
+    "sourceSamples": 224880,
+    "durationMs": 9370,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 305,
-     "bytes": 58752,
+     "frames": 393,
+     "bytes": 75648,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 1104
+     "paddingSamples": 912
     },
-    "decodedPeakDbfs": -3.12
+    "decodedPeakDbfs": -2.21
    },
-   "decodedPeakDbfs": -3.12,
+   "decodedPeakDbfs": -2.21,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "Splashdown in the Atlantic. The mission ends where it began: on Earth, a short way from the launch site.",
+     "text": "Splashdown in the Atlantic, about two hundred and seventy kilometers east of the launch site. The mission ends where it began: on Earth.",
      "startMs": 0,
-     "endMs": 6650,
-     "audioText": "Splashdown in the Atlantic. The mission ends where it began: on Earth, a short way from the launch site.",
-     "phonemes": "splˈaʃdWn ɪn ði ətlˈantɪk. ðə mˈɪʃᵊn ˈɛndz wˌɛː ɪt bɪɡˈan: ˌɒn ˈɜːθ, ɐ ʃˈɔːt wˈA fɹɒm ðə lˈɔːnʧ sˈIt.",
+     "endMs": 8770,
+     "audioText": "Splashdown in the Atlantic, about two hundred and seventy kilometers east of the launch site. The mission ends where it began: on Earth.",
+     "phonemes": "splˈaʃdWn ɪn ði ətlˈantɪk, əbˈWt tˈuː hˈʌndɹəd and sˈɛvnti kˈɪləmˌiːtəz ˈiːst ɒv ðə lˈɔːnʧ sˈIt. ðə mˈɪʃᵊn ˈɛndz wˌɛː ɪt bɪɡˈan: ˌɒn ˈɜːθ.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 101,
+     "tokens": 138,
      "chunks": 1,
-     "synthS": 4.655,
-     "cached": true,
+     "synthS": 16.413,
+     "cached": false,
      "modelLeadS": 0.24,
-     "modelTailS": 0.48,
+     "modelTailS": 0.46,
      "pauses": [
+      {
+       "mark": ",",
+       "pauseS": 0.125,
+       "depthDb": -67.1,
+       "t": 1.775
+      },
       {
        "mark": ".",
        "pauseS": 0.125,
-       "depthDb": -68.8,
-       "t": 1.9
+       "depthDb": -68.6,
+       "t": 5.825
       },
       {
        "mark": ":",
        "pauseS": 0.125,
-       "depthDb": -69.2,
-       "t": 3.8
-      },
-      {
-       "mark": ",",
-       "pauseS": 0.15,
        "depthDb": -69.1,
-       "t": 4.65
+       "t": 7.875
       }
      ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 6.65,
-      "peakDbfs": -2.72,
+      "durationS": 8.77,
+      "peakDbfs": -1.83,
       "clippedSamples": 0,
-      "dcOffset": -0.00019,
-      "leadingSilenceS": 0.04,
-      "trailingSilenceS": 0.1,
-      "longestInternalSilenceS": 0.41,
+      "dcOffset": -0.00018,
+      "leadingSilenceS": 0.05,
+      "trailingSilenceS": 0.11,
+      "longestInternalSilenceS": 0.49,
       "pauses": [
        [
-        1.59,
-        0.41
+        1.53,
+        0.32
        ],
        [
-        3.63,
-        0.26
+        5.44,
+        0.49
        ],
        [
-        4.49,
-        0.25
+        7.68,
+        0.29
        ]
       ],
-      "speechSpanS": 6.51,
-      "f0MedianHz": 139.5,
-      "f0RangeSemitones": 8.1,
+      "speechSpanS": 8.61,
+      "f0MedianHz": 137.5,
+      "f0RangeSemitones": 7.1,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.396,
+      "voicedShare": 0.374,
       "burstDb": 6.1,
-      "burstAtS": 2.05,
-      "onsetBurstDb": 4.3,
+      "burstAtS": 6.0,
+      "onsetBurstDb": 4.6,
       "spikes": 0,
-      "hfShareDb": -29.5,
-      "words": 19,
-      "wpm": 171.4,
-      "speechWpm": 175.1,
-      "rawPeakDbfs": -6.22,
-      "phonemesPerS": 9.68
+      "hfShareDb": -28.4,
+      "words": 23,
+      "wpm": 157.4,
+      "speechWpm": 160.3,
+      "rawPeakDbfs": -5.43,
+      "phonemesPerS": 10.34
      },
      "asr": {
-      "hypothesis": "Splash down in the Atlantic, the mission ends where it began on Earth, a short way from the launch site.",
-      "reference": "splashdown in the atlantic the mission ends where it began on earth a short way from the launch site",
-      "errors": 0,
-      "refWords": 19,
-      "wer": 0.0,
-      "diffs": []
+      "hypothesis": "Splashed on in the Atlantic, about two hundred and seventy kilometres east of the launch site, the mission ends where it began on Earth.",
+      "reference": "splashdown in the atlantic about two hundred seventy kilometers east of the launch site the mission ends where it began on earth",
+      "errors": 2,
+      "refWords": 22,
+      "wer": 0.091,
+      "diffs": [
+       [
+        "splashdown",
+        "splashed on"
+       ]
+      ]
      },
      "flags": []
     }
@@ -8432,94 +8485,94 @@
   {
    "id": "lunar-liftoff",
    "file": "lunar-liftoff.mp3",
-   "durationMs": 1580,
+   "durationMs": 2830,
    "loudness": {
-    "inputLufs": -21.0,
-    "inputTruePeakDb": -7.0,
-    "gainDb": 3.0,
+    "inputLufs": -21.1,
+    "inputTruePeakDb": -6.8,
+    "gainDb": 3.1,
     "outputLufs": -18.0,
-    "outputTruePeakDb": -4.0
+    "outputTruePeakDb": -3.7
    },
    "encoded": {
-    "bytes": 13248,
-    "decodedSamples": 37920,
-    "sourceSamples": 37920,
-    "durationMs": 1580,
+    "bytes": 23232,
+    "decodedSamples": 67920,
+    "sourceSamples": 67920,
+    "durationMs": 2830,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 68,
-     "bytes": 13248,
+     "frames": 120,
+     "bytes": 23232,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 672
+     "paddingSamples": 624
     },
-    "decodedPeakDbfs": -4.69
+    "decodedPeakDbfs": -4.34
    },
-   "decodedPeakDbfs": -4.69,
+   "decodedPeakDbfs": -4.34,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "Liftoff.",
+     "text": "Liftoff, on the way to the Moon.",
      "startMs": 0,
-     "endMs": 980,
-     "audioText": "Liftoff.",
-     "phonemes": "lˈɪftɒf.",
+     "endMs": 2230,
+     "audioText": "Liftoff, on the way to the Moon.",
+     "phonemes": "lˈɪftɒf, ˌɒn ðə wˈA tə ðə mˈuːn.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 8,
+     "tokens": 32,
      "chunks": 1,
-     "synthS": 1.164,
-     "cached": true,
-     "modelLeadS": 0.23,
-     "modelTailS": 0.385,
-     "pauses": [],
+     "synthS": 5.782,
+     "cached": false,
+     "modelLeadS": 0.26,
+     "modelTailS": 0.48,
+     "pauses": [
+      {
+       "mark": ",",
+       "pauseS": 0.1,
+       "depthDb": -68.7,
+       "t": 0.73
+      }
+     ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 0.98,
-      "peakDbfs": -4.22,
+      "durationS": 2.23,
+      "peakDbfs": -3.74,
       "clippedSamples": 0,
-      "dcOffset": -0.00012,
-      "leadingSilenceS": 0.05,
-      "trailingSilenceS": 0.09,
-      "longestInternalSilenceS": 0.01,
+      "dcOffset": -0.00024,
+      "leadingSilenceS": 0.04,
+      "trailingSilenceS": 0.1,
+      "longestInternalSilenceS": 0.13,
       "pauses": [],
-      "speechSpanS": 0.84,
-      "f0MedianHz": 169.1,
-      "f0RangeSemitones": 12.5,
+      "speechSpanS": 2.09,
+      "f0MedianHz": 144.6,
+      "f0RangeSemitones": 3.9,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.2,
-      "burstDb": 6.9,
+      "voicedShare": 0.395,
+      "burstDb": 5.3,
       "burstAtS": 0.1,
-      "onsetBurstDb": 6.9,
+      "onsetBurstDb": 5.3,
       "spikes": 0,
-      "hfShareDb": -31.7,
-      "words": 1,
-      "wpm": 61.2,
-      "speechWpm": 71.4,
-      "rawPeakDbfs": -7.22,
-      "phonemesPerS": 7.14
+      "hfShareDb": -30.7,
+      "words": 7,
+      "wpm": 188.3,
+      "speechWpm": 201.0,
+      "rawPeakDbfs": -6.84,
+      "phonemesPerS": 9.09
      },
      "asr": {
-      "hypothesis": "Lift oven.",
-      "reference": "liftoff",
-      "errors": 2,
-      "refWords": 1,
-      "wer": 2.0,
-      "diffs": [
-       [
-        "liftoff",
-        "lift oven"
-       ]
-      ]
+      "hypothesis": "Lift off on the way to the moon.",
+      "reference": "liftoff on the way to the moon",
+      "errors": 0,
+      "refWords": 7,
+      "wer": 0.0,
+      "diffs": []
      },
-     "flags": [
-      "asr-mismatch"
-     ]
+     "flags": []
     }
    ]
   },
@@ -8824,49 +8877,49 @@
   {
    "id": "lunar-tli",
    "file": "lunar-tli.mp3",
-   "durationMs": 8410,
+   "durationMs": 8310,
    "loudness": {
-    "inputLufs": -21.6,
-    "inputTruePeakDb": -5.9,
-    "gainDb": 3.6,
+    "inputLufs": -21.4,
+    "inputTruePeakDb": -6.3,
+    "gainDb": 3.4,
     "outputLufs": -18.0,
-    "outputTruePeakDb": -2.3
+    "outputTruePeakDb": -2.9
    },
    "encoded": {
-    "bytes": 67968,
-    "decodedSamples": 201840,
-    "sourceSamples": 201840,
-    "durationMs": 8410,
+    "bytes": 67200,
+    "decodedSamples": 199440,
+    "sourceSamples": 199440,
+    "durationMs": 8310,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 353,
-     "bytes": 67968,
+     "frames": 349,
+     "bytes": 67200,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 912
+     "paddingSamples": 1008
     },
-    "decodedPeakDbfs": -2.82
+    "decodedPeakDbfs": -3.35
    },
-   "decodedPeakDbfs": -2.82,
+   "decodedPeakDbfs": -3.35,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "Trans-lunar injection. The engine burns for several minutes, raising the speed to nearly eleven kilometers per second.",
+     "text": "Trans-lunar injection. The engine burns for about a minute, raising the speed to nearly eleven kilometers per second.",
      "startMs": 0,
-     "endMs": 7810,
-     "audioText": "Trans-lunar injection. The engine burns for several minutes, raising the speed to nearly eleven kilometers per second.",
-     "phonemes": "tɹˌanzlˈuːnə ɪnʤˈɛkʃᵊn. ði ˈɛnʤɪn bˈɜːnz fɔː sˈɛvəɹəl mˈɪnɪts, ɹˈAzɪŋ ðə spˈiːd tə nˈɪəli ɪlˈɛvᵊn kˈɪləmˌiːtəz pɜː sˈɛkᵊnd.",
+     "endMs": 7710,
+     "audioText": "Trans-lunar injection. The engine burns for about a minute, raising the speed to nearly eleven kilometers per second.",
+     "phonemes": "tɹˌanzlˈuːnə ɪnʤˈɛkʃᵊn. ði ˈɛnʤɪn bˈɜːnz fɔː əbˈWt ɐ mˈɪnɪt, ɹˈAzɪŋ ðə spˈiːd tə nˈɪəli ɪlˈɛvᵊn kˈɪləmˌiːtəz pɜː sˈɛkᵊnd.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 123,
+     "tokens": 121,
      "chunks": 1,
-     "synthS": 2.035,
-     "cached": true,
+     "synthS": 18.236,
+     "cached": false,
      "modelLeadS": 0.26,
      "modelTailS": 0.55,
      "pauses": [
@@ -8874,56 +8927,60 @@
        "mark": ".",
        "pauseS": 0.125,
        "depthDb": -69.4,
-       "t": 1.93
+       "t": 1.88
       },
       {
        "mark": ",",
        "pauseS": 0.15,
-       "depthDb": -68.0,
-       "t": 4.23
+       "depthDb": -68.4,
+       "t": 4.105
       }
      ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 7.81,
-      "peakDbfs": -2.33,
+      "durationS": 7.71,
+      "peakDbfs": -2.88,
       "clippedSamples": 0,
-      "dcOffset": -0.0003,
+      "dcOffset": -0.00028,
       "leadingSilenceS": 0.04,
-      "trailingSilenceS": 0.1,
-      "longestInternalSilenceS": 0.48,
+      "trailingSilenceS": 0.09,
+      "longestInternalSilenceS": 0.46,
       "pauses": [
        [
-        1.57,
-        0.48
+        1.54,
+        0.46
        ],
        [
-        3.99,
+        3.86,
         0.33
+       ],
+       [
+        5.16,
+        0.15
        ]
       ],
-      "speechSpanS": 7.67,
-      "f0MedianHz": 141.9,
-      "f0RangeSemitones": 6.8,
+      "speechSpanS": 7.58,
+      "f0MedianHz": 143.8,
+      "f0RangeSemitones": 7.2,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.386,
+      "voicedShare": 0.397,
       "burstDb": 5.1,
-      "burstAtS": 0.1,
-      "onsetBurstDb": 5.1,
+      "burstAtS": 5.4,
+      "onsetBurstDb": 4.7,
       "spikes": 0,
-      "hfShareDb": -27.2,
-      "words": 17,
-      "wpm": 130.6,
-      "speechWpm": 133.0,
-      "rawPeakDbfs": -5.93,
-      "phonemesPerS": 10.95
+      "hfShareDb": -27.5,
+      "words": 18,
+      "wpm": 140.1,
+      "speechWpm": 142.5,
+      "rawPeakDbfs": -6.28,
+      "phonemesPerS": 10.69
      },
      "asr": {
-      "hypothesis": "Transluner injection, the engine burns for several minutes, raising the speed to nearly eleven kilometres per second.",
-      "reference": "trans lunar injection the engine burns for several minutes raising the speed to nearly eleven kilometers per second",
+      "hypothesis": "Transluner injection, the engine burns for about a minute, raising the speed to nearly eleven kilometres per second.",
+      "reference": "trans lunar injection the engine burns for about a minute raising the speed to nearly eleven kilometers per second",
       "errors": 2,
-      "refWords": 18,
-      "wer": 0.111,
+      "refWords": 19,
+      "wer": 0.105,
       "diffs": [
        [
         "trans lunar",
@@ -9166,111 +9223,112 @@
   {
    "id": "lunar-cruise",
    "file": "lunar-cruise.mp3",
-   "durationMs": 7040,
+   "durationMs": 7330,
    "loudness": {
-    "inputLufs": -21.5,
-    "inputTruePeakDb": -5.5,
-    "gainDb": 3.5,
+    "inputLufs": -21.6,
+    "inputTruePeakDb": -5.6,
+    "gainDb": 3.6,
     "outputLufs": -18.0,
     "outputTruePeakDb": -2.0
    },
    "encoded": {
-    "bytes": 57024,
-    "decodedSamples": 168960,
-    "sourceSamples": 168960,
-    "durationMs": 7040,
+    "bytes": 59328,
+    "decodedSamples": 175920,
+    "sourceSamples": 175920,
+    "durationMs": 7330,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 296,
-     "bytes": 57024,
+     "frames": 308,
+     "bytes": 59328,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 960
+     "paddingSamples": 912
     },
-    "decodedPeakDbfs": -2.63
+    "decodedPeakDbfs": -2.44
    },
-   "decodedPeakDbfs": -2.63,
+   "decodedPeakDbfs": -2.44,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "Three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
+     "text": "Nearly three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
      "startMs": 0,
-     "endMs": 6440,
-     "audioText": "Three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
-     "phonemes": "θɹˈiː dˈAz ɒv kˈQstɪŋ, ʃˈQn ɡɹˈAtli spˈɛd ˌʌp. ˈɜːθs ɡɹˈavɪti slˈQz ðə pɹˈQb az ɪt klˈImz əwˈA.",
+     "endMs": 6730,
+     "audioText": "Nearly three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
+     "phonemes": "nˈɪəli θɹˈiː dˈAz ɒv kˈQstɪŋ, ʃˈQn ɡɹˈAtli spˈɛd ˌʌp. ˈɜːθs ɡɹˈavɪti slˈQz ðə pɹˈQb az ɪt klˈImz əwˈA.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 95,
+     "tokens": 102,
      "chunks": 1,
-     "synthS": 1.382,
-     "cached": true,
-     "modelLeadS": 0.26,
+     "synthS": 20.717,
+     "cached": false,
+     "modelLeadS": 0.27,
      "modelTailS": 0.495,
      "pauses": [
       {
        "mark": ",",
        "pauseS": 0.15,
-       "depthDb": -45.9,
-       "t": 1.33
+       "depthDb": -60.8,
+       "t": 1.72
       },
       {
        "mark": ".",
        "pauseS": 0.175,
-       "depthDb": -69.5,
-       "t": 3.13
+       "depthDb": -69.2,
+       "t": 3.47
       }
      ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 6.44,
-      "peakDbfs": -2.06,
+      "durationS": 6.73,
+      "peakDbfs": -2.08,
       "clippedSamples": 0,
-      "dcOffset": -0.00034,
-      "leadingSilenceS": 0.04,
+      "dcOffset": -0.00035,
+      "leadingSilenceS": 0.05,
       "trailingSilenceS": 0.1,
       "longestInternalSilenceS": 0.47,
       "pauses": [
        [
-        1.2,
-        0.18
+        1.56,
+        0.22
        ],
        [
-        2.79,
+        3.13,
         0.47
-       ],
-       [
-        5.12,
-        0.16
        ]
       ],
-      "speechSpanS": 6.3,
-      "f0MedianHz": 144.4,
-      "f0RangeSemitones": 7.5,
+      "speechSpanS": 6.58,
+      "f0MedianHz": 143.8,
+      "f0RangeSemitones": 8.2,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.371,
-      "burstDb": 5.2,
-      "burstAtS": 0.1,
-      "onsetBurstDb": 5.2,
+      "voicedShare": 0.376,
+      "burstDb": 6.2,
+      "burstAtS": 0.05,
+      "onsetBurstDb": 6.2,
       "spikes": 0,
       "hfShareDb": -28.2,
-      "words": 17,
-      "wpm": 158.4,
-      "speechWpm": 161.9,
-      "rawPeakDbfs": -5.56,
-      "phonemesPerS": 9.68
+      "words": 18,
+      "wpm": 160.5,
+      "speechWpm": 164.1,
+      "rawPeakDbfs": -5.68,
+      "phonemesPerS": 10.03
      },
      "asr": {
-      "hypothesis": "Three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
-      "reference": "three days of coasting shown greatly sped up earths gravity slows the probe as it climbs away",
-      "errors": 0,
-      "refWords": 17,
-      "wer": 0.0,
-      "diffs": []
+      "hypothesis": "Nearly three days of coasting, Shone greatly sped up. Earth's gravity slows the probe as it climbs away.",
+      "reference": "nearly three days of coasting shown greatly sped up earths gravity slows the probe as it climbs away",
+      "errors": 1,
+      "refWords": 18,
+      "wer": 0.056,
+      "diffs": [
+       [
+        "shown",
+        "shone"
+       ]
+      ]
      },
      "flags": []
     }
@@ -9392,105 +9450,123 @@
   {
    "id": "lunar-flyby",
    "file": "lunar-flyby.mp3",
-   "durationMs": 6430,
+   "durationMs": 11140,
    "loudness": {
-    "inputLufs": -21.5,
-    "inputTruePeakDb": -5.3,
-    "gainDb": 3.5,
-    "outputLufs": -18.0,
-    "outputTruePeakDb": -1.8
+    "inputLufs": -21.6,
+    "inputTruePeakDb": -4.6,
+    "gainDb": 3.1,
+    "outputLufs": -18.5,
+    "outputTruePeakDb": -1.5
    },
    "encoded": {
-    "bytes": 52032,
-    "decodedSamples": 154320,
-    "sourceSamples": 154320,
-    "durationMs": 6430,
+    "bytes": 89856,
+    "decodedSamples": 267360,
+    "sourceSamples": 267360,
+    "durationMs": 11140,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 270,
-     "bytes": 52032,
+     "frames": 467,
+     "bytes": 89856,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 624
+     "paddingSamples": 1056
     },
-    "decodedPeakDbfs": -2.34
+    "decodedPeakDbfs": -1.98
    },
-   "decodedPeakDbfs": -2.34,
+   "decodedPeakDbfs": -1.98,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "Closest approach, over the far side. The Moon bends the probe's path and swings it onward.",
+     "text": "Closest approach, fifteen hundred kilometers up, passing behind the Moon as it moves along its orbit. The Moon's pull bends the probe's path and swings it onward.",
      "startMs": 0,
-     "endMs": 5830,
-     "audioText": "Closest approach, over the far side. The Moon bends the probe's path and swings it onward.",
-     "phonemes": "klˈQsɪst əpɹˈQʧ, ˈQvə ðə fˈɑː sˈId. ðə mˈuːn bˈɛndz ðə pɹˈQbz pˈɑːθ and swˈɪŋz ɪt ˈɒnwəd.",
+     "endMs": 10540,
+     "audioText": "Closest approach, fifteen hundred kilometers up, passing behind the Moon as it moves along its orbit. The Moon's pull bends the probe's path and swings it onward.",
+     "phonemes": "klˈQsɪst əpɹˈQʧ, fˌɪftˈiːn hˈʌndɹəd kˈɪləmˌiːtəz ˌʌp, pˈɑːsɪŋ bɪhˈInd ðə mˈuːn az ɪt mˈuːvz əlˈɒŋ ɪts ˈɔːbɪt. ðə mˈuːnz pˈʊl bˈɛndz ðə pɹˈQbz pˈɑːθ and swˈɪŋz ɪt ˈɒnwəd.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 89,
+     "tokens": 169,
      "chunks": 1,
-     "synthS": 1.272,
-     "cached": true,
+     "synthS": 34.431,
+     "cached": false,
      "modelLeadS": 0.26,
-     "modelTailS": 0.505,
+     "modelTailS": 0.52,
      "pauses": [
       {
        "mark": ",",
        "pauseS": 0.15,
-       "depthDb": -68.8,
-       "t": 1.13
+       "depthDb": -69.1,
+       "t": 1.155
+      },
+      {
+       "mark": ",",
+       "pauseS": 0.125,
+       "depthDb": -67.4,
+       "t": 3.18
       },
       {
        "mark": ".",
-       "pauseS": 0.15,
-       "depthDb": -68.6,
-       "t": 2.73
+       "pauseS": 0.125,
+       "depthDb": -69.0,
+       "t": 6.855
       }
      ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 5.83,
-      "peakDbfs": -1.82,
+      "durationS": 10.54,
+      "peakDbfs": -1.56,
       "clippedSamples": 0,
-      "dcOffset": -0.00026,
-      "leadingSilenceS": 0.04,
-      "trailingSilenceS": 0.11,
-      "longestInternalSilenceS": 0.44,
+      "dcOffset": -0.00019,
+      "leadingSilenceS": 0.05,
+      "trailingSilenceS": 0.1,
+      "longestInternalSilenceS": 0.49,
       "pauses": [
        [
-        1.0,
+        1.02,
         0.23
        ],
        [
-        2.42,
-        0.44
+        2.95,
+        0.33
+       ],
+       [
+        4.54,
+        0.24
+       ],
+       [
+        6.47,
+        0.49
+       ],
+       [
+        9.14,
+        0.17
        ]
       ],
-      "speechSpanS": 5.68,
-      "f0MedianHz": 143.9,
-      "f0RangeSemitones": 6.8,
+      "speechSpanS": 10.39,
+      "f0MedianHz": 140.5,
+      "f0RangeSemitones": 7.5,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.353,
-      "burstDb": 6.7,
+      "voicedShare": 0.369,
+      "burstDb": 5.9,
       "burstAtS": 0.1,
-      "onsetBurstDb": 6.7,
+      "onsetBurstDb": 5.9,
       "spikes": 0,
-      "hfShareDb": -28.0,
-      "words": 16,
-      "wpm": 164.7,
-      "speechWpm": 169.0,
-      "rawPeakDbfs": -5.32,
-      "phonemesPerS": 10.04
+      "hfShareDb": -27.3,
+      "words": 27,
+      "wpm": 153.7,
+      "speechWpm": 155.9,
+      "rawPeakDbfs": -4.66,
+      "phonemesPerS": 10.59
      },
      "asr": {
-      "hypothesis": "Closest approach over the far side, the moon bends the probe's path and swings it onward.",
-      "reference": "closest approach over the far side the moon bends the probes path swings it onward",
+      "hypothesis": "Closest approach, fifteen hundred kilometres up, passing behind the moon as it moves along its orbit, the moon's pull bends the probe's path and swings it onward.",
+      "reference": "closest approach fifteen hundred kilometers up passing behind the moon as it moves along its orbit the moons pull bends the probes path swings it onward",
       "errors": 0,
-      "refWords": 15,
+      "refWords": 26,
       "wer": 0.0,
       "diffs": []
      },
@@ -9501,124 +9577,151 @@
   {
    "id": "lunar-outbound",
    "file": "lunar-outbound.mp3",
-   "durationMs": 12730,
+   "durationMs": 14700,
    "loudness": {
-    "inputLufs": -21.7,
-    "inputTruePeakDb": -5.9,
-    "gainDb": 3.7,
+    "inputLufs": -21.5,
+    "inputTruePeakDb": -5.6,
+    "gainDb": 3.5,
     "outputLufs": -18.0,
-    "outputTruePeakDb": -2.2
+    "outputTruePeakDb": -2.1
    },
    "encoded": {
-    "bytes": 102528,
-    "decodedSamples": 305520,
-    "sourceSamples": 305520,
-    "durationMs": 12730,
+    "bytes": 118272,
+    "decodedSamples": 352800,
+    "sourceSamples": 352800,
+    "durationMs": 14700,
     "lagSamples": 0,
     "lengthMatches": true,
     "gapless": {
      "xingTag": true,
      "tag": "Info",
-     "frames": 533,
-     "bytes": 102528,
+     "frames": 615,
+     "bytes": 118272,
      "encoder": "Lavf lame",
      "encoderDelaySamples": 576,
-     "paddingSamples": 912
+     "paddingSamples": 864
     },
-    "decodedPeakDbfs": -2.64
+    "decodedPeakDbfs": -2.6
    },
-   "decodedPeakDbfs": -2.64,
+   "decodedPeakDbfs": -2.6,
    "flags": [],
    "cues": [
     {
      "id": "a",
-     "text": "Leaving the Moon's sphere of influence on an outbound trajectory. A flyby changes direction and speed without an engine burn, but to stay in lunar orbit the probe would have had to brake.",
+     "text": "Leaving the Moon's sphere of influence. Seen from the Moon, the probe leaves as fast as it arrived, only turned. Seen from Earth, it now moves faster than escape speed and will not come back. That is a gravity assist.",
      "startMs": 0,
-     "endMs": 12130,
-     "audioText": "Leaving the Moon's sphere of influence on an outbound trajectory. A flyby changes direction and speed without an engine burn, but to stay in lunar orbit the probe would have had to brake.",
-     "phonemes": "lˈiːvɪŋ ðə mˈuːnz sfˈɪə ɒv ˈɪnflʊəns ˌɒn ɐn ˈWtbWnd tɹəʤˈɛktəɹi. ɐ flˈIbI ʧˈAnʤɪz dɪɹˈɛkʃᵊn and spˈiːd wɪðˈWt ɐn ˈɛnʤɪn bˈɜːn, bˌʌt tə stˈA ɪn lˈuːnə ˈɔːbɪt ðə pɹˈQb wʊd hav had tə bɹˈAk.",
+     "endMs": 14100,
+     "audioText": "Leaving the Moon's sphere of influence. Seen from the Moon, the probe leaves as fast as it arrived, only turned. Seen from Earth, it now moves faster than escape speed and will not come back. That is a gravity assist.",
+     "phonemes": "lˈiːvɪŋ ðə mˈuːnz sfˈɪə ɒv ˈɪnflʊəns. sˈiːn fɹɒm ðə mˈuːn, ðə pɹˈQb lˈiːvz az fˈɑːst az ɪt əɹˈIvd, ˈQnli tˈɜːnd. sˈiːn fɹɒm ˈɜːθ, ɪt nˈW mˈuːvz fˈɑːstə ðən ɪskˈAp spˈiːd and wɪl nˌɒt kˈʌm bˈak. ðˈat ɪz ɐ ɡɹˈavɪti əsˈɪst.",
      "dictionary": [],
      "espeakWords": [],
      "g2pWarnings": [],
-     "tokens": 187,
+     "tokens": 220,
      "chunks": 1,
-     "synthS": 2.67,
-     "cached": true,
+     "synthS": 43.092,
+     "cached": false,
      "modelLeadS": 0.29,
-     "modelTailS": 0.5,
+     "modelTailS": 0.48,
      "pauses": [
       {
        "mark": ".",
        "pauseS": 0.175,
-       "depthDb": -71.1,
-       "t": 4.1
+       "depthDb": -68.1,
+       "t": 2.425
+      },
+      {
+       "mark": ",",
+       "pauseS": 0.1,
+       "depthDb": -67.8,
+       "t": 3.6
       },
       {
        "mark": ",",
        "pauseS": 0.125,
-       "depthDb": -65.7,
-       "t": 8.575
+       "depthDb": -68.9,
+       "t": 5.85
+      },
+      {
+       "mark": ".",
+       "pauseS": 0.2,
+       "depthDb": -69.2,
+       "t": 7.15
+      },
+      {
+       "mark": ",",
+       "pauseS": 0.15,
+       "depthDb": -69.1,
+       "t": 8.325
+      },
+      {
+       "mark": ".",
+       "pauseS": 0.125,
+       "depthDb": -67.8,
+       "t": 12.475
       }
      ],
      "unpunctuatedGaps": [],
      "qa": {
-      "durationS": 12.13,
-      "peakDbfs": -2.26,
+      "durationS": 14.1,
+      "peakDbfs": -2.14,
       "clippedSamples": 0,
-      "dcOffset": -0.00022,
+      "dcOffset": -0.00021,
       "leadingSilenceS": 0.04,
-      "trailingSilenceS": 0.1,
-      "longestInternalSilenceS": 0.56,
+      "trailingSilenceS": 0.09,
+      "longestInternalSilenceS": 0.46,
       "pauses": [
        [
-        2.06,
-        0.16
+        2.1,
+        0.4
        ],
        [
-        3.66,
-        0.56
+        3.5,
+        0.18
        ],
        [
-        6.66,
+        5.7,
         0.24
        ],
        [
-        8.26,
-        0.43
+        6.79,
+        0.46
        ],
        [
-        10.24,
-        0.22
+        8.16,
+        0.25
+       ],
+       [
+        10.8,
+        0.26
+       ],
+       [
+        12.17,
+        0.41
        ]
       ],
-      "speechSpanS": 11.99,
-      "f0MedianHz": 141.0,
-      "f0RangeSemitones": 7.6,
+      "speechSpanS": 13.97,
+      "f0MedianHz": 142.0,
+      "f0RangeSemitones": 7.4,
       "pitchJumpsPerMin": 0.0,
-      "voicedShare": 0.384,
+      "voicedShare": 0.386,
       "burstDb": 6.2,
       "burstAtS": 0.05,
       "onsetBurstDb": 6.2,
       "spikes": 0,
-      "hfShareDb": -27.5,
-      "words": 33,
-      "wpm": 163.2,
-      "speechWpm": 165.1,
-      "rawPeakDbfs": -5.96,
-      "phonemesPerS": 10.51
+      "hfShareDb": -27.7,
+      "words": 40,
+      "wpm": 170.2,
+      "speechWpm": 171.8,
+      "rawPeakDbfs": -5.64,
+      "phonemesPerS": 9.81
      },
      "asr": {
-      "hypothesis": "Leaving the moon's sphere of influence on an outbound trajectory, a flyby changes direction and speed without an engine burn, but to stay in lunar orbit the probe would have had to break.",
-      "reference": "leaving the moons sphere of influence on an outbound trajectory a flyby changes direction speed without an engine burn but to stay in lunar orbit the probe would have had to brake",
-      "errors": 1,
-      "refWords": 32,
-      "wer": 0.031,
-      "diffs": [
-       [
-        "brake",
-        "break"
-       ]
-      ]
+      "hypothesis": "Leaving the moon's sphere of influence, seen from the moon, the probe leaves as fast as it arrived, only turned, seen from earth. It now moves faster than escape speed, and will not come back. That is a gravity assist.",
+      "reference": "leaving the moons sphere of influence seen from the moon the probe leaves as fast as it arrived only turned seen from earth it now moves faster than escape speed will not come back that is a gravity assist",
+      "errors": 0,
+      "refWords": 39,
+      "wer": 0.0,
+      "diffs": []
      },
      "flags": []
     }

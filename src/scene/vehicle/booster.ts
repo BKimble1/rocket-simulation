@@ -921,9 +921,12 @@ function capsuleAdapter(ctx: Ctx) {
   jointBand(kit, s, y0 + 0.03, 'paint', 'payload-adapter', 'al-2219', { bolts: kit.hangar ? 144 : 0 });
   const cap = 0.12;
   const w = wordWidth('onefab', cap);
+  // on the cone: a conical band 2.5 mm off the skin (radius follows the adapter's taper)
+  const coneR = (y: number) => R + ((r1 - R) * (y - (y0 + 0.15))) / (y1 - 0.2 - (y0 + 0.15)) + 0.0025;
   const d = makeDecal(ctx.mats, {
     key: 'adapter-onefab',
-    r: 1.905,
+    r: coneR(38.62),
+    r1: coneR(38.95),
     phiC: 0,
     halfW: w / 2 + 0.05,
     y0: 38.62,

@@ -148,7 +148,7 @@ float skinFade = 1.0 - smoothstep(0.01, 0.06, length(fwidth(vVeh.xyz)));
     float patchN = vfbm(sp * vec3(2.6, 0.9, 2.6));
     float streak = vnoise(vec3(sp.x * 9.0, sp.y * 0.8, sp.z * 9.0));
     float fine = vnoise(sp * 70.0) * skinFade;
-    float cover = smoothstep(0.47, 0.6, patchN * 0.75 + streak * 0.4 + (fm - 1.0) * 0.7);
+    float cover = smoothstep(0.5, 0.63, patchN * 0.75 + streak * 0.4 + (fm - 1.0) * 0.7);
     skinFrostM = clamp(cover * (0.45 + 0.35 * fm) + fine * 0.08 * fm * cover, 0.0, 0.82);
     vec3 frostCol = mix(vec3(0.78, 0.84, 0.9), vec3(0.975, 0.985, 1.0), clamp(fine * 0.8 + (patchN - 0.45) * 1.6, 0.0, 1.0));
     diffuseColor.rgb = mix(diffuseColor.rgb, frostCol, skinFrostM);
@@ -165,7 +165,7 @@ float skinFade = 1.0 - smoothstep(0.01, 0.06, length(fwidth(vVeh.xyz)));
     float blot = vfbm(sp * vec3(0.9, 0.3, 0.9));
     float s = h * (0.5 + 0.6 * streak + 0.3 * (fineStreak - 0.5) * skinFade) + blot * 0.35 * h + 0.25 * h * h * h;
     skinSootM = clamp(sw * smoothstep(0.14, 0.78, s), 0.0, 1.0);
-    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05, 0.042, 0.034), skinSootM * 0.96);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.032, 0.027, 0.022), skinSootM * 0.97);
   }
 #endif
 #ifdef SKIN_SEAMS
@@ -177,7 +177,7 @@ float skinFade = 1.0 - smoothstep(0.01, 0.06, length(fwidth(vVeh.xyz)));
 
 const SKIN_ROUGH = /* glsl */ `
 roughnessFactor = mix(roughnessFactor, 0.93, skinFrostM);
-roughnessFactor = mix(roughnessFactor, 0.82, skinSootM);
+roughnessFactor = mix(roughnessFactor, 0.9, skinSootM);
 `;
 
 const SKIN_NORMAL = /* glsl */ `
@@ -194,6 +194,10 @@ const SKIN_CLEARCOAT = /* glsl */ `
 #ifdef USE_CLEARCOAT
 material.clearcoat *= (1.0 - skinFrostM) * (1.0 - skinSootM);
 #endif
+// soot is a dull absorber: little specular sheen (so it reads as soot, not dark grey paint)
+material.specularColor *= 1.0 - 0.7 * skinSootM;
+material.specularColorBlended *= 1.0 - 0.7 * skinSootM;
+material.specularF90 *= 1.0 - 0.7 * skinSootM;
 `;
 
 const RIM = /* glsl */ `
