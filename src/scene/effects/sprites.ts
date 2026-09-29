@@ -257,20 +257,22 @@ varying float vFade;
 void main() {
   #include <logdepthbuf_fragment>
   // tiles 4-7: the same billows for thin media (puffs, vapour, spray), lit through
-  float tile = floor(vTile + 0.5);
+  float tile = floor(vTile + 0.02);
+  float soft = clamp((vTile - tile) / 0.9, 0.0, 1.0);
   float thinMedium = step(3.5, tile);
   tile = mod(tile, 4.0);
   vec2 base = vec2(mod(tile, 2.0), floor(tile / 2.0)) * 0.5;
   vec2 uvT = base + (vUv * 0.5 + 0.5) * 0.5;
   vec4 tx = texture2D(uAtlas, uvT);
-  float dens = tx.r;
+  // an old, diffuse puff: its outline fades out gradually instead of ending at the lobe rims
+  float dens = tx.r * mix(1.0, 1.0 - smoothstep(0.15, 0.95, length(vUv)), soft);
   float a = dens * vAlb.a * vFade;
   vec3 emitT = vEmit.rgb * dens * dens * vFade;
   if (a < 0.002 && dot(emitT, vec3(1.0)) < 0.002) discard;
   // tile-space normal rotated into view space
   vec2 nt = tx.gb * 2.0 - 1.0;
   vec2 nxy = vRot * nt.x + vec2(-vRot.y, vRot.x) * nt.y;
-  vec3 n = normalize(vec3(nxy, sqrt(max(0.0, 1.0 - dot(nt, nt)))));
+  vec3 n = normalize(vec3(nxy * (1.0 - 0.5 * soft), sqrt(max(0.0, 1.0 - dot(nt, nt)))));
   vec3 toCam = normalize(-vView);
   float shadow = vEmit.a;
   float ndl = dot(n, uSunView);
@@ -612,7 +614,8 @@ export class SpriteRenderer {
       b.shape.array[j * 4] = p.radius;
       b.shape.array[j * 4 + 1] = p.rot;
       b.shape.array[j * 4 + 2] = p.stretch;
-      b.shape.array[j * 4 + 3] = p.variant + (p.group === Group.Puff || p.group === Group.Vent || p.group === Group.Water ? 4 : 0);
+      // tile index, plus the edge softness in the fractional part
+      b.shape.array[j * 4 + 3] = p.variant + (p.group === Group.Puff || p.group === Group.Vent || p.group === Group.Water ? 4 : 0) + 0.9 * Math.min(1, Math.max(0, p.soft));
       b.axis.array[j * 3] = p.axis.x;
       b.axis.array[j * 3 + 1] = p.axis.y;
       b.axis.array[j * 3 + 2] = p.axis.z;

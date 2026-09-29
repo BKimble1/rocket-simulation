@@ -133,6 +133,8 @@ export interface Particle {
   variant: number;
   group: Group;
   shadow: number;
+  /** 0..1: how diffuse the puff has become (old, spread-out clouds lose their crisp billow edges). */
+  soft: number;
 }
 
 const makeParticle = (): Particle => ({
@@ -148,6 +150,7 @@ const makeParticle = (): Particle => ({
   variant: 0,
   group: Group.Smoke,
   shadow: 0,
+  soft: 0,
 });
 
 // ───────────────────────────── helpers ─────────────────────────────
@@ -938,6 +941,8 @@ export function evalRec(r: Rec, a: number, o: Particle): boolean {
   o.variant = r.variant;
   o.group = r.group;
   o.shadow = 0;
+  // a young cloud billows with crisp edges; as it ages and spreads, its edges diffuse
+  o.soft = r.group === Group.Ground || r.group === Group.Trail ? 0.9 * smoothstep(6, 45, a) : r.group === Group.Smoke ? 0.5 * smoothstep(1, 4, a) : 0;
   if (r.stretchVel > 0) {
     // velocity-aligned streak (spray)
     o.axis.copy(r.u0).addScaledVector(r.grav, a);
