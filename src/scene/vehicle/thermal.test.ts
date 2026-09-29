@@ -12,7 +12,7 @@ describe('thermal lens', () => {
     expect(THERMAL_COLORS[2]).toBe('#e0b44a');
     expect(THERMAL_COLORS[3]).toBe('#e0662f');
     expect(THERMAL_COLORS[4]).toBe('#c33d2c');
-    for (const c of THERMAL_LENS) expect(c.detail).not.toMatch(/—/);
+    for (const c of THERMAL_LENS) expect(c.detail).not.toMatch(/\u2014/);
   });
 
   it('classifies the cryogenic hardware', () => {

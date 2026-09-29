@@ -270,7 +270,10 @@ describe('events match the state they name', () => {
       const off = cutoffs[e.id];
       if (off) {
         const ch = m.channels[off]!;
-        expect(channelAt(ch, e.t - 0.05), `${id} ${e.id}: not burning before cutoff`).toBeGreaterThan(0.3);
+        // the event marks the cutoff command (MECO, SECO) or the end of the shutdown ramp (booster burns, apogee engine)
+        let before = 0;
+        for (let t = e.t - 2; t < e.t; t += 0.05) before = Math.max(before, channelAt(ch, t));
+        expect(before, `${id} ${e.id}: not burning before cutoff`).toBeGreaterThan(0.3);
         expect(channelAt(ch, e.t + 1.5), `${id} ${e.id}: still burning after cutoff`).toBe(0);
         n++;
       }
@@ -362,7 +365,8 @@ describe('events match the state they name', () => {
     let prev = bodyAt(tr, ev(m, 'undock'), S).pos.distanceTo(bodyAt(st, ev(m, 'undock'), S2).pos);
     for (let t = ev(m, 'undock'); t < ev(m, 'deorbit-start') - 400; t += 2) {
       const d = bodyAt(tr, t, S).pos.distanceTo(bodyAt(st, t, S2).pos);
-      expect(Math.abs(d - prev), `capsule-station distance jumps at ${t}`).toBeLessThan(10);
+      // the drift apart reaches a few m/s; the old handover teleport moved the capsule 30 km
+      expect(Math.abs(d - prev), `capsule-station distance jumps at ${t}`).toBeLessThan(25);
       prev = d;
       // docking end (+Y) up, like the station
       expect(new THREE.Vector3(0, 1, 0).applyQuaternion(S.quat).dot(S.pos.clone().normalize())).toBeGreaterThan(0.999);

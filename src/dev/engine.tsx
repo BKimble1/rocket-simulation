@@ -29,12 +29,15 @@ const str = (k: string, d: string) => q.get(k) ?? d;
 /** Height of the nozzle exit above the floor on the display stands (m). */
 const CLEAR = 0.32;
 
-function stand(pivotY: number, halfSpan: number): THREE.Group {
-  // a painted steel gantry: two posts, a top beam and a mounting plate the engine hangs from
+function stand(pivotY: number, halfSpan: number, topY: number): THREE.Group {
+  // a painted steel gantry: two posts and a top beam carrying a stage-simulator plate at the
+  // engine's stage interface (topY above the pivot: the feed-duct interface flanges and the
+  // helium hose fittings end on its underside) and a thrust post down to the gimbal mount pad
   const g = new THREE.Group();
   const steel = M('steelPainted');
-  const mountTop = pivotY + 0.13;
-  const beamY = mountTop + 0.06;
+  const plateBot = pivotY + topY;
+  const plateTh = 0.03;
+  const beamY = plateBot + plateTh + 0.06;
   const postH = beamY + 0.06;
   for (const s of [-1, 1]) {
     const post = new THREE.Mesh(new RoundedBoxGeometry(0.12, postH, 0.12, 2, 0.01), steel);
@@ -45,9 +48,14 @@ function stand(pivotY: number, halfSpan: number): THREE.Group {
   }
   const beam = new THREE.Mesh(new RoundedBoxGeometry(halfSpan * 2 + 0.12, 0.12, 0.14, 2, 0.01), steel);
   beam.position.set(0, beamY, 0);
-  const plate = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.012, 0.34, 2, 0.004), M('aluminumDark'));
-  plate.position.set(0, mountTop + 0.006, 0);
-  g.add(beam, plate);
+  // interface plate over the powerhead (the turbopump is on +X, the helium hoses at -Z)
+  const plate = new THREE.Mesh(new RoundedBoxGeometry(0.86, plateTh, 0.84, 2, 0.006), M('aluminumDark'));
+  plate.position.set(0.17, plateBot + plateTh / 2, -0.05);
+  // thrust post from the plate down onto the gimbal mount pad (top at 0.13 above the pivot)
+  const padTop = pivotY + 0.13;
+  const post = new THREE.Mesh(new RoundedBoxGeometry(0.2, plateBot - padTop, 0.2, 2, 0.008), steel);
+  post.position.set(0, (padTop + plateBot) / 2, 0);
+  g.add(beam, plate, post);
   g.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh) m.castShadow = m.receiveShadow = true;
@@ -121,7 +129,7 @@ export default function Dev() {
       });
       group.add(e.root);
       if (withStand) {
-        const s = stand(py, e.exitRadius + 0.35);
+        const s = stand(py, e.exitRadius + 0.35, engineDesign(k).topY);
         s.position.set(x, 0, z);
         group.add(s);
       }

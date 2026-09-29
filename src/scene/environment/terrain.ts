@@ -213,7 +213,9 @@ vec2 waveSlope( vec2 p, float t, float px, float ocean, out float var ) {
     float k = 6.2831853 / wl;
     float w = sqrt( 9.81 * k );
     float steep = mix( 0.03, 0.12, fi / 11.0 ) * ampK;
-    float fade = 1.0 - smoothstep( 0.35, 0.9, px * 2.0 / wl );
+    // a wave stays only while it spans several pixels: shorter ones would alias into regular
+    // stripes in the glint, so they turn into surface roughness instead
+    float fade = smoothstep( 4.0, 12.0, wl / px );
     if ( fade <= 0.0 ) {
       var += 0.5 * steep * steep * 0.55;
     } else {

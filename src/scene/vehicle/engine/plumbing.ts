@@ -82,14 +82,19 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     axisLathe(k, prof, t, p, dir, hangar ? 32 : 14);
     if (!hangar) return;
     const bolt = hexBolt(Math.max(0.009, rp * 0.2), Math.max(0.008, rp * 0.17));
+    // a flange on the section plane is cut in half (axisLathe): its bolts split with it, by
+    // bolt centre, or the removed half would leave its bolts floating in front of the cut
+    const onPlane = k.section && Math.abs(p.z) < 1e-4 && Math.abs(dir.clone().normalize().z) < 1e-4;
     for (const side of [1, -1]) {
       const g = bolt.clone();
       if (side < 0) g.rotateX(Math.PI);
-      const all = ringOf(g, bolts, (rp + rf) / 2 + 0.002, { centre: p.clone().addScaledVector(dir.clone().normalize(), side * w), axis: dir, phase: Math.PI / bolts });
+      const o = { centre: p.clone().addScaledVector(dir.clone().normalize(), side * w), axis: dir, phase: Math.PI / bolts };
+      const rb = (rp + rf) / 2 + 0.002;
+      if (onPlane) {
+        k.add(ringOf(g, bolts, rb, { ...o, filter: (q) => q.z <= 0 }), t);
+        k.add(ringOf(g, bolts, rb, { ...o, filter: (q) => q.z > 0 }), { ...t, front: true });
+      } else k.add(ringOf(g, bolts, rb, o), { ...t, front: t.front || (k.section && p.z > 0.001) });
       g.dispose();
-      if (!all) continue;
-      // split by the section plane (bolt centres)
-      k.add(all, { ...t, front: k.section && p.z > 0.02 });
     }
     bolt.dispose();
   };
@@ -422,7 +427,14 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   pipe(R.igniterToGG, 0.0055, { part: 'igniter', mat: 'stainless' }, { bend: 0.05, segs: 10 });
 
   // ── helium lines from the heat exchanger up to the stage interface ──
-  for (const h of R.helium) pipe(h, 0.0062, { part: 'gas-generator', mat: 'stainless', thermal: 1 }, { bend: 0.06, segs: 10 });
+  // (each ends in a hex union; the flexible hose above it to the stage interface is in mech.ts)
+  for (const h of R.helium) {
+    pipe(h, 0.0062, { part: 'gas-generator', mat: 'stainless', thermal: 1 }, { bend: 0.06, segs: 10 });
+    const end = h[h.length - 1];
+    const union = new THREE.CylinderGeometry(0.0105, 0.0105, 0.022, 6);
+    union.translate(end.x, end.y + 0.005, end.z);
+    k.add(union, { part: 'gas-generator', mat: 'steel', thermal: 1 });
+  }
 
   // ── wire harnesses from the junction box to sensors and valve actuators ──
   const J = R.pts.junction;

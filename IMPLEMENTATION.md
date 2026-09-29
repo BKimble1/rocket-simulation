@@ -109,6 +109,15 @@ camera (drag, pinch, wheel, arrows) switches to Free starting exactly at the dis
 Changing location captures the displayed picture and dissolves it over the new location; a
 location that is not ready is not entered (the picture holds and the page says so).
 
+Panels never hide the subject: a panel that covers part of the screen registers the area it
+hides (`useStageInset`: a sheet spanning the width at the bottom on phones, a tall panel at one
+side on desktop and phone-landscape). The stage then moves the projection centre into the free
+area with `setViewOffset` (and, for a bottom sheet, widens the view to fit the free height),
+eased so opening and closing a panel glides. It changes the projection only, never a framing or
+a trajectory, and picking and hotspots follow automatically because they use the same camera.
+In the hangar, a move between distant subjects keeps the destination in view (the camera pulls
+back while the target travels, then closes in) instead of passing close to empty floor.
+
 ## Frame order (no per-frame React state)
 
 `useFrame` priorities: −30 player tick → −20 body sampling → −10 director → 0 scene components

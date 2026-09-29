@@ -39,6 +39,9 @@ export const TP = {
   bellowsY: [0.03, 0.17] as [number, number],
 };
 
+/** The helium lines end in a union this far below the stage interface (m); a hose spans the rest. */
+export const HE_UNION_DROP = 0.09;
+
 /** Largest axis distance of the fuel line centre (line and clamps stay inside the envelope). */
 const LINE_R_MAX = 0.522;
 
@@ -161,11 +164,12 @@ export function routes(d: Design): Routes {
   const igniterToInjector = [igniter.clone().add(v(0, 0.09, 0)), v(-0.12, -0.5, -0.31), v(-0.05, -0.34, d.domeR * -1 - 0.03), v(0, -0.308, -(d.domeR + 0.012))];
   const igniterToGG = [igniter.clone().add(v(0, -0.1, 0)), v(-0.16, -0.97, -0.26), v(0.2, -0.97, -0.2), v(x, -0.97, -0.04), v(x, TP.ggBottom - 0.004, 0)];
 
-  // helium pressurant: heat-exchanger coil outlet and inlet up to the stage interface
+  // helium pressurant: heat-exchanger coil outlet and inlet up to a union below the stage
+  // interface (HE_UNION_DROP under topY); flexible hoses (mech.ts) carry them across the gimbal
   const helium = [0, 1].map((i) => {
     const off = (i - 0.5) * 0.05;
     const hx = v(run.x + 0.07 + off * 0.3, hxTop + 0.05, run.z + 0.02 - off);
-    return [hx, v(run.x + 0.06, -0.62, run.z + 0.1 - off), v(0.24 + off * 0.6, -0.45, -0.42), v(0.2 + off * 0.6, -0.1, -0.38), v(0.18 + off * 0.6, d.topY - 0.03, -0.34)];
+    return [hx, v(run.x + 0.06, -0.62, run.z + 0.1 - off), v(0.24 + off * 0.6, -0.45, -0.42), v(0.2 + off * 0.6, -0.1, -0.38), v(0.18 + off * 0.6, d.topY - HE_UNION_DROP, -0.34)];
   });
 
   // harness: a junction box on the dome back, branches to the sensors and valve actuators

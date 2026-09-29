@@ -6,7 +6,7 @@
  */
 import type { BodyId } from '../../vehicle/parts';
 import type { MissionTimeline, TelemetrySample } from '../types';
-import { bodyAt, makeBodyState } from '../sample';
+import { bodyAt, bracket, makeBodyState } from '../sample';
 import { MU_EARTH, MU_MOON, R_EARTH, R_MOON, EARTH_AXIS, OMEGA_EARTH, moonPosition, sitePosition } from '../../world/frames';
 import { atmosphere } from './atmosphere';
 import { SOI_MOON } from './cislunar';
@@ -47,11 +47,44 @@ export function telemetryPoint(tl: MissionTimeline, body: BodyId): THREE.Vector3
   return new THREE.Vector3(c.x, c.y, c.z);
 }
 
+type Track = NonNullable<MissionTimeline['bodies'][BodyId]>;
+
+/**
+ * Velocity of the track's origin as the rendered motion has it: the time derivative of the cubic
+ * Hermite position (equal to the sampled velocities at the samples). Differencing it gives the
+ * acceleration of a coast to a fraction of a mm/s^2 even with minute-long samples, where the
+ * straight-line velocity interpolation would show a spurious 0.03 g on a weightless station.
+ */
+function hermiteVel(tr: Track, t: number, out: THREE.Vector3): THREE.Vector3 {
+  const T = tr.t;
+  const n = T.length;
+  const P = tr.pos;
+  const V = tr.vel;
+  if (n < 2 || t <= T[0] || t >= T[n - 1]) {
+    const k = 3 * (t <= T[0] ? 0 : n - 1);
+    return out.set(V[k], V[k + 1], V[k + 2]);
+  }
+  const i = bracket(T, t);
+  const h = T[i + 1] - T[i];
+  const u = (t - T[i]) / h;
+  const d00 = (6 * u * u - 6 * u) / h;
+  const d10 = 3 * u * u - 4 * u + 1;
+  const d01 = -d00;
+  const d11 = 3 * u * u - 2 * u;
+  const a = 3 * i;
+  const b = a + 3;
+  return out.set(
+    d00 * P[a] + d10 * V[a] + d01 * P[b] + d11 * V[b],
+    d00 * P[a + 1] + d10 * V[a + 1] + d01 * P[b + 1] + d11 * V[b + 1],
+    d00 * P[a + 2] + d10 * V[a + 2] + d01 * P[b + 2] + d11 * V[b + 2],
+  );
+}
+
 /** Position and velocity of the model-frame point `c` of a track at time t. */
-function pointState(tr: NonNullable<MissionTimeline['bodies'][BodyId]>, c: THREE.Vector3, t: number) {
+function pointState(tr: Track, c: THREE.Vector3, t: number) {
   const s = bodyAt(tr, t, makeBodyState());
   const pos = c.clone().applyQuaternion(s.quat).add(s.pos);
-  const vel = s.vel.clone();
+  const vel = hermiteVel(tr, t, new THREE.Vector3());
   if (c.lengthSq() > 0) {
     // the point's own velocity: the origin's plus the rate of change of the rotated offset
     const e = 0.05;

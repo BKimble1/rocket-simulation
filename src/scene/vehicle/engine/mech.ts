@@ -10,7 +10,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { Design } from './design';
 import { BACK, FRONT, FULL, bellowsLoop, hexBolt, merge, revolve, ringOf, roundPoly, type V2 } from './geo';
 import type { Kit, Tag, Thermal } from './kit';
-import { TP } from './layout';
+import { HE_UNION_DROP, TP, routes } from './layout';
 import { MATERIAL_OF, type MaterialSet } from './mats';
 import type { EngineDetail } from './types';
 
@@ -257,6 +257,27 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
     b.mesh.userData.front = b.slides;
     meshes.push(b.mesh);
   }
+  // helium hoses: braided flexible lines from the unions on the engine (see plumbing.ts) up to
+  // bulkhead fittings at the stage interface, re-posed like the bellows so they stay attached
+  const heEnds = detail === 'cluster' ? [] : routes(d).helium.map((h) => h[h.length - 1]);
+  const heLo = heEnds.map((e) => V(e.x, e.y + 0.016, e.z));
+  const heHi = heEnds.map((e) => V(e.x, d.topY - 0.02, e.z));
+  let hoses: THREE.InstancedMesh | null = null;
+  if (heEnds.length) {
+    const hose = new THREE.CylinderGeometry(0.0082, 0.0082, 1, hangar ? 12 : 8, 1, true);
+    hose.translate(0, 0.5, 0);
+    owned.push(hose);
+    hoses = new THREE.InstancedMesh(hose, mats.get('braid', 'keep'), heEnds.length);
+    tag(hoses, 'engine', 'braid');
+    hoses.frustumCulled = false;
+    meshes.push(hoses);
+    for (const e of heHi) {
+      const fit = new THREE.CylinderGeometry(0.012, 0.012, 0.02, 6);
+      fit.translate(e.x, e.y + 0.01, e.z);
+      k.add(fit, { part: 'engine', mat: 'steel', node: 'fixed' });
+    }
+  }
+
   // stage-side flange, spool and interface flange above each bellows (fixed)
   for (const [i, b] of bel.entries()) {
     const t: Tag = { part: 'engine', mat: 'stainless', node: 'fixed', front: k.section && b.z > 0.01, thermal: i === 0 ? 0 : 1 };
@@ -298,10 +319,19 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
     } else k.add(revolve([{ pts: low }], FULL[0], FULL[1], s, { centre: c }).surf, tl);
     if (hangar) {
       const bolt = hexBolt(0.012, 0.011);
-      k.add(ringOf(bolt, 12, b.r + 0.012, { centre: V(b.x, b1 + 0.012, b.z) }), t);
-      // interface flange: the nuts sit under it (the bolt heads are on the stage side)
-      k.add(ringOf(bolt.clone().rotateX(Math.PI), 12, b.r + 0.014, { centre: V(b.x, d.topY - 0.018, b.z), phase: Math.PI / 12 }), t);
+      const nut = bolt.clone().rotateX(Math.PI);
+      // the LOX duct flanges are cut in half by the section: their bolts split with them
+      const rings = (f?: (p: THREE.Vector3) => boolean) => [
+        ringOf(bolt, 12, b.r + 0.012, { centre: V(b.x, b1 + 0.012, b.z), filter: f }),
+        // interface flange: the nuts sit under it (the bolt heads are on the stage side)
+        ringOf(nut, 12, b.r + 0.014, { centre: V(b.x, d.topY - 0.018, b.z), phase: Math.PI / 12, filter: f }),
+      ];
+      if (k.section && i === 0) {
+        for (const g of rings((p) => p.z <= 0)) k.add(g, { ...t, front: false });
+        for (const g of rings((p) => p.z > 0)) k.add(g, { ...t, front: true });
+      } else for (const g of rings()) k.add(g, t);
       bolt.dispose();
+      nut.dispose();
     }
   }
 
@@ -318,6 +348,7 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
   const rot = new THREE.Matrix4();
   const yawM = new THREE.Matrix4();
   const up = V(0, 1, 0);
+  const hoseScale = V(1, 1, 1);
   let slide = 0;
   const engineMatrix = new THREE.Matrix4();
   const inst = bel.map(() => ({ lo: new THREE.Vector3(), q: new THREE.Quaternion(), scale: new THREE.Vector3() }));
@@ -350,6 +381,17 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
       const len = dir.length();
       it.q.setFromUnitVectors(up, dir.multiplyScalar(1 / len));
       it.scale.set(b.r, len, b.r);
+    }
+    if (hoses) {
+      for (let i = 0; i < heLo.length; i++) {
+        P.copy(heLo[i]).applyMatrix4(engineMatrix);
+        dir.copy(heHi[i]).sub(P);
+        const len = dir.length();
+        q.setFromUnitVectors(up, dir.multiplyScalar(1 / len));
+        tmp.compose(P, q, hoseScale.set(1, len, 1));
+        hoses.setMatrixAt(i, tmp);
+      }
+      hoses.instanceMatrix.needsUpdate = true;
     }
     for (const bm of bellowMeshes) {
       for (let j = 0; j < bm.ids.length; j++) {

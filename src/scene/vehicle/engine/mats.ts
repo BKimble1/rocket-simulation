@@ -210,16 +210,18 @@ function hatch(f: HatchFamily): THREE.Texture {
     }
   };
   const sgn = st.angle > 0 ? 1 : -1;
-  if (st.pattern === 'single') lines(sgn, 3.4, 0);
+  // line widths about 2 mm at the 4 cm tile: thinner lines vanish at viewing distance and the
+  // section faces read as plain white
+  if (st.pattern === 'single') lines(sgn, 6, 0);
   else if (st.pattern === 'double') {
-    lines(sgn, 2.4, -step * 0.14);
-    lines(sgn, 2.4, step * 0.14);
+    lines(sgn, 4, -step * 0.16);
+    lines(sgn, 4, step * 0.16);
   } else if (st.pattern === 'dash') {
-    lines(sgn, 3, 0);
-    lines(sgn, 1.8, step * 0.5, true);
+    lines(sgn, 5.5, 0);
+    lines(sgn, 3.2, step * 0.5, true);
   } else {
-    lines(sgn, 2.6, 0);
-    lines(-sgn, 1.6, 0);
+    lines(sgn, 4.6, 0);
+    lines(-sgn, 2.8, 0);
   }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -439,7 +441,7 @@ function patchTubes(m: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
 export function hatchMaterial(f: HatchFamily): THREE.Material {
   return once(`hatch-${f}`, () => {
     const t = hatch(f);
-    return std({ color: '#ffffff', map: t, emissive: '#ffffff', emissiveMap: t, emissiveIntensity: 0.16, roughness: 0.62, metalness: 0.1, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+    return std({ color: '#ffffff', map: t, emissive: '#ffffff', emissiveMap: t, emissiveIntensity: 0.1, roughness: 0.62, metalness: 0.1, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
   });
 }
 
@@ -471,9 +473,12 @@ function patchGlow(m: THREE.MeshStandardMaterial, uniform: { value: number }) {
           // radiatively cooled niobium: brightest just below the joint (about 1300 K, a dark
           // red-orange), dimming toward the exit (dull red, then nothing visible)
           float t = clamp(vGlowT, 0.0, 1.0);
+          // (kept below about 0.5 linear: AgX tone mapping desaturates brighter emission to a
+          // pale peach; these values display as about rgb(182, 89, 55) at the joint and
+          // rgb(125, 47, 29) a fifth of the way down)
           float hot = exp(-4.6 * t);
-          vec3 c = mix(vec3(0.42, 0.022, 0.004), vec3(0.98, 0.2, 0.026), hot);
-          totalEmissiveRadiance += c * hot * 1.2 * uGlow;
+          vec3 c = mix(vec3(0.40, 0.026, 0.003), vec3(0.6, 0.065, 0.006), hot);
+          totalEmissiveRadiance += c * hot * 0.8 * uGlow;
           // where it glows, emission dominates the look (a lit, reflective surface would wash the
           // dark red-orange out to a pale peach in a bright hangar)
           float lit = 1.0 - 0.85 * smoothstep(0.0, 0.5, hot * uGlow);

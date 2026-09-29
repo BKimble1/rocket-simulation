@@ -527,7 +527,8 @@ export function upperBurn(c: Craft, plan: UpperBurnPlan, hooks: BurnHooks | null
     prevDes = t >= plan.tGuide ? des : null;
     // throttle
     if (inTail) {
-      thr = Math.max(0, thr - (dt / TAIL_S2) * cutFrom);
+      thr = thr - (dt / TAIL_S2) * cutFrom;
+      if (thr < 1e-9) thr = 0; // no rounding residue left burning after the ramp
     } else if (t + dt <= plan.tIgn + 1e-9) thr = 0;
     else if (t < plan.tIgn + IGN_S2) thr = clamp((t + dt - plan.tIgn) / IGN_S2, 0, 1);
     else {
