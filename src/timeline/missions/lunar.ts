@@ -149,7 +149,7 @@ export function buildLunar(): MissionTimeline {
       k.env.moonPhase0 = ph;
       return k;
     },
-    'far',
+    'trailing',
   );
   const phase0 = found.phase0;
   ctx.env.moonPhase0 = phase0;

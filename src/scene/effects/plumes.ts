@@ -171,6 +171,8 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   p.scatSigma = 0.55 * wbal * sq;
   p.scatAlb.copy(COL.envelope);
   p.glowI = 1.4 * wbal * sq * st * (solid ? 2 : 1);
+  // the ballooned plume is smooth: fine turbulence would only show as grain over its width
+  p.turb *= 1 - 0.6 * wbal;
   p.glowDecay = 0.5 * s.Rbal + 6;
   p.glowCore.copy(COL.balloonGlow);
   p.glowRim.copy(COL.balloonRim);

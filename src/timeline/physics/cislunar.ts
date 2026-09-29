@@ -13,7 +13,7 @@
 import { MOON_DISTANCE, MU_EARTH, MU_MOON, R_MOON, MOON_ORBIT_NORMAL } from '../../world/frames';
 import { Craft, moonPos } from './craft';
 import { kepler } from './kepler';
-import { clamp, vcross, vdot, vlen, vnorm, vsub, type V3 } from './vec';
+import { clamp, vadd, vcross, vdot, vlen, vnorm, vscale, vsub, type V3 } from './vec';
 
 /** Sphere-of-influence radius of the Moon (Laplace, a (m/M)^(2/5)): about 66,000 km. */
 export const SOI_MOON = MOON_DISTANCE * Math.pow(MU_MOON / MU_EARTH, 0.4);
@@ -43,6 +43,9 @@ export interface FlybyResult {
   signed: number;
   soiEnter: number;
   soiExit: number;
+  /** Earth-centred position and velocity at the sphere-of-influence exit (interpolated inside the step). */
+  soiExitR: V3 | null;
+  soiExitV: V3 | null;
 }
 
 /**
@@ -53,11 +56,13 @@ export interface FlybyResult {
 export function coastCislunar(c: Craft, until: number, onStep: ((c: Craft) => void) | null, stopAfterCA = Infinity, stopAfterSoiExit = Infinity): FlybyResult {
   const ph = c.env.moonPhase0;
   if (ph === null) throw new Error('coastCislunar needs the Moon phase');
-  const res: FlybyResult = { t: NaN, dist: Infinity, alt: Infinity, farSide: false, trailing: false, angleFromEarthDeg: 0, signed: Infinity, soiEnter: NaN, soiExit: NaN };
+  const res: FlybyResult = { t: NaN, dist: Infinity, alt: Infinity, farSide: false, trailing: false, angleFromEarthDeg: 0, signed: Infinity, soiEnter: NaN, soiExit: NaN, soiExitR: null, soiExitV: null };
   let prevD = vlen(vsub(c.r, moonAt(c.t, ph)));
   for (let guard = 0; guard < 100_000 && c.t < until - 1e-9; guard++) {
     const dt = Math.min(cislunarDt(c, ph), until - c.t);
     const tPrev = c.t;
+    const rPrev = c.r;
+    const vPrev = c.v;
     c.step(dt, null);
     const m = moonAt(c.t, ph);
     const rel = vsub(c.r, m);
@@ -76,7 +81,12 @@ export function coastCislunar(c: Craft, until: number, onStep: ((c: Craft) => vo
     // sphere-of-influence crossings, interpolated inside the step (steps reach several minutes)
     const cross = () => tPrev + ((c.t - tPrev) * (prevD - SOI_MOON)) / (prevD - d);
     if (Number.isNaN(res.soiEnter) && prevD > SOI_MOON && d <= SOI_MOON) res.soiEnter = cross();
-    if (!Number.isNaN(res.soiEnter) && Number.isNaN(res.soiExit) && prevD <= SOI_MOON && d > SOI_MOON) res.soiExit = cross();
+    if (!Number.isNaN(res.soiEnter) && Number.isNaN(res.soiExit) && prevD <= SOI_MOON && d > SOI_MOON) {
+      res.soiExit = cross();
+      const u = (res.soiExit - tPrev) / (c.t - tPrev);
+      res.soiExitR = vadd(rPrev, vscale(vsub(c.r, rPrev), u));
+      res.soiExitV = vadd(vPrev, vscale(vsub(c.v, vPrev), u));
+    }
     prevD = d;
     onStep?.(c);
     if (d < R_MOON) break; // impact: stop (only trial runs get here)

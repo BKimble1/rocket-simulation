@@ -17,6 +17,7 @@ import { E1V, G0, S1, SERVICE_MODULE } from '../../vehicle/spec';
 import { MU_EARTH, R_EARTH, moonPosition } from '../../world/frames';
 import { kepler } from '../physics/kepler';
 import { SM_PROP_FULL } from '../physics/vehicle';
+import { SM_PROP_AT_DOCKING } from './station';
 
 const TL: Partial<Record<MissionId, MissionTimeline>> = {};
 beforeAll(() => {
@@ -476,9 +477,18 @@ describe('headline facts recomputed independently', () => {
     expect(f['deorbit.dv']).toBeGreaterThan(dvImp - 2);
     expect(f['deorbit.dv']).toBeLessThan(dvImp * 1.08);
     const m0 = f.capsuleKg + f.serviceModuleKg;
+    expect(f.serviceModuleKg).toBeCloseTo(SERVICE_MODULE.mass - SM_PROP_FULL + f['undock.smPropKg'], 6);
     const used = m0 * (1 - Math.exp(-f['deorbit.dv'] / (SERVICE_MODULE.ispVac * G0)));
     expect(f['smSep.smPropLeftKg']).toBeGreaterThan(0);
-    expect(Math.abs(f['smSep.smPropLeftKg'] - (SM_PROP_FULL - used)) / used).toBeLessThan(0.05);
+    expect(Math.abs(f['smSep.smPropLeftKg'] - (f['undock.smPropKg'] - used)) / used).toBeLessThan(0.05);
+    // margin: the propellant left could still give well over half the deorbit burn again
+    expect(f['smSep.dvLeft']).toBeGreaterThan(0.5 * f['deorbit.dv']);
+  });
+
+  it('return starts with the service-module propellant the station mission arrives with', () => {
+    const arrive = tl('station').facts['sm.propLeftKg'];
+    expect(Math.abs(tl('return').facts['undock.smPropKg'] - arrive)).toBeLessThan(1);
+    expect(Math.abs(SM_PROP_AT_DOCKING - arrive)).toBeLessThan(1);
   });
 
   it('boosters: the landing reserve is spent to a thin margin, and the aerodynamic deceleration is plausible', () => {

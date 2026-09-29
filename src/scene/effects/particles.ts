@@ -65,8 +65,13 @@ export interface Rec {
   tauE: number;
   rot0: number;
   spin: number;
-  stretchAxis: THREE.Vector3;
-  stretchLen: number;
+  /**
+   * Streak to the neighbouring spawns (continuous smoke from discrete particles): the
+   * emitter's velocity through the air and the spawn interval (s); 0 disables it.
+   */
+  gapVel: THREE.Vector3;
+  gapDt: number;
+  /** Velocity-aligned streak (spray): streak length per m/s of speed. */
   stretchVel: number;
   variant: number;
 }
@@ -108,8 +113,8 @@ const makeRec = (): Rec => ({
   tauE: 1,
   rot0: 0,
   spin: 0,
-  stretchAxis: new THREE.Vector3(0, 1, 0),
-  stretchLen: 0,
+  gapVel: new THREE.Vector3(),
+  gapDt: 0,
   stretchVel: 0,
   variant: 0,
 });
@@ -288,8 +293,7 @@ function exhaustStart(c: ClusterSnap, ts: number, rec: Rec, rnd: (j: number) => 
   rec.variant = Math.floor(rnd(10) * 4);
   // spacing of successive spawns along the flight path must be covered by the particle size
   const spacing = c.airVel.length() * dtS * m;
-  rec.stretchAxis.copy(c.airVel).normalize();
-  if (rec.stretchAxis.lengthSq() < 0.5) rec.stretchAxis.copy(c.dir).negate();
+  rec.gapVel.copy(c.airVel);
   return Math.max(R * (0.7 + 0.35 * rnd(11)), spacing * 0.55);
 }
 
@@ -340,7 +344,7 @@ const TAIL: Species = {
     }
     rec.tauC = solid ? 1.2 : 2.6 + 1.4 * rnd(17);
     // overlap successive puffs along the path (a continuous column, not a string of beads)
-    rec.stretchLen = c.airVel.length() * dtS * 0.9;
+    rec.gapDt = dtS;
     rec.stretchVel = 0;
     return true;
   },
@@ -391,7 +395,7 @@ const TRAIL: Species = {
     rec.tauE = 1;
     // soft wisps stretched along the path so the trail reads as one continuous column
     rec.variant = rnd(10) < 0.7 ? 2 + Math.floor(rnd(18) * 2) : Math.floor(rnd(18) * 2);
-    rec.stretchLen = spacing * 0.9;
+    rec.gapDt = dtS;
     rec.stretchVel = 0;
     return true;
   },
@@ -507,7 +511,7 @@ const GROUND: Species = {
     rec.rot0 = rnd(19) * Math.PI * 2;
     rec.spin = (rnd(20) - 0.5) * 0.35;
     rec.variant = Math.floor(rnd(21) * 4);
-    rec.stretchLen = 0;
+    rec.gapDt = 0;
     rec.stretchVel = 0;
     return true;
   },
@@ -567,7 +571,7 @@ const VENT: Species = {
     rec.rot0 = rnd(12) * Math.PI * 2;
     rec.spin = (rnd(13) - 0.5) * 0.8;
     rec.variant = Math.floor(rnd(14) * 4);
-    rec.stretchLen = 0;
+    rec.gapDt = 0;
     rec.stretchVel = 0;
     return true;
   },
@@ -612,7 +616,7 @@ const WATER: Species = {
     rec.rot0 = rnd(6) * Math.PI * 2;
     rec.spin = 0;
     rec.variant = Math.floor(rnd(7) * 4);
-    rec.stretchLen = 0;
+    rec.gapDt = 0;
     rec.stretchVel = 0.05;
     return true;
   },
@@ -662,13 +666,15 @@ const PUFF: Species = {
     rec.size0 = (mono ? 0.07 : 0.12 + 0.08 * rnd(5)) * ctx.sizeK;
     rec.size1 = (mono ? 0.9 + 0.5 * rnd(6) : 2.2 + 2.2 * rnd(6)) * ctx.sizeK * (vac ? 1.3 : 1);
     rec.tauS = 0.4;
-    rec.sizeLin = vac ? (mono ? 0.8 : 2.4) : 0.5;
-    rec.life = 0.8 + 0.6 * rnd(7);
+    // in vacuum the gas expands at its thermal speed and is gone in a fraction of a second;
+    // in air it slows within metres and disperses in about a second
+    rec.sizeLin = vac ? (mono ? 2.5 : 9) : 0.5;
+    rec.life = vac ? 0.35 + 0.35 * rnd(7) : 0.8 + 0.6 * rnd(7);
     rec.alpha0 = Math.min(1, (hyp ? 0.3 : mono ? 0.22 : 0.55) * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.03;
     rec.fadeOut = 0.25;
-    rec.thin = 0.8;
+    rec.thin = vac ? 1 : 0.8;
     rec.thinRef = rec.size0 * 4;
     if (hyp) {
       rec.alb0.setRGB(0.96, 0.84, 0.76);
@@ -691,7 +697,7 @@ const PUFF: Species = {
     rec.rot0 = rnd(8) * Math.PI * 2;
     rec.spin = (rnd(9) - 0.5) * 2;
     rec.variant = Math.floor(rnd(10) * 4);
-    rec.stretchLen = 0;
+    rec.gapDt = 0;
     rec.stretchVel = 0;
     return true;
   },
@@ -909,10 +915,16 @@ export function evalRec(r: Rec, a: number, o: Particle): boolean {
     if (sp > 1e-3) o.axis.multiplyScalar(1 / sp);
     rotateEarth(o.axis, OMEGA_EARTH * a);
     o.stretch = sp * r.stretchVel;
-  } else if (r.stretchLen > 0) {
-    o.axis.copy(r.stretchAxis);
-    if (r.mode !== Mode.Vacuum) rotateEarth(o.axis, OMEGA_EARTH * a);
-    o.stretch = r.stretchLen;
+  } else if (r.gapDt > 0 && r.mode === Mode.Air) {
+    // the next particle was spawned one interval later, from where the emitter had moved:
+    // the gap between them is (emitter velocity - particle velocity) x interval
+    const k = Math.exp(-a / r.tau);
+    const kb = r.buoy * Math.exp(-a / r.tauB) + r.buoyLin;
+    o.axis.copy(r.gapVel).addScaledVector(r.u0, -k).addScaledVector(r.up, -kb);
+    const g = o.axis.length();
+    if (g > 1e-6) o.axis.multiplyScalar(1 / g);
+    rotateEarth(o.axis, OMEGA_EARTH * a);
+    o.stretch = Math.min(g * r.gapDt, radius * 12);
   } else o.stretch = 0;
   return true;
 }

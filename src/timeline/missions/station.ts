@@ -37,6 +37,12 @@ const START = -60;
 /** The dataset's crew stack (spec.ts CAPSULE, SERVICE_MODULE, ABORT_TOWER), flown with an expendable booster (kg). */
 export const CREW_DATASET = { capsule: CAPSULE.mass, smDry: SM_DRY, smProp: SM_PROP_FULL, les: ABORT_TOWER.mass };
 export const STATION_ALT = 400e3;
+/**
+ * Service-module propellant left after docking (kg): this mission's 'sm.propLeftKg' fact
+ * (1,107.6 kg) rounded to the kilogram. The capsule-return mission starts with it, so the two
+ * lessons agree; a test keeps the constant in step with this build.
+ */
+export const SM_PROP_AT_DOCKING = 1108;
 const PHASING_REVS = 4;
 /** Altitude the two phasing burns lead to: 3 km below the station. */
 const H2 = 397e3;

@@ -9,14 +9,16 @@
  * deceleration, opens drogues at 7 km and mains at 2 km (reefed, then full) and splashes down
  * in the Atlantic a few hundred kilometres east of the launch site.
  *
- * Masses from spec.ts (capsule 8.3 t at entry, service module 4.1 t). Mission time: the lesson
+ * Masses from spec.ts (capsule 8.3 t at entry, service module 2.6 t dry) plus the service-module
+ * propellant the station mission arrives with (SM_PROP_AT_DOCKING, 1,108 kg of the 1,500 kg
+ * launched: the phasing, raise and approach burns used the rest). Mission time: the lesson
  * starts about a day after launch (T+23 h), the moment the station's ground track brings the
  * splashdown zone east of the pad; the station's phase is set by a short deterministic
  * iteration so the capsule comes down there.
  *
  * Reference trajectory from the simplified point-mass model, computed once.
  */
-import { CAPSULE, SERVICE_MODULE } from '../../vehicle/spec';
+import { CAPSULE, G0, SERVICE_MODULE } from '../../vehicle/spec';
 import { MU_EARTH, OMEGA_EARTH, R_EARTH, latLonOf } from '../../world/frames';
 import * as THREE from 'three';
 import type { MissionTimeline, Shot } from '../types';
@@ -28,11 +30,11 @@ import { CAPSULE_AREA, DROGUE_CDA, MAIN_CDA, flyCapsuleDescent, type DescentResu
 import { elements } from '../physics/kepler';
 import { apsidesKm, coastKepler, orbitBurn, retrogradeAttitude, zenithAttitude } from '../physics/orbit';
 import { absState, angleIn, circularOrbit, cwPropagate, lvlh, lvlhAttitude, orbitState, type CircularOrbit, type Rel } from '../physics/rendezvous';
-import { CAPSULE_DOCK_Y, CAPSULE_ITEM, ENG_SM, SM_COM, SM_DRY, SM_PROP_FULL, STATION_DOCK, STATION_MASS, areaOf, sumMass, type MassItem } from '../physics/vehicle';
+import { CAPSULE_DOCK_Y, CAPSULE_ITEM, ENG_SM, SM_COM, SM_DRY, STATION_DOCK, STATION_MASS, areaOf, sumMass, type MassItem } from '../physics/vehicle';
 import { DEG, qaxisX, qdelta, qslerp, v3, vadd, vcross, vlen, vnorm, vscale, type Q, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
 import { Pres, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
-import { STATION_ALT } from './station';
+import { SM_PROP_AT_DOCKING, STATION_ALT } from './station';
 
 /** Splashdown this many degrees of longitude east of the pad (about 290 km at 28.5 deg N). */
 const SPLASH_EAST_DEG = 3.0;
@@ -74,7 +76,7 @@ function dockedRel(comY: number): Rel {
 function fly(ctx: Ctx | null, env: Env, theta0: number, tU: number, start: number, end: number): ReturnRun {
   const orb = station(theta0);
   const n = orb.n;
-  const cap = new Craft({ bodies: ['capsule', 'service'], t: start, r: v3(), v: v3(), q: { x: 0, y: 0, z: 0, w: 1 }, fixedMass: sumMass(ITEMS).m, tanks: { sm: SM_PROP_FULL }, aero: { area: CAPSULE_AREA, cd: cdCapsule }, comFn: comFrom(ITEMS), env });
+  const cap = new Craft({ bodies: ['capsule', 'service'], t: start, r: v3(), v: v3(), q: { x: 0, y: 0, z: 0, w: 1 }, fixedMass: sumMass(ITEMS).m, tanks: { sm: SM_PROP_AT_DOCKING }, aero: { area: CAPSULE_AREA, cd: cdCapsule }, comFn: comFrom(ITEMS), env });
   cap.groups = [{ id: 'sm', eng: ENG_SM, n: 1, tank: 'sm', thr: 0, next: 0 }];
   const comY = cap.com.y;
   const x0 = dockedRel(comY);
@@ -279,7 +281,8 @@ export function buildReturn(): MissionTimeline {
   f('search.theta0', searchTheta0);
   f('search.tU', tU);
   f('capsuleKg', CAPSULE.mass);
-  f('serviceModuleKg', SERVICE_MODULE.mass);
+  f('serviceModuleKg', SM_DRY + SM_PROP_AT_DOCKING);
+  f('undock.smPropKg', SM_PROP_AT_DOCKING);
   f('undock.t', tU);
   f('departureDv', run.dvDepart);
   f('deorbit.t', run.deorbit.start);
@@ -288,6 +291,8 @@ export function buildReturn(): MissionTimeline {
   f('deorbit.perigeeKm', run.deorbit.perigeeKm);
   f('smSep.t', run.smSep);
   f('smSep.smPropLeftKg', run.smPropLeft);
+  // velocity change still in the tanks at separation (rocket equation, capsule + service module)
+  f('smSep.dvLeft', ENG_SM.ispVac * G0 * Math.log((CAPSULE.mass + SM_DRY + run.smPropLeft) / (CAPSULE.mass + SM_DRY)));
   f('entryInterface.t', d.ei);
   f('entry.peakHeating.t', d.peakHeating.t);
   f('entry.peakHeating.altKm', d.peakHeating.alt / 1000);

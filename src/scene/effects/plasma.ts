@@ -124,7 +124,7 @@ vec3 field(vec3 p) {
     float s = (y - yf) / th;
     float layer = smoothstep(-0.08, 0.3, s) * (1.0 - smoothstep(0.78, 1.08, s));
     float radial = clamp(1.15 - 0.55 * (r / R) * (r / R), 0.25, 1.15) * (1.0 - smoothstep(1.02, 1.25, r / R));
-    e += mix(uColRim, uColHot, clamp(1.2 - r / R, 0.0, 1.0)) * (layer * radial * 26.0);
+    e += mix(uColRim, uColHot, clamp(1.2 - r / R, 0.0, 1.0)) * (layer * radial * 11.0);
   }
   // hot gas turning around the shoulder
   float yr = faceY(R);
@@ -137,12 +137,14 @@ vec3 field(vec3 p) {
     float rsl = R * (1.02 - 0.8 * conv) + max(0.0, x - uNeck) * 0.05;
     float w = 0.12 * R + 0.07 * x;
     float nz = fxNoise(vec3(p.x * 1.3, (y + uTime * 60.0) * 0.35, p.z * 1.3) / R);
-    float sl = exp(-pow((r - rsl) / w, 2.0)) * exp(-x / uWake) * (0.6 + 0.8 * nz);
-    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 2.6;
+    // fades out before the end of the bounding volume (no visible cut)
+    float tailFade = 1.0 - smoothstep(0.55, 0.95, x / max(yr - uY0, 1e-3));
+    float sl = exp(-pow((r - rsl) / w, 2.0)) * exp(-x / uWake) * (0.6 + 0.8 * nz) * tailFade;
+    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 1.6;
   }
   // soft glow around the stagnation region (the eye sees the bright layer bleed)
-  float hd = length(vec2(r, y - uDelta * 0.5)) / (1.25 * R);
-  e += uColHot * exp(-hd * hd) * 0.55;
+  float hd = length(vec2(r, y - uDelta * 0.5)) / (0.9 * R);
+  e += uColHot * exp(-hd * hd) * 0.45;
   return e;
 }
 
@@ -272,7 +274,7 @@ export class PlasmaVolume {
     }
     const wake = (u.uWake.value as number) * 2.6;
     u.uY0.value = -Math.min(wake, booster ? 16 : 60);
-    u.uY1.value = (u.uDelta.value as number) + 1.4 * R;
+    u.uY1.value = (u.uDelta.value as number) + 2.2 * R;
     u.uRb0.value = booster ? 2.2 * R : 2.4 * R;
     u.uRb1.value = 2.1 * R;
     // camera inside the bounds: draw back faces
