@@ -1684,3 +1684,28 @@ code {
   border-radius: 4px;
   flex: none;
 }
+
+/* capture mode (?ui=brand): the identity on its own for the poster and the preview clip */
+.poster-brand {
+  position: absolute;
+  left: 28px;
+  bottom: 26px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow-2);
+  color: var(--ink);
+}
+.poster-brand__sub {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line-2);
+  font-size: 13px;
+  color: var(--ink-3);
+}

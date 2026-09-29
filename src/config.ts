@@ -30,4 +30,7 @@ export const FLAGS = {
   failAssets: params.get('failassets') === '1',
   /** Force no-WebGL fallback (tests the fallback). */
   noWebGL: params.get('nowebgl') === '1',
+  /** Capture mode for posters and preview clips: ?ui=0 hides the interface, ?ui=brand keeps only the identity. */
+  clean: params.get('ui') === '0' || params.get('ui') === 'brand',
+  brandOnly: params.get('ui') === 'brand',
 };

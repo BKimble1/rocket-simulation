@@ -204,6 +204,19 @@ export function App() {
   );
 }
 
+/** The identity alone, for the poster and the muted preview clip (?ui=brand). */
+function PosterBrand() {
+  return (
+    <div className="poster-brand" aria-label="KIMBLE Rocket Engineering, ONE / FAB">
+      <KimbleLogo height={30} />
+      <span className="poster-brand__sub">
+        <span>Rocket Engineering</span>
+        <OneFab height={9} />
+      </span>
+    </div>
+  );
+}
+
 function Main() {
   const view = useApp((s) => s.view);
   const toast = useApp((s) => s.toast);
@@ -241,17 +254,23 @@ function Main() {
   return (
     <div className="app" data-view={view}>
       <Stage>{{ hangar: <Hangar />, flight: <FlightWorld />, map: <OrbitalMap /> }}</Stage>
-      <Header />
-      <main className="overlay" aria-live="polite">
-        {view === 'home' && <Home />}
-        {view === 'explore' && <Explore />}
-        {view === 'missions' && <Missions />}
-        {view === 'mission' && <MissionView />}
-        {view === 'watch' && <WatchView />}
-      </main>
-      <LoadingNote />
-      {toast && <div className="toast">{toast}</div>}
-      <Drawers />
+      {FLAGS.clean ? (
+        FLAGS.brandOnly && <PosterBrand />
+      ) : (
+        <>
+          <Header />
+          <main className="overlay" aria-live="polite">
+            {view === 'home' && <Home />}
+            {view === 'explore' && <Explore />}
+            {view === 'missions' && <Missions />}
+            {view === 'mission' && <MissionView />}
+            {view === 'watch' && <WatchView />}
+          </main>
+          <LoadingNote />
+          {toast && <div className="toast">{toast}</div>}
+          <Drawers />
+        </>
+      )}
       {FLAGS.diag && <Diag />}
     </div>
   );
