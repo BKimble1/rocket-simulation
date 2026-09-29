@@ -60,6 +60,7 @@ export const PART_IDS = [
   'grid-fins',
   'landing-legs',
   'cold-gas-rcs',
+  'booster-avionics',
   // separation
   'stage-separation',
   // upper stage
@@ -147,6 +148,7 @@ export const PARTS: Record<PartId, PartDef> = Object.fromEntries(
     p('grid-fins', 'Grid fins', 'Grid fins', 'booster', 'recovery', { variants: ['recovery'], keywords: ['lattice fins', 'fins', 'aero control'] }),
     p('landing-legs', 'Landing legs', 'Landing legs', 'booster', 'recovery', { variants: ['recovery'], keywords: ['legs', 'touchdown', 'crush core'] }),
     p('cold-gas-rcs', 'Cold-gas reaction control thrusters (booster)', 'Booster RCS', 'booster', 'recovery', { variants: ['recovery'], keywords: ['nitrogen thrusters', 'attitude control', 'flip'] }),
+    p('booster-avionics', 'Booster flight computers and navigation', 'Booster avionics', 'booster', 'guidance', { variants: ['recovery'], principal: false, keywords: ['booster computer', 'recovery guidance', 'IMU', 'GNSS'] }),
     p('stage-separation', 'Stage separation system', 'Stage separation', 'booster', 'separation', { keywords: ['pneumatic pushers', 'separation collet', 'staging', 'release'] }),
     p('vacuum-engine', 'E-1V vacuum engine', 'E-1V engine', 'upper', 'propulsion', { keywords: ['upper stage engine', 'vacuum', 'MVac'] }),
     p('nozzle-extension', 'Radiatively cooled nozzle extension', 'Nozzle extension', 'upper', 'thermal', { keywords: ['niobium', 'radiation cooled', 'skirt'] }),

@@ -36,6 +36,8 @@ export const LENS_COLORS: Record<MaterialId, string> = {
   'cryo-foam': '#e0873a',
   'honeycomb-core': '#c9b36b',
   textiles: '#d98bb3',
+  'structural-steel': '#6b7a8c',
+  'refractory-concrete': '#b9a58c',
 };
 
 export const HIGHLIGHT = new THREE.Color('#ffb54a');

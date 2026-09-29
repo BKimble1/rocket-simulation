@@ -212,6 +212,8 @@ export interface PhaseCard {
   next: string;
   /** Optional short equation reference for this phase (e.g. dynamic pressure at max-q). */
   equation?: 'thrust' | 'dynamic-pressure' | 'rocket-equation' | 'orbital-speed';
+  /** Sources for figures quoted on the card (optional; cards cite through part lessons otherwise). */
+  sources?: string[];
 }
 
 /** Watch-mode narration: cues anchored to mission events so speech matches the picture. */

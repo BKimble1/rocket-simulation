@@ -1,6 +1,6 @@
 /** Guidance and control lessons: thrust vector control actuators and the avionics. */
 import type { PartLesson, PartNote } from '../types';
-import { at, lesson, mats } from './util';
+import { at, lesson, mats, note } from './util';
 import { F } from './derived';
 
 export const GUIDANCE: (PartLesson | PartNote)[] = [
@@ -77,5 +77,20 @@ export const GUIDANCE: (PartLesson | PartNote)[] = [
     },
     demo: 'gnc-loop',
     sources: ['nasa-bsf-3', 'nasa-bsf-14', 'nasa-sst-soa'],
+  }),
+  note({
+    id: 'booster-avionics',
+    summary: 'The booster’s own flight computers, inertial measurement unit and satellite-navigation receivers, which fly it home after the upper stage has gone.',
+    function: 'During ascent the upper stage’s avionics lead the vehicle. After separation the booster is a separate spacecraft: its own navigation estimates where it is and how fast it moves, its guidance computes the flip, the boostback, the entry and landing burns and the grid-fin commands toward the landing zone, and its control loop commands the cold-gas thrusters, the engine gimbals and the grid-fin actuators.',
+    why: 'A returning booster cannot be steered from the ground in real time: the landing burn is decided in seconds and the booster must correct its own errors all the way down, so it carries redundant computers and sensors of its own.',
+    materials: mats('booster-avionics'),
+    phases: [
+      at('leo', 'flip', 'Commands the cold-gas thrusters for the flip.'),
+      at('leo', 'boostback', 'Steers the boostback burn toward the landing zone.'),
+      at('leo', 'aero-guidance', 'Turns navigation errors into grid-fin commands.'),
+      at('leo', 'landing-burn', 'Times the landing burn and holds the booster upright.'),
+      at('suborbital', 'landing-burn', 'Flies the booster back to the landing zone after the hop.'),
+    ],
+    sources: ['nasa-bsf-14'],
   }),
 ];

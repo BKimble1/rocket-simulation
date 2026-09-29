@@ -15,5 +15,7 @@ export const MATERIAL_IDS = [
   'cryo-foam',
   'honeycomb-core',
   'textiles',
+  'structural-steel',
+  'refractory-concrete',
 ] as const;
 export type MaterialId = (typeof MATERIAL_IDS)[number];

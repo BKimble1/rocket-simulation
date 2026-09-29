@@ -59,8 +59,13 @@ export const ASSIGNMENTS: Partial<Record<PartId, MaterialUse[]>> = {
   'docking-system': [u('al-2219', 'Docking ring and latches'), u('stainless', 'Hooks and springs')],
   'service-module': [u('al-2219', 'Primary structure'), u('mli', 'Thermal blankets'), u('titanium', 'Propellant tanks')],
   'launch-abort-system': [u('cfrp-sandwich', 'Tower fairing and nose'), u('nickel-superalloy', 'Abort motor nozzles')],
-  'launch-mount': [u('stainless', 'Hold-down clamp mechanisms')],
-  'flame-deflector': [u('stainless', 'Water-cooled steel deflector plates')],
+  's1-engine-cluster': [u('grcop', 'Chamber liners of the seven engines'), u('nickel-superalloy', 'Turbomachinery and hot manifolds'), u('stainless', 'Lines, bellows and nozzle tubes')],
+  'booster-avionics': [u('al-2219', 'Avionics enclosures and mounting shelf')],
+  station: [u('al-2219', 'Welded pressurized module shells'), u('mli', 'Thermal blankets on modules and truss'), u('cfrp-sandwich', 'Solar-array substrates and radiator panels')],
+  'launch-mount': [u('stainless', 'Hold-down clamp mechanisms'), u('structural-steel', 'Launch-mount frame'), u('refractory-concrete', 'Mount foundations')],
+  'service-tower': [u('structural-steel', 'Galvanized lattice tower, platforms and access arms')],
+  'flame-deflector': [u('stainless', 'Water-cooled steel deflector plates'), u('refractory-concrete', 'Flame trench lining')],
+  'sound-suppression': [u('structural-steel', 'Elevated water tank and supply piping')],
 };
 
 /** Parts that use a material in this vehicle (the reverse index). */

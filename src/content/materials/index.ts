@@ -14,6 +14,7 @@ import { MATERIAL_IDS, type MaterialId } from './ids';
 import { AL_2219, AL_LI, GRCOP, NICKEL_SUPERALLOY, NIOBIUM_C103, STAINLESS, TITANIUM } from './metals';
 import { CFRP_COPV, CFRP_SANDWICH, HONEYCOMB_CORE, TEXTILES } from './composites';
 import { ABLATOR, CERAMIC_TILES, CRYO_FOAM, MLI } from './thermal';
+import { REFRACTORY_CONCRETE, STRUCTURAL_STEEL } from './ground';
 
 const DRAFTS: Record<MaterialId, MaterialDraft> = {
   'al-li': AL_LI,
@@ -31,6 +32,8 @@ const DRAFTS: Record<MaterialId, MaterialDraft> = {
   'cryo-foam': CRYO_FOAM,
   'honeycomb-core': HONEYCOMB_CORE,
   textiles: TEXTILES,
+  'structural-steel': STRUCTURAL_STEEL,
+  'refractory-concrete': REFRACTORY_CONCRETE,
 };
 
 /** Parts that use a material in this illustrative vehicle, with their roles (from ASSIGNMENTS). */

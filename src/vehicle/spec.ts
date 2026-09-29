@@ -38,7 +38,10 @@ export interface EngineSpec {
   expansionRatio: number;
   throatDiameter: number;
   exitDiameter: number;
-  /** Overall engine length, gimbal point to nozzle exit (m). */
+  /**
+   * Overall engine length (m), from the top of the powerhead to the nozzle exit. For the E-1 the
+   * gimbal point sits 2.3 m above the exit (STATIONS.s1Gimbal); for the E-1V it is 6.1 m above.
+   */
   length: number;
   gimbalRangeDeg: number;
   /** Deepest stable throttle as a fraction of rated thrust. */
@@ -52,21 +55,28 @@ export interface EngineSpec {
   restartable: boolean;
 }
 
-/** First-stage engine: sea-level nozzle, regeneratively cooled chamber and nozzle. */
+/**
+ * First-stage engine: sea-level nozzle, regeneratively cooled chamber and nozzle.
+ *
+ * Internally consistent nozzle numbers (ratio of specific heats 1.2, nozzle efficiency 0.975,
+ * implied characteristic velocity c* = Pc * At / mdot = 1,746 m/s, typical of LOX/RP-1):
+ * vacuum thrust = Cf * Pc * At with the ideal vacuum thrust coefficient for the expansion ratio;
+ * sea-level thrust = vacuum thrust - p0 * Ae (101,325 Pa on the exit area). A test checks it.
+ */
 export const E1: EngineSpec = {
   id: 'E-1',
   name: 'E-1 sea-level engine',
   cycle: 'gas-generator',
   propellants: 'LOX/RP-1',
-  thrustSL: 760e3,
+  thrustSL: 744e3,
   thrustVac: 835e3,
-  ispSL: 285,
+  ispSL: 278,
   ispVac: 312,
   chamberPressure: 8.5e6,
   mixtureRatio: 2.3,
-  expansionRatio: 18,
-  throatDiameter: 0.25,
-  exitDiameter: 1.06,
+  expansionRatio: 16,
+  throatDiameter: 0.267,
+  exitDiameter: 1.068,
   length: 2.55,
   gimbalRangeDeg: 5,
   minThrottle: 0.55,
@@ -77,9 +87,10 @@ export const E1: EngineSpec = {
 };
 
 /**
- * Upper-stage engine: the same core (chamber, injector, turbopump, gas generator) with a
- * large radiatively cooled nozzle extension for vacuum. Restartable (TEA-TEB igniter
- * cartridges, see ACCURACY.md).
+ * Upper-stage engine: the SAME core as the E-1 (same injector, chamber, 0.267 m throat, 8.5 MPa,
+ * turbopump and gas generator, about 272 kg/s of propellant) with a large radiatively cooled
+ * nozzle extension (expansion ratio 110) for vacuum, which raises the vacuum thrust and specific
+ * impulse. Restartable (TEA-TEB igniter cartridges, see ACCURACY.md).
  */
 export const E1V: EngineSpec = {
   id: 'E-1V',
@@ -87,18 +98,18 @@ export const E1V: EngineSpec = {
   cycle: 'gas-generator',
   propellants: 'LOX/RP-1',
   thrustSL: null,
-  thrustVac: 700e3,
+  thrustVac: 910e3,
   ispSL: null,
   ispVac: 342,
   chamberPressure: 8.5e6,
   mixtureRatio: 2.3,
   expansionRatio: 110,
-  throatDiameter: 0.23,
-  exitDiameter: 2.41,
+  throatDiameter: 0.267,
+  exitDiameter: 2.8,
   length: 6.1,
   gimbalRangeDeg: 4,
   minThrottle: 0.6,
-  mass: 610,
+  mass: 690,
   pumpRpm: 32000,
   ggFlowFraction: 0.03,
   restartable: true,
