@@ -35,9 +35,8 @@ test('learning path, glossary, knowledge checks: explored and checked kept apart
   await page.getByRole('button', { name: 'Learning path, glossary and checks' }).click();
   await page.getByRole('dialog', { name: 'Learning path' }).getByRole('button', { name: 'Knowledge checks' }).click();
   const checks = page.getByRole('dialog', { name: 'Knowledge checks' });
-  const q = checks.locator('.check-q').filter({ has: page.locator('.check-q__choices') }).first();
-  await q.locator('.choice').first().click();
-  await expect(q.getByRole('status')).toContainText(/Right\.|Not quite\./);
+  await checks.locator('.check-q__choices .choice').first().click();
+  await expect(checks.getByRole('status').first()).toContainText(/Right\.|Not quite\./);
   await expect.poll(async () => Object.keys((await progress(page)).checked).length).toBe(1);
   await checks.getByRole('button', { name: 'Close' }).click();
 
