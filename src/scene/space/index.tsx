@@ -14,7 +14,9 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { use, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { createSpace } from './system';
-import { loadSpaceTextures, spaceTexturesSettled } from './assets';
+import { loadSpaceTextures, spaceTexturesSettled, spaceAssets } from './assets';
+import { skyState } from './skyState';
+import { FLAGS } from '../../config';
 
 export { skyState } from './skyState';
 export { spaceAssets } from './assets';
@@ -43,6 +45,20 @@ export function SpaceWorld({ applyExposure = true, clouds = true, holeDebug = fa
   }, [scene, gl]);
 
   useEffect(() => () => sys.dispose(scene), [sys, scene]);
+
+  useEffect(() => {
+    if (!FLAGS.hooks) return;
+    // test hooks: the lighting state and the loading state of the space module
+    const w = window as unknown as Record<string, unknown>;
+    const hook = { scene, root: sys.root, bench: (n = 3) => sys.bench(gl, scene, camera, n) };
+    w.__rocketSky = skyState;
+    w.__rocketSpaceAssets = spaceAssets;
+    w.__rocketSpace = hook;
+    return () => {
+      // a remount may already have installed its own hook
+      if (w.__rocketSpace === hook) delete w.__rocketSpace;
+    };
+  }, [sys, scene, gl, camera]);
 
   useFrame(() => sys.update(gl, scene, camera), 0);
 

@@ -2,30 +2,24 @@
  * Station delivery: the crew stack (capsule, service module, abort tower) rides the K-1 into the
  * station's orbital plane (the launch is timed so the pad lies in that plane at T-0: the plane
  * of a due-east launch, inclination 28.5 deg), the abort tower leaves after staging on its own
- * jettison motor, the upper stage inserts the capsule into a 200 x 250 km orbit behind and below
- * the station, and the booster returns to the landing zone. The capsule then phases for four
- * revolutions (a lower orbit is a faster orbit), raises its orbit with two service-module burns
- * (Hohmann-like) to 3 km below the station, and flies the final approach with Clohessy-Wiltshire
- * relative motion: a two-impulse transfer to a hold point 400 m straight below the station, then
- * up the radial line (R-bar) with holds at 400, 150 and 20 m and a closing speed of 0.08 m/s at
- * contact; soft capture, then hard capture.
+ * jettison motor, and the upper stage inserts the capsule into a 200 x 250 km orbit behind and
+ * below the station. The capsule then phases for four revolutions (a lower orbit is a faster
+ * orbit), raises its orbit with two service-module burns (Hohmann-like) to 3 km below the
+ * station, and flies the final approach with Clohessy-Wiltshire relative motion: a two-impulse
+ * transfer to a hold point 400 m straight below the station, then up the radial line (R-bar)
+ * with holds at 400, 150 and 20 m and a closing speed of 0.08 m/s at contact; soft capture,
+ * then hard capture.
  *
- * Crew stack masses. The dataset's stack (spec.ts: capsule 8,300 kg, service module 4,100 kg,
- * abort tower 5,400 kg) puts 12.4 t in orbit. With the booster keeping its return-to-launch-site
- * reserve (about 50 t), the K-1 places at most about 7.8 t in the 200 x 250 km insertion orbit
- * with that 5.4 t tower (capsule about 3.7 t with the 4.1 t service module): 4.6 t short. With
- * the booster expended the dataset's stack reaches the insertion orbit with about 1 t of
- * upper-stage propellant to spare. So the builder follows the outline: while the station
- * outline recovers the booster (OUTLINES.station.recovery, the RTLS branch) it flies the lighter
- * CREW_RTLS stack; with an expendable booster it flies the dataset's CREW_DATASET stack.
- * Which one was flown is reported in the facts (crew.*Kg, crew.dataset).
+ * The booster is EXPENDED (outline: recovery false). The dataset's crew stack (spec.ts: capsule
+ * 8,300 kg, service module 4,100 kg, abort tower 5,400 kg) is too heavy to fly with the
+ * return-to-launch-site reserve of about 50 t, so the booster burns to its depletion margin,
+ * carries no legs, and falls into the Atlantic downrange (flight.ts disposeBooster).
  *
  * Reference trajectory from the simplified point-mass model, computed once.
  */
 import { MU_EARTH, R_EARTH } from '../../world/frames';
-import type { Branch, MissionTimeline, Shot } from '../types';
+import type { MissionTimeline } from '../types';
 import { ABORT_TOWER, CAPSULE } from '../../vehicle/spec';
-import type { RtlsResult } from '../physics/landing';
 import { cdCapsule, cdFreeMolecular } from '../physics/aero';
 import { comFrom, type StackSpec } from '../physics/ascent';
 import { Craft } from '../physics/craft';
@@ -36,13 +30,11 @@ import { absState, angleIn, circularOrbit, cwPropagate, cwTarget, lvlh, lvlhAtti
 import { CAPSULE_DOCK_Y, ENG_SM, SM_DRY, SM_PROP_FULL, STATION_DOCK, STATION_MASS, areaOf, sumMass } from '../physics/vehicle';
 import { DEG, qaxisY, qdelta, v3, vadd, vcross, vlen, vnorm, vscale, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, branchFrom, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
 import { ascentFacts, flyOrbitalAscent, s2Channels } from './flight';
 
 const START = -60;
-/** Crew stack flown while the booster returns to the launch site (kg): see the header. */
-export const CREW_RTLS = { capsule: 4500, smDry: 1500, smProp: 900, les: 2400 };
-/** The dataset's crew stack (spec.ts CAPSULE, SERVICE_MODULE, ABORT_TOWER), flown with an expendable booster. */
+/** The dataset's crew stack (spec.ts CAPSULE, SERVICE_MODULE, ABORT_TOWER), flown with an expendable booster (kg). */
 export const CREW_DATASET = { capsule: CAPSULE.mass, smDry: SM_DRY, smProp: SM_PROP_FULL, les: ABORT_TOWER.mass };
 export const STATION_ALT = 400e3;
 const PHASING_REVS = 4;
@@ -59,21 +51,24 @@ function move(a: number, b: number, D: number, u: number): { x: number; v: numbe
   return { x: a + (b - a) * (u - Math.sin(2 * Math.PI * u) / (2 * Math.PI)), v: ((b - a) / D) * (1 - Math.cos(2 * Math.PI * u)) };
 }
 
-/** Station delivery; `recovery` (default: the outline's) chooses the RTLS or the expendable flight (see the header). */
-export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.station.branch): MissionTimeline {
+/** Station delivery with an expendable booster (see the header). */
+export function buildStation(): MissionTimeline {
   const ctx = new Ctx();
   const O = OUTLINES.station;
-  const CREW = recovery ? CREW_RTLS : CREW_DATASET;
-  const SPEC: StackSpec = { payload: 'capsule', recovery, crew: true, boosterOnly: false, crewKg: CREW };
+  if (O.recovery || O.branch) throw new Error('station: the outline recovers the booster, but the dataset crew stack needs it expended');
+  const CREW = CREW_DATASET;
+  const SPEC: StackSpec = { payload: 'capsule', recovery: false, crew: true, boosterOnly: false, crewKg: CREW };
   const a = flyOrbitalAscent(ctx, {
     spec: SPEC,
-    gammaMeco: recovery ? 36 : 30,
-    rtls: recovery ? { reserve0: 49_780, bias0: { e: -6541, n: -332 }, margin: 700 } : null,
+    gammaMeco: 30,
+    rtls: null,
     insertion: { rp: 200e3, ra: 250e3 },
     // warm starts: the converged values of the deterministic searches
-    ltg0: recovery ? { A: 0.74432, B: -0.0032145 } : { A: 0.5, B: -0.002 },
-    kick0: recovery ? 0.74551 : 1.0,
-    gLimitS1: 4.5 * 9.80665,
+    ltg0: { A: 0.19581, B: -0.00060079 },
+    kick0: 0.6042,
+    // crew limits: the booster throttles (all seven engines, within the E-1's 55 % minimum) to
+    // hold 4 g near burnout, as crew launchers do; the upper stage holds 4 g as well
+    gLimitS1: 4.0 * 9.80665,
     gLimitS2: 4.0 * 9.80665,
     s2Keep: 300,
     padStart: START,
@@ -308,7 +303,6 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
   ctx.ev('hard-capture', tHard, 'Hard capture: hooks close, the capsule is docked', 'dock', ['capsule', 'station'], 'dock');
 
   // ── existence and attachment
-  if (recovery) ctx.exists.booster = [START, end];
   ctx.exists.upper = [START, upEnd];
   ctx.exists.capsule = [START, end];
   ctx.exists.service = [START, end];
@@ -320,7 +314,6 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
   const E = (id: string) => ctx.evt(id);
   const bounds = [START, E('engine-start'), 0, T.throttleDown, T.stageSep, T.ses1, E('les-jettison') + 12, tSep, tSep + 120, pb1.start, tH, tContact, end];
   const phases = phasesFrom('station', O.phases, contiguous(O.phases.map((p) => p.id), bounds));
-  const branches = a.rtls ? rtlsBranch(T, a.rtls) : [];
   const tLes = E('les-jettison');
   const shots = tidyShots(
     [
@@ -357,11 +350,11 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
     .to(tArrays + 50, 2, rateNote('Arrays deploying', 2))
     .omit(pb1.start - 10, 'Quiet interval omitted: about six hours of phasing in the lower, faster orbit')
     .to(pb1.end + 10)
-    .to(pb2.start - 10, 120, rateNote('Coast to apogee', 120))
+    .to(pb2.start - 10, 180, rateNote('Coast to apogee', 180))
     .to(pb2.end + 10)
     .to(tHold1, 150, rateNote('Relative-motion transfer', 150))
     .to(tHold1 + H1, 30, rateNote('Hold', 30))
-    .to(tHold1 + H1 + M1, 60, rateNote('Approach', 60))
+    .to(tHold1 + H1 + M1, 80, rateNote('Approach', 80))
     .to(tHold1 + H1 + M1 + H2h, 30, rateNote('Hold', 30))
     .to(tFinalStart - H3, 80, rateNote('Approach', 80))
     .to(tFinalStart, 30, rateNote('Hold', 30))
@@ -375,7 +368,7 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
   f('crew.capsuleKg', CREW.capsule);
   f('crew.serviceModuleKg', CREW.smDry + CREW.smProp);
   f('crew.abortTowerKg', CREW.les);
-  f('crew.dataset', recovery ? 0 : 1);
+  f('crew.dataset', 1);
   f('les.t', tLes);
   f('seco.t', tSeco);
   f('seco.s2PropLeftKg', a.burn.prop);
@@ -408,7 +401,7 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
 
   return {
     id: 'station',
-    variant: ['capsule', recovery ? 'recovery' : 'expendable'],
+    variant: ['capsule', 'expendable'],
     payload: 'capsule',
     start: START,
     end,
@@ -416,31 +409,12 @@ export function buildStation(recovery = OUTLINES.station.recovery && !!OUTLINES.
     channels: ctx.ch.build(),
     events: ctx.sortedEvents(),
     phases,
-    branches,
+    branches: [],
     shots,
     pres,
     moonPhase0: 0,
     facts: ctx.facts,
   };
-}
-
-/** The booster's return-to-launch-site storyline (branch phases and shots). */
-function rtlsBranch(T: Record<string, number>, r: RtlsResult): Branch[] {
-  const branchEnd = r.touchdown + 15;
-  const bshots: Shot[] = tidyShots(
-    [
-      shot('staging', T.stageSep - 2, T.stageSep + 14, 'booster', 'upper', { d: 70, az: 110, el: 6 }),
-      shot('chase', T.stageSep + 14, r.boostbackStart + 4, 'booster', undefined, { d: 90, az: 60, el: 10 }),
-      shot('side', r.boostbackStart + 4, r.boostbackEnd, 'booster', undefined, { d: 160 }),
-      shot('orbit', r.boostbackEnd, r.entryStart - 12, 'booster', 'earth', { d: 140, az: 40, el: 18 }),
-      shot('entry', r.entryStart - 12, r.entryEnd + 10, 'booster', undefined, { d: 110, az: 70, el: -8 }),
-      shot('chase', r.entryEnd + 10, r.landingStart - 6, 'booster', undefined, { d: 120, az: 30, el: 8 }),
-      shot('landing', r.landingStart - 6, branchEnd, 'booster', undefined, { frame: 1.4 }),
-    ],
-    T.stageSep - 2,
-    branchEnd,
-  );
-  return branchFrom('station', [T.stageSep, r.boostbackStart, r.boostbackEnd, r.entryStart, r.entryEnd, r.landingStart, branchEnd], bshots);
 }
 
 function rcs(ctx: Ctx, c: Craft) {

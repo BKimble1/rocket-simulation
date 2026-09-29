@@ -203,6 +203,14 @@ vec2 cloudWeather(vec3 pEF, out float padDist) {
   return vec2(cov, top);
 }
 
+/* Lookup of the cumulus cells, domain-warped by the cluster noise (a, sampled at 26 km): the
+   4.2 km tile of the noise volume would otherwise repeat visibly over a wide overcast area seen
+   from orbit. The warp changes where cells sit, not their statistics. */
+vec3 cellCoord(vec3 pEF, vec4 a) {
+  vec3 w = vec3(a.g, a.r, 0.5 * (a.g + a.r)) - 0.5;
+  return pEF * C_CELL + vec3(0.37, 0.11, 0.73) + w * 0.9;
+}
+
 /* Vertical gradient: fast rise at a flat base, parabolic fall to the tallest tops (topH). */
 float heightGradient(float hf, float topF) {
   float topH = mix(0.42, 1.0, topF);
@@ -226,7 +234,7 @@ float cloudShape(vec3 pEF, float hf, vec2 wc, float lod) {
     mean = -log(1.0 - min(area, 0.93)) / (C_SIGMA * C_COLUMN);
   }
   if (lod >= 0.999) return mean;
-  vec4 b = texture(uNoise, pEF * C_CELL + vec3(0.37, 0.11, 0.73));
+  vec4 b = texture(uNoise, cellCoord(pEF, a));
   float n = (b.r * 0.85 + b.g * 0.15) * 0.74 + clusters * 0.26;
   float detailed = remap01(n * g, thr, 1.0);
   return mix(detailed, mean, lod);
@@ -265,7 +273,7 @@ float cloudColumn(vec3 pEF, float lod) {
   float clusters = a.r * 0.6 + a.g * 0.4;
   float mean = clamp((g - thr) / g * (0.55 + 0.9 * clusters), 0.0, 1.0) * 0.8;
   if (lod >= 0.999) return mean;
-  vec4 b = texture(uNoise, pEF * C_CELL + vec3(0.37, 0.11, 0.73));
+  vec4 b = texture(uNoise, cellCoord(pEF, a));
   float n = (b.r * 0.85 + b.g * 0.15) * 0.74 + clusters * 0.26;
   float detailed = smoothstep(0.18, 0.55, remap01(n * g, thr, 1.0));
   return mix(detailed, mean, lod);

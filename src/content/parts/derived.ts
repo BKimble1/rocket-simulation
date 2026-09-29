@@ -59,13 +59,25 @@ export const PROFILE = {
   /** Rendezvous hold points below the station (m) and the maximum closing speed at contact (m/s). */
   holdPoints: [400, 150, 20],
   closingSpeed: 0.1,
-  /** Suborbital hop: planned high point (middle of the 110 to 120 km target) and the free-fall floor. */
-  suborbitalApogee: 115e3,
+  /** Suborbital hop: capsule high point as flown (suborbital.ts: about 117 km) and the free-fall floor. */
+  suborbitalApogee: 117e3,
   freeFallFloor: 80e3,
   /** Suborbital hop: engines lit (suborbital.ts: the centre engine and two opposite outer engines). */
   suborbitalEngines: 3,
   /** Altitude by which drag starts to matter for the falling research capsule (estimate), m. */
   suborbitalDragAlt: 50e3,
+  /** Suborbital hop: the capsule is released once the air is thin enough (suborbital.ts: about 75 km). */
+  suborbitalReleaseAlt: 75e3,
+  /** Propellant the LEO booster still holds at cutoff for its return (leo.ts: about 50 t), kg. */
+  rtlsReserve: 50e3,
+  /** Crew load limit the booster throttles to hold near the end of its burn on the station mission (flight.ts), g. */
+  crewGLimit: 4,
+  /** LEO upper-stage engine cutoff after liftoff (leo.ts: about 7.3 min), s. */
+  leoSeco: 437,
+  /** GTO explanatory apogee burn as flown (gto.ts): velocity change (m/s), duration (h) and the final circular altitude (m). */
+  gtoBurnDv: 1830,
+  gtoBurnHours: 3,
+  gtoFinalAlt: 32000e3,
 } as const;
 
 /**
@@ -193,6 +205,16 @@ const carryBoosterLoss = (payload: number, recovery: boolean) =>
   idealDv(E1V.ispVac, s2Gross + payload, S2.dry + payload) - idealDv(E1V.ispVac, s2Gross + payload + s1Empty(recovery), S2.dry + payload + s1Empty(recovery));
 const capS2 = idealDv(E1V.ispVac, s2Gross + PAYLOADS.capsule.mass, S2.dry + PAYLOADS.capsule.mass);
 const capS2WithTower = idealDv(E1V.ispVac, s2Gross + PAYLOADS.capsule.mass + ABORT_TOWER.mass, S2.dry + PAYLOADS.capsule.mass + ABORT_TOWER.mass);
+/**
+ * Ideal booster velocity change (vacuum Isp, upper bound) with the given payload stack, either
+ * expended (no legs, all propellant burned) or recovered (legs carried, the return reserve kept).
+ */
+const boosterDv = (payload: number, recovered: boolean) => {
+  const m0 = S1.dry + (recovered ? LEGS.mass : 0) + S1.propellant + s2Gross + payload;
+  return idealDv(E1.ispVac, m0, m0 - (S1.propellant - (recovered ? PROFILE.rtlsReserve : 0)));
+};
+/** What keeping the booster's return (legs plus the reserve) would cost the station ascent, ideal. */
+const stationRecoveryCost = boosterDv(PAYLOADS.capsule.mass + ABORT_TOWER.mass, false) - boosterDv(PAYLOADS.capsule.mass + ABORT_TOWER.mass, true);
 
 /** Payload lost (kg) per 100 kg added to a stage's dry mass, at fixed total ideal velocity change (LEO). */
 function payloadTrade(stage: 's1' | 's2'): number {
@@ -281,12 +303,13 @@ const noChuteSpeed = fallSpeedAt(SEA_LEVEL_DENSITY);
 const drogueSpeed = fallSpeedAt(REFERENCE.density7km);
 /** Suborbital hop: speed after falling from the planned high point to where drag starts to matter. */
 const suborbitalFallSpeed = Math.sqrt(2 * MU_EARTH * (1 / (R_EARTH + PROFILE.suborbitalDragAlt) - 1 / (R_EARTH + PROFILE.suborbitalApogee)));
-/** Time above the free-fall floor for a vertical coast (uniform gravity at the mean height). */
-const suborbitalFreeFall = (() => {
-  const h = PROFILE.suborbitalApogee - PROFILE.freeFallFloor;
-  const g = MU_EARTH / (R_EARTH + (PROFILE.suborbitalApogee + PROFILE.freeFallFloor) / 2) ** 2;
+/** Time above a floor for a vertical coast to the planned high point (uniform gravity at the mean height). */
+const timeAbove = (floor: number) => {
+  const h = PROFILE.suborbitalApogee - floor;
+  const g = MU_EARTH / (R_EARTH + (PROFILE.suborbitalApogee + floor) / 2) ** 2;
   return 2 * Math.sqrt((2 * h) / g);
-})();
+};
+const suborbitalFreeFall = timeAbove(PROFILE.freeFallFloor);
 const smMdot = SERVICE_MODULE.engineThrust / (SERVICE_MODULE.ispVac * G0);
 const smDeorbitProp = PAYLOADS.capsule.mass * (1 - Math.exp(-deorbitDv / (SERVICE_MODULE.ispVac * G0)));
 
@@ -367,8 +390,11 @@ export const D = {
     leo: E1V.thrustVac / ((s2Gross + PAYLOADS.leoSat.mass + FAIRING.mass) * G0),
     gto: E1V.thrustVac / ((s2Gross + PAYLOADS.gtoSat.mass + FAIRING.mass) * G0),
     lunar: E1V.thrustVac / ((s2Gross + PAYLOADS.lunarProbe.mass + FAIRING.mass) * G0),
+    station: E1V.thrustVac / ((s2Gross + PAYLOADS.capsule.mass + ABORT_TOWER.mass) * G0),
   },
   s2EndAccelLeo: E1V.thrustVac / (S2.dry + PAYLOADS.leoSat.mass),
+  /** Full-thrust acceleration of the nearly empty upper stage with the capsule and service module. */
+  s2EndAccelStation: E1V.thrustVac / (S2.dry + PAYLOADS.capsule.mass),
   s1LoxVolume: tankVolume(S1.lox, 'lox'),
   s1Rp1Volume: tankVolume(S1.rp1, 'rp1'),
   s2LoxVolume: tankVolume(S2.lox, 'lox'),
@@ -397,6 +423,9 @@ export const D = {
   leoS2CarryingBoosterLoss: leoS2 - leoS2CarryingBooster,
   leoS2CarryingFairingLoss: leoS2 - leoS2CarryingFairing,
   towerCarriedLoss: capS2 - capS2WithTower,
+  /** Upper-stage ideal velocity change with the capsule and service module (tower already gone). */
+  capS2,
+  stationRecoveryCost,
   tradeS1: payloadTrade('s1'),
   tradeS2: payloadTrade('s2'),
   // orbits
@@ -457,6 +486,7 @@ export const D = {
   landingZoneDistance: Math.hypot(LANDING_ZONE.x, LANDING_ZONE.z),
   xBandWavelength: 299_792_458 / 8.4e9,
   suborbitalFreeFall,
+  suborbitalAboveKarman: timeAbove(100e3),
   gridFinArea: GRID_FINS.width * GRID_FINS.height,
   legsFractionOfDry: LEGS.mass / S1.dry,
 };
@@ -510,10 +540,9 @@ export const F = {
   pumpEfficiency: `${fmt(PUMP_EFFICIENCY * 100)} %`,
   e1LoxVolumeFlow: `${fmt(D.e1Lox / PROPELLANTS.lox.density, 2)} m³/s`,
   loxPumpHydraulic: `${fmt(((D.e1Lox / PROPELLANTS.lox.density) * LOX_PUMP_RISE) / 1e6, 1)} MW`,
-  e1ExitPressure: `${fmt(sig(D.e1ExitPressure / 1e3, 1))} kPa`,
+  e1ExitPressure: `${fmt(sig(D.e1ExitPressure / 1e3, 2))} kPa`,
   e1SeaLevelPressureTerm: kN(sig(SEA_LEVEL_PRESSURE * D.e1ExitArea, 2)),
   e1ThrustSLFromPressure: kN(E1.thrustVac - SEA_LEVEL_PRESSURE * D.e1ExitArea),
-  e1ThrustSLMismatch: `${fmt((100 * ((E1.thrustSL ?? 0) - (E1.thrustVac - SEA_LEVEL_PRESSURE * D.e1ExitArea))) / (E1.thrustSL ?? 1))} %`,
   e1vExitPressure: `${fmt(sig(D.e1vExitPressure / 1e3, 1))} kPa`,
   e1vSeaLevelRatio: fmt(sig(SEA_LEVEL_PRESSURE / D.e1vExitPressure, 2)),
   noDivergingLossSL: `${fmt(sig(D.noDivergingLossSL * 100, 2))} %`,
@@ -595,7 +624,9 @@ export const F = {
   s2IgnitionTWLeo: fmt(D.s2IgnitionTW.leo, 2),
   s2IgnitionTWGto: fmt(D.s2IgnitionTW.gto, 2),
   s2IgnitionTWLunar: fmt(D.s2IgnitionTW.lunar, 2),
+  s2IgnitionTWStation: fmt(D.s2IgnitionTW.station, 2),
   s2EndAccelLeo: `${fmt(D.s2EndAccelLeo / G0, 1)} g`,
+  s2EndAccelStation: `${fmt(D.s2EndAccelStation / G0, 1)} g`,
   landingThrustMin: kN(D.landingThrustMin),
   landingTWDry: fmt(D.landingTWDry, 1),
   boosterEmptyMass: `${fmt(D.boosterEmptyMass)} kg`,
@@ -635,6 +666,14 @@ export const F = {
   leoS2CarryingBoosterLoss: kms(D.leoS2CarryingBoosterLoss, 1),
   leoS2CarryingFairingLoss: `${fmt(sig(D.leoS2CarryingFairingLoss, 2))} m/s`,
   towerCarriedLoss: kms(D.towerCarriedLoss, 1),
+  capS2: kms(D.capS2, 1),
+  stationRecoveryCost: kms(D.stationRecoveryCost, 1),
+  rtlsReserve: `${fmt(PROFILE.rtlsReserve / 1e3)} t`,
+  crewGLimit: `${fmt(PROFILE.crewGLimit)} g`,
+  leoSeco: `${fmt(PROFILE.leoSeco / 60, 1)} minutes`,
+  gtoBurnDv: kms(PROFILE.gtoBurnDv, 1),
+  gtoBurnHours: `${fmt(PROFILE.gtoBurnHours)} hours`,
+  gtoFinalAlt: km(PROFILE.gtoFinalAlt),
   tradeS1: `${fmt(D.tradeS1)} kg`,
   tradeS2: `${fmt(D.tradeS2)} kg`,
   // mission-profile values (see PROFILE)
@@ -661,6 +700,7 @@ export const F = {
   suborbitalApogee: km(PROFILE.suborbitalApogee),
   freeFallFloor: km(PROFILE.freeFallFloor),
   suborbitalDragAlt: km(PROFILE.suborbitalDragAlt),
+  suborbitalReleaseAlt: km(PROFILE.suborbitalReleaseAlt),
   // orbits
   leoAlt: `${fmt(LEO_ALT / 1e3)} km`,
   leoSpeed: kms(D.leoSpeed),
@@ -741,6 +781,7 @@ export const F = {
   landingZoneDistance: `${fmt(D.landingZoneDistance / 1e3, 1)} km`,
   xBandWavelength: `${fmt(D.xBandWavelength * 100, 1)} cm`,
   suborbitalFreeFall: `${fmt(sig(D.suborbitalFreeFall / 60, 1))} minutes`,
+  suborbitalAboveKarman: `${fmt(sig(D.suborbitalAboveKarman / 60, 1))} minutes`,
   // recovery hardware
   gridFinCount: fmt(GRID_FINS.count),
   gridFinSize: `${fmt(GRID_FINS.width, 1)} m × ${fmt(GRID_FINS.height, 1)} m`,
@@ -755,5 +796,9 @@ export const F = {
   gtoSatMass: `${fmt(PAYLOADS.gtoSat.mass)} kg`,
   lunarProbeMass: `${fmt(PAYLOADS.lunarProbe.mass)} kg`,
   capsuleStackMass: `${fmt(PAYLOADS.capsule.mass)} kg`,
+  /** Capsule, service module and abort tower: what the station ascent lifts above the upper stage. */
+  crewStackMass: `${fmt(PAYLOADS.capsule.mass + ABORT_TOWER.mass)} kg`,
+  /** Satellite and fairing: what the LEO ascent lifts above the upper stage. */
+  leoStackMass: `${fmt(PAYLOADS.leoSat.mass + FAIRING.mass)} kg`,
   researchCapsuleMass: `${fmt(PAYLOADS.researchCapsule.mass)} kg`,
 };

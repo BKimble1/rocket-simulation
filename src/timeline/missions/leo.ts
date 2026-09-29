@@ -36,7 +36,7 @@ export function buildLeo(): MissionTimeline {
     rtls: { reserve0: 50_279, bias0: { e: -6287, n: -298 }, margin: 700 },
     insertion: { rp: 200e3, ra: 400e3 },
     // warm starts: the converged values of the deterministic searches (they re-converge in a pass or two)
-    ltg0: { A: 0.74657, B: -0.0032797 },
+    ltg0: { A: 0.7456, B: -0.0032723 },
     kick0: 0.77368,
     gLimitS1: 4.5 * 9.80665,
     gLimitS2: 4.5 * 9.80665,
@@ -191,7 +191,7 @@ export function buildLeo(): MissionTimeline {
   const coast1 = circ.start - 20;
   const pres = new Pres(START)
     .to(tSeco + 40)
-    .to(coast1, 30, rateNote('Coast to apogee (half an orbit)', 30))
+    .to(coast1, 40, rateNote('Coast to apogee (half an orbit)', 40))
     .to(circ.end + 20)
     .to(tSep - 20, 8, rateNote('Coast', 8))
     .to(end).segs;

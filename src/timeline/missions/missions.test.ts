@@ -13,7 +13,6 @@ import { OUTLINES, MISSION_ORDER } from './outline';
 import { BODY_SIZE } from '../../director/shots';
 import { PART_IDS, type BodyId } from '../../vehicle/parts';
 import { ABORT_TOWER, CAPSULE, E1, E1V, S1, SERVICE_MODULE } from '../../vehicle/spec';
-import { buildStation } from './station';
 import { FACTS, factKeys } from './facts';
 import { MU_EARTH, R_EARTH, R_MOON, latLonOf, moonPosition } from '../../world/frames';
 import { LANDING_ZONE } from '../../world/site';
@@ -403,7 +402,8 @@ describe('mission targets', () => {
   });
 
   it('boosters land on the landing zone within 10 m at under 2.5 m/s with propellant left', () => {
-    for (const id of ['leo', 'station', 'suborbital'] as MissionId[]) {
+    for (const id of MISSION_ORDER) expect(OUTLINES[id].recovery, id).toBe(id === 'leo' || id === 'suborbital');
+    for (const id of ['leo', 'suborbital'] as MissionId[]) {
       const m = tl(id);
       expect(m.facts['rtls.landingErrorM'], id).toBeLessThan(10);
       expect(m.facts['rtls.touchdownSpeed'], id).toBeLessThan(2.5);
@@ -423,7 +423,7 @@ describe('mission targets', () => {
   });
 
   it('expendable boosters burn almost everything', () => {
-    for (const id of ['gto', 'lunar'] as MissionId[]) expect(tl(id).facts['meco.s1PropLeft'] / S1.propellant).toBeLessThan(0.01);
+    for (const id of ['gto', 'station', 'lunar'] as MissionId[]) expect(tl(id).facts['meco.s1PropLeft'] / S1.propellant).toBeLessThan(0.01);
   });
 
   it('capsules splash down in water at under 10 m/s', async () => {
@@ -496,19 +496,51 @@ describe('mission targets', () => {
     expect(m.facts['insertion.incDeg']).toBeCloseTo(28.5, 1);
   });
 
-  it('station with an expendable booster: flies the dataset crew stack and docks', () => {
-    // the dataset's 17.8 t crew stack does not fit with the RTLS reserve (see station.ts); the
-    // builder flies it whenever the outline expends the booster
-    const m = buildStation(false);
+  it('station: the booster is expended to carry the dataset crew stack', () => {
+    // the dataset's 17.8 t crew stack does not fit with the RTLS reserve (see station.ts)
+    const m = tl('station');
     expect(m.facts['crew.dataset']).toBe(1);
     expect(m.facts['crew.capsuleKg']).toBe(CAPSULE.mass);
     expect(m.facts['crew.serviceModuleKg']).toBe(SERVICE_MODULE.mass);
     expect(m.facts['crew.abortTowerKg']).toBe(ABORT_TOWER.mass);
     expect(m.facts['seco.s2PropLeftKg']).toBeGreaterThan(300);
-    expect(m.facts['insertion.incDeg']).toBeCloseTo(28.5, 1);
-    expect(m.facts['docking.closingSpeed']).toBeLessThanOrEqual(0.12);
     expect(m.branches).toHaveLength(0);
-    expect(m.bodies.booster!.exists[1]).toBeLessThan(ev(m, 'stage-sep') + 400); // expended: its track ends at sea
+    expect(m.variant).toContain('expendable');
+    expect(Object.keys(m.facts).some((k) => k.startsWith('rtls.') || k.startsWith('search.rtls'))).toBe(false);
+    for (const e of ['fins-deploy', 'boostback-start', 'landing-start', 'legs-deploy', 'touchdown']) expect(m.events.some((x) => x.id === e), e).toBe(false);
+    // no landing legs or grid fins on it
+    expect(channelAt(m.channels['s1.legs'], m.end)).toBe(0);
+    expect(channelAt(m.channels['s1.fins'], m.end)).toBe(0);
+  });
+
+  it('expended boosters coast over apogee and fall into the ocean downrange', async () => {
+    const water = await loadPng('public/textures/earth/water_2048.png');
+    for (const id of ['gto', 'station', 'lunar'] as MissionId[]) {
+      const m = tl(id);
+      const tr = m.bodies.booster!;
+      const tEnd = tr.exists[1];
+      expect(tEnd, id).toBeCloseTo(m.facts['boosterImpact.t'], 6);
+      const s = telemetryAt(m, 'booster', tEnd)!;
+      // the centre of mass reaches the sea (telemetry reads the nozzle-exit plane, within a body length)
+      bodyAt(tr, tEnd, S);
+      const com = new THREE.Vector3(0, 21, 0).applyQuaternion(S.quat).add(S.pos);
+      expect(Math.abs(com.length() - R_EARTH), id).toBeLessThan(30);
+      expect(s.speed, id).toBeLessThan(500); // slowed by the air, moving with the rotating Earth
+      expect(s.groundSpeed, id).toBeLessThan(80);
+      expect(m.facts['boosterImpact.downrangeKm'], id).toBeGreaterThan(500);
+      expect(m.facts['boosterImpact.downrangeKm'], id).toBeLessThan(1200);
+      expect(Math.abs(s.downrange / 1000 - m.facts['boosterImpact.downrangeKm']), id).toBeLessThan(1);
+      const ll = latLonOf(S.pos, tEnd);
+      const wx = Math.floor(((ll.lon + 180) / 360) * water.w) % water.w;
+      const wy = Math.floor(((90 - ll.lat) / 180) * water.h);
+      expect(water.data[(wy * water.w + wx) * water.ch], `${id} booster falls at ${ll.lat.toFixed(2)}, ${ll.lon.toFixed(2)}`).toBeGreaterThan(200);
+      // engines stay off from separation to impact; the tanks keep the depletion margin
+      for (let t = m.facts['stageSep.t']; t <= tEnd; t += 1) {
+        expect(channelAt(m.channels['s1.center.throttle'], t)).toBe(0);
+        expect(channelAt(m.channels['s1.outer.throttle'], t)).toBe(0);
+      }
+      expect(channelAt(m.channels['s1.lox'], tEnd) * S1.propellant).toBeCloseTo(m.facts['meco.s1PropLeft'], -1);
+    }
   }, 60_000);
 
   it('lunar: far-side closest approach within 1,000 to 3,000 km, not captured', () => {

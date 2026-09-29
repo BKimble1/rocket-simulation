@@ -80,11 +80,13 @@ export function assembleTrack(body: BodyId, segments: Segment[], direct: DirectS
       if (last && s.t <= last.t + minDt) {
         // A separation: the new segment starts where the old one ends, at the same pose but with
         // an impulsive change of velocity (springs, pushers, a tumble kick that swings the model
-        // origin far from the centre of mass). The earlier sample is kept; a sample JOIN_DT later,
-        // on the new segment's own path, confines the jump to that sliver, so the cubic Hermite
-        // interval does not spread the old velocity over the new segment's first step.
+        // origin far from the centre of mass) or of mass (a fairing or tower leaving a body that
+        // keeps its path). The earlier sample is kept; a sample JOIN_DT later, on the new
+        // segment's own path, confines the jump to that sliver, so the cubic Hermite interval does
+        // not spread the old velocity (or the old mass) over the new segment's first step.
         const next = p[i + 1];
-        if (i === 0 && next && next.t - s.t > 4 * JOIN_DT && Math.hypot(s.v.x - last.v.x, s.v.y - last.v.y, s.v.z - last.v.z) > 1e-3) all.push(originAt(s, next, s.t + JOIN_DT));
+        const jump = Math.hypot(s.v.x - last.v.x, s.v.y - last.v.y, s.v.z - last.v.z) > 1e-3 || Math.abs(s.m - last.m) > 1e-3;
+        if (i === 0 && next && next.t - s.t > 4 * JOIN_DT && jump) all.push(originAt(s, next, s.t + JOIN_DT));
         continue;
       }
       all.push(s);

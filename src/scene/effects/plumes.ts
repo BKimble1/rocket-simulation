@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { R_EARTH } from '../../world/frames';
 import type { ClusterSnap, EmitterSnap } from './snapshot';
-import { airDensity, columnShape, makeColumnShape, pressureRatioAmb, RHO_SL, smokiness, type ColumnShape } from './physics';
+import { airDensity, columnShape, makeColumnShape, pressureRatioAmb, RHO_SL, SMALL_THRUSTER, smokiness, type ColumnShape } from './physics';
 import { resetParams, Volume, type VolumeLight, type VolumeParams } from './volume';
 
 const C = (r: number, g: number, b: number) => new THREE.Color(r, g, b);
@@ -20,7 +20,7 @@ const C = (r: number, g: number, b: number) => new THREE.Color(r, g, b);
  */
 const COL = {
   core: C(1.0, 0.62, 0.24),
-  diamond: C(1.0, 0.86, 0.62),
+  diamond: C(1.0, 0.8, 0.56),
   green: C(0.08, 1.0, 0.18),
   flameA: C(1.0, 0.42, 0.11),
   flameB: C(1.0, 0.25, 0.045),
@@ -44,20 +44,24 @@ const COL = {
   ggSootB: C(0.14, 0.13, 0.12),
   ggFlameA: C(1.0, 0.34, 0.07),
   ggFlameB: C(0.9, 0.16, 0.02),
-  cold: C(0.96, 0.97, 1.0),
-  mono: C(0.92, 0.9, 0.85),
   none: C(0, 0, 0),
 };
+
+/**
+ * Plume volumes drawn at most (one draw call each). With the two sprite batches and up to two
+ * plasma volumes the effects stay within 25 draw calls.
+ */
+export const MAX_VOLUMES = 20;
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
 
-/** TEA-TEB (pyrophoric igniter) flash: bright green at the nozzle for the first ~0.5 s. */
-/** Development switch: draw only one kind of plume volume ('core', 'column', 'gg', 'vac', 'cold'). */
+/** Development switch: draw only one kind of plume volume ('core', 'column', 'gg', 'vac'). */
 export const plumeDebug = { only: null as string | null };
 
+/** TEA-TEB (pyrophoric igniter) flash: bright green at the nozzle for the first ~0.5 s. */
 export const greenFlash = (since: number) => smooth(0, 0.03, since) * (1 - smooth(0.18, 0.55, since));
 
 /** Engine start transient: the flame builds over ~0.7 s. */
@@ -101,7 +105,8 @@ function engineCore(e: EmitterSnap, p: VolumeParams, steps: number) {
   const coreCol = bcol(solid ? COL.solidCore : COL.core).lerp(COL.green, green * 0.7);
   const rCore = re * 0.6 * Math.sqrt(p.Rbal / re);
   const coreI = (solid ? 16 : 3.6) * thr * st;
-  p.blobOcc = solid ? 0.3 : 0.75;
+  // the luminous core hides what is behind it (without this, yellow over blue sky reads green)
+  p.blobOcc = solid ? 0.3 : 1.4;
   blob(p, Lcore * 0.1, Lcore * 0.3, rCore, coreI, coreCol);
   blob(p, Lcore * 0.55, Lcore * 0.34, rCore * 0.8, coreI * 0.55, bcol(coreCol));
   // shock diamonds: Mach disks in the over- or near-ideally-expanded jet, fading as it balloons
@@ -143,8 +148,8 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   p.seed = 13.7;
   p.margin = 1.25;
   const sq = Math.sqrt(s.throttle);
-  p.flameI = (solid ? 4 : 2.4) * s.lum * sq * st;
-  p.flameSigma = (solid ? 2 : 1.1) * (0.4 + 0.6 * Math.min(1, s.rhoRatio * 3));
+  p.flameI = (solid ? 4 : 3.4) * s.lum * sq * st;
+  p.flameSigma = (solid ? 2 : 1.5) * (0.4 + 0.6 * Math.min(1, s.rhoRatio * 3));
   p.flameIn = [1.2, solid ? 2 : 6];
   p.flameLen = s.flameLen * (0.4 + 0.6 * st);
   p.flameA.copy(solid ? COL.solidA : COL.colFlameA);
@@ -161,6 +166,8 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   p.smokeB.copy(solid ? COL.solidSmokeB : COL.sootB);
   // the under-expanded plume at altitude: sunlit translucent envelope with an orange glow near the nozzles
   const wbal = smooth(1.6, 14, s.pr);
+  // condensed exhaust and afterburning keep the ballooned plume bright as it spreads
+  p.exK = 1 - 0.55 * wbal;
   p.scatSigma = 0.55 * wbal * sq;
   p.scatAlb.copy(COL.envelope);
   p.glowI = 1.4 * wbal * sq * st * (solid ? 2 : 1);
@@ -245,29 +252,6 @@ function vacuumPlume(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.endFade = p.y1 * 0.5;
 }
 
-/** Cold-gas (nitrogen) or hydrazine thruster jet: visible only by scattered sunlight. */
-function coldJet(e: EmitterSnap, p: VolumeParams, steps: number) {
-  resetParams(p);
-  const re = Math.max(0.02, e.exitRadius);
-  const mono = e.kind === 'mono';
-  p.Rc = re;
-  p.Rbal = re;
-  p.Lb = 1;
-  p.spread = mono ? 0.3 : 0.34;
-  p.y0 = 0;
-  p.y1 = (mono ? 18 : 40) * re + (mono ? 0.4 : 1.6);
-  p.steps = steps;
-  p.seed = hashId(e.id) * 7;
-  p.margin = 1.3;
-  p.scatSigma = (mono ? 3 : 14) * e.throttle;
-  p.scatAlb.copy(mono ? COL.mono : COL.cold);
-  p.radK = 1.8;
-  p.turb = 0.4;
-  p.flow = 60;
-  p.noiseK = 1.1;
-  p.endFade = p.y1 * 0.6;
-}
-
 function hashId(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
@@ -299,7 +283,8 @@ export class PlumeSet {
   /** View depth of the dominant plume (smoke farther than this draws before the plumes). */
   splitDepth = Infinity;
 
-  private take(): Volume {
+  private take(): Volume | null {
+    if (this.used >= MAX_VOLUMES) return null;
     let v = this.vols[this.used];
     if (!v) {
       v = new Volume();
@@ -324,73 +309,74 @@ export class PlumeSet {
     let bestW = 0;
     this.lights[0].intensity = 0;
     this.lights[1].intensity = 0;
-    for (const e of emitters) {
-      if (e.throttle <= 0.003) continue;
-      const k = e.kind;
-      const f = flicker(hashId(e.id));
-      const only = plumeDebug.only;
-      if ((k === 'kerolox-sl' || k === 'solid') && (!only || only === 'core')) {
-        const v = this.take();
-        engineCore(e, v.p, Math.max(8, Math.round(steps * 0.85)));
-        v.p.opacity = f;
-        this.put(v, e.pos, e.dir, origin, light, time, camFwd);
-      } else if ((k === 'kerolox-vac' || k === 'hypergolic') && (!only || only === 'vac')) {
-        const v = this.take();
-        vacuumPlume(e, v.p, Math.max(8, Math.round(steps * 0.75)));
-        v.p.opacity = 0.9 + 0.1 * f;
-        this.put(v, e.pos, e.dir, origin, light, time, camFwd);
-      } else if ((k === 'cold-gas' || k === 'mono') && (!only || only === 'cold')) {
-        const v = this.take();
-        coldJet(e, v.p, 8);
-        this.put(v, e.pos, e.dir, origin, light, time, camFwd);
-      }
-      if (e.gg && (k === 'kerolox-sl' || k === 'kerolox-vac') && (!only || only === 'gg')) {
-        const v = this.take();
-        ggJet(e, v.p, Math.max(8, Math.round(steps * 0.7)));
-        this.put(v, e.gg.pos, e.gg.dir, origin, light, time, camFwd);
-      }
-    }
+    this.splitDepth = Infinity;
+    const only = plumeDebug.only;
+    // 1. merged columns behind first-stage (or abort-motor) clusters: the dominant picture
     for (const c of clusters) {
       if (c.kind !== 'kerolox-sl' && c.kind !== 'solid') continue;
       const s = columnShape(c.kind, c.Rc, c.Req, c.throttle, c.ambientPressure, c.altitude, this.shape);
-      if (plumeDebug.only && plumeDebug.only !== 'column') continue;
+      if (only && only !== 'column') continue;
       const v = this.take();
+      if (!v) break;
       column(c, s, v.p, steps);
       v.p.opacity = 0.85 + 0.15 * flicker(0.5);
       this.put(v, c.centroid, c.dir, origin, light, time, camFwd);
       const w = c.flow * s.lum;
-      if (w > bestW) {
-        bestW = w;
-        best = c;
-        this.splitDepth = v.depth;
-      }
+      if (w <= bestW) continue;
+      bestW = w;
+      best = c;
+      this.splitDepth = v.depth;
       // light from the flame on the vehicle, the pad and the smoke
-      if (best === c) {
-        const L = this.lights[0];
-        L.pos.copy(c.centroid).addScaledVector(c.dir, Math.min(14, s.flameLen * 0.3));
-        L.col.setRGB(1.0, 0.56, 0.24);
-        const since = startUp(c.sinceIgnition);
-        L.intensity = (c.kind === 'solid' ? 1500 : 1150) * Math.min(1.3, c.flow / 1.97) * s.lum * (0.2 + 0.8 * since) * flicker(0.77) * (0.3 + 0.7 * Math.min(1, s.rhoRatio * 3 + 0.2));
-        // exhaust flashing out of the flame trench while the vehicle is on or just above the mount
-        const hN = c.centroid.length() - R_EARTH;
-        if (hN < 40) {
-          const L2 = this.lights[1];
-          L2.intensity = 520 * Math.min(1.2, c.flow / 1.97) * (1 - smooth(18, 40, hN)) * since * flicker(0.31);
-          L2.col.setRGB(1.0, 0.58, 0.28);
-        }
+      const L = this.lights[0];
+      L.pos.copy(c.centroid).addScaledVector(c.dir, Math.min(14, s.flameLen * 0.3));
+      L.col.setRGB(1.0, 0.56, 0.24);
+      const since = startUp(c.sinceIgnition);
+      L.intensity = (c.kind === 'solid' ? 1500 : 1150) * Math.min(1.3, c.flow / 1.97) * s.lum * (0.2 + 0.8 * since) * flicker(0.77) * (0.3 + 0.7 * Math.min(1, s.rhoRatio * 3 + 0.2));
+      // exhaust flashing out of the flame trench while the vehicle is on or just above the mount
+      const hN = c.centroid.length() - R_EARTH;
+      const L2 = this.lights[1];
+      L2.intensity = hN < 40 ? 520 * Math.min(1.2, c.flow / 1.97) * (1 - smooth(18, 40, hN)) * since * flicker(0.31) : 0;
+      L2.col.setRGB(1.0, 0.58, 0.28);
+    }
+    // 2. per-nozzle cores (shock diamonds, ignition) and vacuum or hypergolic plumes. Cold-gas,
+    // hydrazine and small hypergolic thrusters are drawn as puffs by the particles.
+    for (const e of emitters) {
+      if (e.throttle <= 0.003) continue;
+      const k = e.kind;
+      const core = k === 'kerolox-sl' || k === 'solid';
+      const vac = k === 'kerolox-vac' || (k === 'hypergolic' && e.exitRadius >= SMALL_THRUSTER);
+      if ((core && only && only !== 'core') || (vac && only && only !== 'vac') || (!core && !vac)) continue;
+      const v = this.take();
+      if (!v) break;
+      const f = flicker(hashId(e.id));
+      if (core) {
+        engineCore(e, v.p, Math.max(8, Math.round(steps * 0.85)));
+        v.p.opacity = f;
+      } else {
+        vacuumPlume(e, v.p, Math.max(8, Math.round(steps * 0.75)));
+        v.p.opacity = 0.9 + 0.1 * f;
       }
+      this.put(v, e.pos, e.dir, origin, light, time, camFwd);
+    }
+    // 3. gas-generator exhaust jets, while the volume budget lasts
+    for (const e of emitters) {
+      if (e.throttle <= 0.003 || !e.gg || (e.kind !== 'kerolox-sl' && e.kind !== 'kerolox-vac') || (only && only !== 'gg')) continue;
+      const v = this.take();
+      if (!v) break;
+      ggJet(e, v.p, Math.max(8, Math.round(steps * 0.7)));
+      this.put(v, e.gg.pos, e.gg.dir, origin, light, time, camFwd);
     }
     if (!best) {
       // no cluster: a vacuum engine still lights its surroundings faintly
-      this.splitDepth = Infinity;
-      for (const e of emitters) {
-        if ((e.kind === 'kerolox-vac' || e.kind === 'hypergolic') && e.throttle > 0.01) {
+      for (let i = 0; i < emitters.length; i++) {
+        const e = emitters[i];
+        if ((e.kind === 'kerolox-vac' || (e.kind === 'hypergolic' && e.exitRadius >= SMALL_THRUSTER)) && e.throttle > 0.01) {
           const L = this.lights[0];
           L.pos.copy(e.pos).addScaledVector(e.dir, e.exitRadius * 2);
           L.col.setRGB(1.0, 0.72, 0.5);
           L.intensity = (e.kind === 'hypergolic' ? 30 : 160) * e.throttle;
           const v = this.vols[0];
-          if (v) this.splitDepth = v.depth;
+          if (v && this.used > 0) this.splitDepth = v.depth;
           break;
         }
       }

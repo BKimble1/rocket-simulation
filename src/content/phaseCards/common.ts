@@ -1,6 +1,7 @@
 /**
  * Shared phase-card builders: the standard ascent (leo, gto, lunar use the same outline phases)
- * and the booster's return-to-launch-site branch (leo and station). Mission-specific wording is
+ * and the booster's return-to-launch-site branch (leo; the suborbital hop reuses its last two
+ * cards). Mission-specific wording is
  * passed in, so each card still speaks about its own payload and configuration.
  */
 import type { MissionId } from '../../timeline/types';
@@ -93,7 +94,7 @@ export function ascentCards(a: AscentContext): PhaseCard[] {
       what: `The E-1V starts (a TEA-TEB flash, the turbopump spinning up) and within seconds its niobium nozzle extension begins to glow. The upper stage and the ${a.payload} fly on alone${a.recovery ? ', while the booster begins its own journey home' : ''}.`,
       whyNow: 'The pause after separation lets the nozzle clear the interstage; waiting any longer would waste time in which gravity slows the climbing stage.',
       parts: ['vacuum-engine', 'nozzle-extension', 'igniter', 's2-tanks', 'tvc-actuators', 'avionics'],
-      forces: `At ignition the stage's thrust-to-weight ratio is only about ${a.s2TW} (computed). That is enough: the stage is already high and climbing fast, and what it needs now is horizontal speed. Its ${F.e1vThrust} comes in near vacuum, where the large nozzle is most efficient.`,
+      forces: `At ignition the stage's thrust-to-weight ratio is only about ${a.s2TW} (computed): its thrust barely exceeds its weight. That is enough: the stage is already high and climbing fast, and what it needs now is horizontal speed. Its ${F.e1vThrust} comes in near vacuum, where the large nozzle is most efficient.`,
       next: a.upperNext,
       equation: 'thrust',
     }),
@@ -105,16 +106,16 @@ export function rtlsCards(mission: MissionId): PhaseCard[] {
   const m = mission;
   return [
     card(m, 'flip', {
-      what: 'Freed from the upper stage, the booster uses its nitrogen thrusters to turn itself end over end, until its engines face forward along its direction of travel, so that their thrust can push it back toward the coast.',
+      what: 'Freed from the upper stage, the booster uses its nitrogen thrusters to turn itself end over end, until its engines face forward along its direction of travel, so that their thrust can push it back toward the coast. The avionics ring that guided the ascent has left with the upper stage; from here the booster\'s own flight computers and navigation sensors fly every step of the return.',
       whyNow: 'The booster is still moving away from the coast at high speed. It is above most of the air, its engines are off and its fins are folded, so only the reaction thrusters can turn it, and every second it waits it travels further downrange.',
-      parts: ['cold-gas-rcs', 's1-lox-tank', 's1-fuel-tank', 'pressurization'],
+      parts: ['cold-gas-rcs', 'booster-avionics', 's1-lox-tank', 's1-fuel-tank', 'pressurization'],
       forces: 'Almost no air, so no aerodynamic help or hindrance; the thrusters work at the top of the long booster for maximum leverage. The reserve propellant sloshes as the booster rotates.',
       next: 'Pointing the right way, with the propellant pushed back over the outlets, three engines can relight.',
     }),
     card(m, 'boostback', {
       what: `Three E-1s relight (TEA-TEB again) and fire against the booster's downrange motion, reversing it so that the ballistic arc now bends back toward the landing zone on the coast, ${F.landingZoneDistance} from the pad.`,
       whyNow: 'The sooner the booster cancels its downrange speed, the less distance it has to make up. This is the most propellant-hungry part of the return and the main reason the booster cut off early.',
-      parts: ['s1-engine-cluster', 'engine', 'igniter', 'tvc-actuators', 'turbopump', 's1-lox-tank', 's1-fuel-tank'],
+      parts: ['s1-engine-cluster', 'engine', 'igniter', 'tvc-actuators', 'turbopump', 'booster-avionics', 's1-lox-tank', 's1-fuel-tank'],
       forces: 'A light, nearly empty booster on three engines accelerates strongly. The engines fire in near vacuum, so their plumes are wide. The propellant must stay settled over the outlets throughout.',
       next: 'With the arc aimed back at the coast, the engines shut down and the booster coasts over the top of its trajectory.',
       equation: 'rocket-equation',
@@ -122,22 +123,22 @@ export function rtlsCards(mission: MissionId): PhaseCard[] {
     card(m, 'booster-coast', {
       what: 'The booster coasts up and over the top of its arc, engines first. The four grid fins unfold from the forward skirt, and the cold-gas thrusters hold it in the right attitude for the fall.',
       whyNow: 'There is nothing to do but fall: the boostback has set the arc. Deploying the fins now, in near vacuum, means they are ready as soon as the air thickens.',
-      parts: ['grid-fins', 'cold-gas-rcs', 'pressurization'],
+      parts: ['grid-fins', 'cold-gas-rcs', 'booster-avionics', 'pressurization'],
       forces: 'Free fall: gravity alone shapes the arc, and the booster and its propellant are weightless. The tanks stay pressurized for stiffness and for the next relight.',
       next: 'Falling back into denser air at high speed, the booster must slow down before the heating and loads grow too large.',
     }),
     card(m, 'entry-burn', {
       what: 'Three engines relight while the booster falls engines first through the upper atmosphere, slowing it sharply. The exhaust pushes into the oncoming flow and forms a protective cushion of gas ahead of the base.',
       whyNow: 'Heating and aerodynamic load grow steeply with speed. Braking before the air gets dense keeps them within what the base and structure can take.',
-      parts: ['s1-engine-cluster', 'engine', 'base-heat-shield', 'grid-fins', 'igniter'],
+      parts: ['s1-engine-cluster', 'engine', 'base-heat-shield', 'grid-fins', 'igniter', 'booster-avionics'],
       forces: 'Engines firing into a supersonic oncoming flow (supersonic retropropulsion): complex shock and plume interaction, heating around the base, strong deceleration. The glow and soot on the booster\'s lower body come from here.',
       next: 'Once slowed, the booster falls through the lower atmosphere under aerodynamic control.',
       equation: 'dynamic-pressure',
     }),
     card(m, 'aero-guidance', {
-      what: 'The booster falls through the lower atmosphere engines first, steered by its grid fins toward the landing zone, using no propellant.',
+      what: 'The booster falls through the lower atmosphere engines first, steered by its grid fins toward the landing zone, using no propellant. Its own flight computer compares where it is heading with where the pad is and turns the error into fin commands.',
       whyNow: 'The air is now dense enough for the fins to work, and steering with them is free, while the engines stay off until the last moment to save propellant.',
-      parts: ['grid-fins', 'cold-gas-rcs', 'base-heat-shield', 'thrust-structure'],
+      parts: ['grid-fins', 'booster-avionics', 'cold-gas-rcs', 'base-heat-shield', 'thrust-structure'],
       forces: 'Drag slows the booster toward a steady falling speed; dynamic pressure is high in the dense air; the fins, at the trailing end relative to the flow, keep it stable like the feathers of an arrow.',
       next: 'Close to the ground, the booster must remove its remaining speed exactly at the landing pad.',
       equation: 'dynamic-pressure',
@@ -145,7 +146,7 @@ export function rtlsCards(mission: MissionId): PhaseCard[] {
     card(m, 'landing-burn', {
       what: 'The centre engine alone relights for the landing. The legs swing open seconds before touchdown and the booster sets down upright on the landing zone.',
       whyNow: `Even throttled to its minimum, one E-1 gives ${F.landingThrustMin}, more than the ${F.boosterDryWeight} weight of the empty booster (thrust-to-weight about ${F.landingTWDry}), so the booster cannot hover. The burn is timed so the speed reaches zero at the moment it reaches the ground: too early and it would stop in mid-air and climb back up; too late and it would hit hard.`,
-      parts: ['engine', 's1-engine-cluster', 'tvc-actuators', 'landing-legs', 'igniter', 'grid-fins'],
+      parts: ['engine', 's1-engine-cluster', 'tvc-actuators', 'landing-legs', 'igniter', 'grid-fins', 'booster-avionics'],
       forces: 'Deceleration of a few g, the plume reflecting from the landing pad onto the base, and at touchdown the leg loads, absorbed by crushable cores in the feet.',
       next: 'After engine cutoff the booster is made safe (vented, pressures lowered) and taken back for inspection and reuse.',
       equation: 'thrust',

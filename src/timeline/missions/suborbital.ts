@@ -24,7 +24,7 @@ import { flyBoosterReturn, padLocal, type RtlsResult } from '../physics/landing'
 import { RESEARCH_CAPSULE_ITEM, areaOf, boosterDry, sumMass } from '../physics/vehicle';
 import { DEG, qaxisY, v3, vadd, vcross, vnorm, vscale, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, branchFrom, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, branchFrom, contiguous, num, phasesFrom, rateNote, shot, tidyShots } from './common';
 import { landedBooster } from './flight';
 
 const START = -60;
@@ -130,9 +130,9 @@ const SIDE = v3(0, 0, 1);
 export function buildSuborbital(): MissionTimeline {
   const O = OUTLINES.suborbital;
   // ── deterministic sizing: propellant load, launch azimuth and tilt (warm-started)
-  let load = 53_900;
-  let az = 153.9;
-  let kick = 0.85;
+  let load = 54_097;
+  let az = 154.2126;
+  let kick = 0.91186;
   const trialEnv = (): Craft['env'] => ({ moonPhase0: null, segments: [] });
   const trial = (L: number, a: number, k: number): { r: RtlsResult; h: HopTrial } => {
     const h = hop(null, trialEnv(), L, a, k);
@@ -201,7 +201,7 @@ export function buildSuborbital(): MissionTimeline {
   ctx.ev('karman-up', d.karmanUp, 'Crossing 100 km: the conventional edge of space', 'milestone', ['capsule']);
   ctx.ev('apogee', d.apogee.t, `Apogee ${(d.apogee.alt / 1000).toFixed(0)} km: weightless free fall`, 'milestone', ['capsule']);
   ctx.ev('karman-down', d.karmanDown, 'Back below 100 km', 'milestone', ['capsule']);
-  ctx.ev('peak-heating', d.peakHeating.t, `Peak heating at ${(d.peakHeating.alt / 1000).toFixed(0)} km, ${d.peakHeating.speed.toFixed(0)} m/s`, 'entry', ['capsule']);
+  ctx.ev('peak-heating', d.peakHeating.t, `Peak heating at ${(d.peakHeating.alt / 1000).toFixed(0)} km, ${num(d.peakHeating.speed)} m/s`, 'entry', ['capsule']);
   ctx.ev('drogue-deploy', d.drogue, 'Drogue parachutes', 'recovery', ['capsule'], 'chute');
   ctx.ev('main-deploy', d.main, 'Main parachutes, reefed', 'recovery', ['capsule'], 'chute');
   ctx.ev('main-disreef', d.disreef, 'Mains fully open', 'recovery', ['capsule']);

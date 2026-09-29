@@ -70,7 +70,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'specific-impulse',
     term: 'Specific impulse',
     definition:
-      'Thrust divided by the weight of propellant used per second, in seconds; equivalently, the effective exhaust velocity divided by 9.80665 m/s². Higher specific impulse means more velocity change from the same propellant. E-1: 285 s at sea level, 312 s in vacuum; E-1V: 342 s in vacuum.',
+      'Thrust divided by the weight of propellant used per second, in seconds; equivalently, the effective exhaust velocity divided by 9.80665 m/s². Higher specific impulse means more velocity change from the same propellant. E-1: 278 s at sea level, 312 s in vacuum; E-1V (the same core with a larger nozzle): 342 s in vacuum.',
     see: [{ part: 'vacuum-engine' }, { demo: 'nozzle-pressure' }],
     aliases: ['Isp'],
   },
@@ -137,7 +137,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'expansion-ratio',
     term: 'Expansion ratio',
     definition:
-      'Nozzle exit area divided by throat area. A larger ratio expands the gas to lower pressure and higher speed: 18 for the sea-level E-1, 110 for the vacuum E-1V.',
+      'Nozzle exit area divided by throat area. A larger ratio expands the gas to lower pressure and higher speed: 16 for the sea-level E-1, 110 for the vacuum E-1V, which has the same throat and a much larger exit.',
     see: [{ part: 'nozzle' }, { part: 'nozzle-extension' }, { demo: 'nozzle-pressure' }],
     aliases: ['area ratio', 'nozzle expansion ratio'],
   },
@@ -151,7 +151,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'throttling',
     term: 'Throttling',
-    definition: 'Reducing an engine’s thrust by reducing its propellant flow. The E-1 can throttle to 55 % of rated thrust; the booster throttles down around max-q and for its landing burn.',
+    definition: 'Reducing an engine’s thrust by reducing its propellant flow. The E-1 can throttle to 55 % of rated thrust; the booster throttles down around max-q and for its landing burn, and near the end of its burn on the crewed station flight all seven engines throttle back together to hold the crew’s load to about 4 g.',
     see: [{ part: 'main-valves' }, { mission: 'leo', phase: 'maxq' }],
     aliases: ['throttle down'],
   },
@@ -318,7 +318,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'seco',
     term: 'SECO',
-    definition: 'Second-stage engine cutoff: the end of an upper-stage burn. On the LEO mission it comes about 8.5 minutes after liftoff, once the stage is in orbit.',
+    definition: 'Second-stage engine cutoff: the end of an upper-stage burn. On the LEO mission it comes about 7.3 minutes after liftoff, once the stage is in orbit.',
     see: [{ mission: 'leo', phase: 'seco' }],
     aliases: ['second engine cutoff'],
   },

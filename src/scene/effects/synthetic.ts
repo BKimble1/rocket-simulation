@@ -78,11 +78,18 @@ export interface SyntheticOptions {
   alt?: number | null;
   /** Override every engine's throttle (0..1). */
   throttle?: number | null;
+  /**
+   * Mission time at which a held scenario is at its nominal altitude (`alt` or the scenario's
+   * default). The stand-in flies through that point at its air-relative velocity, so smoke,
+   * puffs and trails stream away from it as they would in flight.
+   */
+  tRef?: number;
 }
 
 const q1 = new THREE.Quaternion();
 const q2 = new THREE.Quaternion();
 const v1 = new THREE.Vector3();
+const v2 = new THREE.Vector3();
 const Z = new THREE.Vector3(0, 0, 1);
 
 const smooth = (a: number, b: number, x: number) => {
@@ -170,6 +177,7 @@ export class SyntheticSource implements EffectsSource {
   readonly scenario: Scenario;
   readonly alt: number | null;
   readonly thr: number | null;
+  readonly tRef: number;
   groundBlastStart: number | null;
   groundBlastEnd: number | null;
   /** Ascent path table (pad-local east/up of the nozzle plane, velocity, pitch from vertical). */
@@ -179,6 +187,7 @@ export class SyntheticSource implements EffectsSource {
     this.scenario = o.scenario ?? 'ascent';
     this.alt = o.alt ?? null;
     this.thr = o.throttle ?? null;
+    this.tRef = o.tRef ?? 0;
     const padScene = this.scenario === 'ascent' && this.alt === null;
     this.groundBlastStart = padScene ? -3 : this.scenario === 'solid' && this.alt === null ? 0 : null;
     this.groundBlastEnd = padScene ? 16 : this.scenario === 'solid' && this.alt === null ? 3 : null;
@@ -231,7 +240,7 @@ export class SyntheticSource implements EffectsSource {
     let pitch = 0;
     let q = q2.identity();
     if (s === 'ascent') {
-      if (this.alt !== null) local.set(0, this.alt, 0);
+      if (this.alt !== null) local.set(0, this.alt + this.altSpeed() * (t - this.tRef), 0);
       else if (t <= 0) local.set(0, PAD.nozzleExitHeight, 0);
       else {
         const p = this.pathAt(t);
@@ -278,18 +287,33 @@ export class SyntheticSource implements EffectsSource {
       q.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
       out.shape = 'booster';
     }
+    if (s !== 'ascent' && s !== 'solid') {
+      // held scenarios fly through their nominal point at their air-relative velocity
+      this.localVelocity(t, v2);
+      local.addScaledVector(v2, t - this.tRef);
+    }
     out.altitude = local.y;
     sitePosition(t, 0, out.pos).add(local.applyQuaternion(qs));
     out.quat.copy(qs).multiply(q);
     return out;
   }
 
+  /** Climb speed (m/s) of the ascent held at an altitude (plume tests). */
+  private altSpeed(): number {
+    return 300 + (this.alt ?? 0) * 0.025;
+  }
+
   /** Air-relative velocity (frame I) of the stand-in. */
   private velocity(t: number, pose: VehiclePose, out: THREE.Vector3): THREE.Vector3 {
+    void pose;
+    return this.localVelocity(t, out).applyQuaternion(siteFrameQuaternion(t, q1));
+  }
+
+  /** Air-relative velocity in pad-local axes (x east, y up, z south). */
+  private localVelocity(t: number, out: THREE.Vector3): THREE.Vector3 {
     const s = this.scenario;
-    const qs = siteFrameQuaternion(t, q1);
     if (s === 'ascent') {
-      if (this.alt !== null) out.set(0, 300 + this.alt * 0.025, 0);
+      if (this.alt !== null) out.set(0, this.altSpeed(), 0);
       else if (t <= 0) out.set(0, 0, 0);
       else {
         const p = this.pathAt(t);
@@ -304,8 +328,7 @@ export class SyntheticSource implements EffectsSource {
     } else if (s === 'rcs') out.set(1400, 300, 0);
     else if (s === 'entry') out.set(7000 * Math.cos(-0.105), 7000 * Math.sin(-0.105), 0);
     else out.set(-0.35 * 1800, -0.94 * 1800, 0);
-    void pose;
-    return out.applyQuaternion(qs);
+    return out;
   }
 
   private pose: VehiclePose = { pos: new THREE.Vector3(), quat: new THREE.Quaternion(), shape: 'stack', altitude: 0 };
@@ -356,6 +379,8 @@ export class SyntheticSource implements EffectsSource {
     if (s === 'ascent') {
       const since = t + 3;
       if (since < 0 || (this.alt === null && t > 152)) return out;
+      // held at an altitude: the engines run only above the ground
+      if (this.alt !== null && this.alt + this.altSpeed() * (t - this.tRef) < 60) return out;
       // start transient: flow ramps up over ~0.9 s; throttle bucket through max-q; cutoff at T+150
       const ramp = this.alt !== null ? 1 : smooth(0, 0.9, since);
       const bucket = 1 - 0.3 * smooth(52, 58, t) * (1 - smooth(72, 78, t));

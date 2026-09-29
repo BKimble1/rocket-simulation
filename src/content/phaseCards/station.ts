@@ -1,13 +1,16 @@
-/** Station delivery: crewed ascent, abort-tower jettison, phasing, approach and docking; booster return. */
+/**
+ * Station delivery: crewed ascent, abort-tower jettison, phasing, approach and docking. The crew
+ * stack is heavy enough that the booster is expended on this mission (no return branch).
+ */
 import type { PhaseCard } from '../types';
 import { F } from '../parts/derived';
-import { card, rtlsCards } from './common';
+import { card } from './common';
 
 const s = F.stack.station;
 
 export const STATION_CARDS: PhaseCard[] = [
   card('station', 'pad', {
-    what: `The crew walks across the access arm to the capsule hatch, about ${F.crewHatchHeight} above the ground, while the K-1 is fuelled: RP-1 first, then LOX, topped up continuously as it boils. The abort tower on the capsule is armed. The arms swing back in the final minutes and the flight computer takes over the count.`,
+    what: `The crew walks across the access arm to the capsule hatch, about ${F.crewHatchHeight} above the ground, while the K-1 is fuelled: RP-1 first, then LOX, topped up continuously as it boils. The abort tower on the capsule is armed. The arms swing back in the final minutes and the flight computer takes over the count. The booster carries no landing legs or grid fins on this flight: it will not come back.`,
     whyNow: `The capsule must be launched into the station's orbital plane. Earth's rotation carries the pad through that plane, and because the station's inclination (${F.inclination}) equals the pad's latitude, that happens only once a day: the launch window is essentially an instant, so the count is timed to it.`,
     parts: ['service-tower', 'launch-mount', 'capsule', 'launch-abort-system', 's1-lox-tank', 's1-fuel-tank', 's2-tanks', 'pressurization'],
     forces: `The fuelled stack (${s.mass}, a weight of ${s.weight}) rests on the hold-downs. The crew sits in the capsule at the top of the vehicle, where wind sway on the pad is largest.`,
@@ -33,14 +36,14 @@ export const STATION_CARDS: PhaseCard[] = [
     whyNow: 'This is when aerodynamic loads are largest. It is also the most demanding moment for an abort: if the tower had to fire here, it would pull the capsule away into the strongest airflow of the flight.',
     parts: ['s1-engine-cluster', 'gas-generator', 'launch-abort-system', 'capsule', 'interstage', 's1-intertank', 'tvc-actuators', 'avionics'],
     forces: 'Peak aerodynamic pressure and bending, transonic buffeting, heating of the tower\'s nose and the capsule shoulder. The telemetry shows the computed maximum for this flight.',
-    next: 'Past the peak, the booster returns to full thrust and burns on to its cutoff, keeping a reserve for its return.',
+    next: `Past the peak, the booster returns to full thrust and burns on until its tanks are nearly empty. As the vehicle lightens, its acceleration climbs, so near the end all seven engines throttle back together to hold the crew's load to about ${F.crewGLimit}.`,
     equation: 'dynamic-pressure',
   }),
   card('station', 'staging', {
-    what: 'The booster shuts down with its return reserve, coasts for a few seconds, then the collets release and pushers separate the stages. The upper stage slides out of the interstage and ignites its E-1V; the booster begins turning around.',
-    whyNow: `Dropping ${s.boosterEmpty} of empty booster (with its landing legs) saves the upper stage about ${s.carryBoosterLoss} of ideal velocity change on this mission (computed); the booster keeps enough propellant to fly home.`,
-    parts: ['stage-separation', 'interstage', 'vacuum-engine', 'nozzle-extension', 'cold-gas-rcs', 's2-rcs'],
-    forces: 'A few seconds of free fall with floating propellant, a gentle push-off, then the E-1V\'s thrust on a stage whose thrust-to-weight ratio is below 1: enough, because the stage is already climbing fast.',
+    what: 'The booster shuts down with its tanks nearly empty, coasts for a few seconds, then the collets release and pushers separate the stages. The upper stage slides out of the interstage and ignites its E-1V. The spent booster, with no legs, fins or propellant to come home, falls on a long arc into the ocean hundreds of kilometres downrange.',
+    whyNow: `Dropping ${s.boosterEmpty} of empty booster saves the upper stage about ${s.carryBoosterLoss} of ideal velocity change on this mission (computed). Why not fly it home, as on the LEO mission? The crew stack (${F.crewStackMass} of capsule, service module and abort tower, against ${F.leoStackMass} of satellite and fairing) leaves the upper stage only about ${F.capS2} of ideal velocity change instead of ${F.leoS2}, so the booster must give the ascent everything it has. Keeping the legs and a return reserve of about ${F.rtlsReserve} would cost it about ${F.stationRecoveryCost} (computed, ideal). Payload mass is traded against reusability: here the booster is expended.`,
+    parts: ['stage-separation', 'interstage', 'vacuum-engine', 'nozzle-extension', 's2-rcs'],
+    forces: `A few seconds of free fall with floating propellant, a gentle push-off, then the E-1V's thrust on a stage whose thrust-to-weight ratio is only about ${F.s2IgnitionTWStation} (computed), below 1: enough, because the stage is already high and climbing fast.`,
     next: 'With the vehicle high above the dense atmosphere and the upper stage running, the abort tower is no longer needed.',
     equation: 'rocket-equation',
   }),
@@ -56,7 +59,7 @@ export const STATION_CARDS: PhaseCard[] = [
     what: `The E-1V cuts off with the capsule in a low orbit (about ${F.stationInsertion}, the mission target) below and behind the station.`,
     whyNow: `Starting lower is deliberate: a lower orbit is faster and has a shorter period, so the capsule gains on the station every lap. The insertion point and the phase angle behind the station are chosen so the catch-up takes several orbits.`,
     parts: ['vacuum-engine', 'nozzle-extension', 's2-tanks', 'avionics', 'tvc-actuators'],
-    forces: `Free fall at orbital speed (about ${F.parkingSpeed} at ${F.parkingAlt}, computed); gravity alone from here, apart from a trace of drag.`,
+    forces: `Near the end of the burn the nearly empty stage would push the crew at about ${F.s2EndAccelStation} at full thrust (computed), so the E-1V throttles back to hold about ${F.crewGLimit}. After cutoff: free fall at orbital speed (about ${F.parkingSpeed} at ${F.parkingAlt}, computed), gravity alone apart from a trace of drag.`,
     next: 'The capsule and service module separate from the spent upper stage.',
     equation: 'orbital-speed',
   }),
@@ -97,5 +100,4 @@ export const STATION_CARDS: PhaseCard[] = [
     forces: 'Small contact forces, set by the closing speed and the masses; after hard capture the two vehicles move as one structure.',
     next: 'The crew transfers to the station. The capsule stays docked as the crew\'s way home (see the Capsule return mission).',
   }),
-  ...rtlsCards('station'),
 ];

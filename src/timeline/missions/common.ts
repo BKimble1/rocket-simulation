@@ -11,7 +11,8 @@ import { OUTLINES, type PhaseOutline } from './outline';
  * Parts doing the work in each phase (ids from src/vehicle/parts.ts). Rules: the booster's own
  * guidance computers ('booster-avionics') fly its return, not the upper stage's 'avionics' ring;
  * at max-q the engines throttle through their gas generators while the main valves stay open;
- * the suborbital stack has no upper stage and its research capsule no attitude thrusters.
+ * the suborbital stack has no upper stage; its research capsule holds attitude with its own
+ * thrusters during the free fall (the cap.rcs channel).
  */
 export const ACTIVE: Record<string, PartId[]> = {
   pad: ['service-tower', 'launch-mount', 's1-lox-tank', 's1-fuel-tank', 'pressurization', 'sound-suppression'],
@@ -83,6 +84,8 @@ const OVERRIDE: Partial<Record<MissionId, Record<string, PartId[]>>> = {
     liftoff: ['s1-engine-cluster', 'tvc-actuators', 'booster-avionics', 'launch-mount'],
     meco: ['main-valves', 's1-engine-cluster', 'booster-avionics'],
     'booster-coast': ['cold-gas-rcs', 'grid-fins'],
+    apogee: ['capsule', 'attitude-thrusters'],
+    descent: ['capsule', 'heat-shield', 'attitude-thrusters'],
   },
   return: {
     entry: ['heat-shield', 'backshell-tps', 'capsule', 'attitude-thrusters'],
@@ -155,6 +158,12 @@ export class Pres {
   get duration(): number {
     return this.p;
   }
+}
+
+/** A number for interface text, with thousands separators: num(35802.4) is "35,802". */
+export function num(x: number, digits = 0): string {
+  const [i, f] = Math.abs(x).toFixed(digits).split('.');
+  return (x < 0 && Number(Math.abs(x).toFixed(digits)) !== 0 ? '-' : '') + i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (f ? '.' + f : '');
 }
 
 /** "x20" style rate label. */

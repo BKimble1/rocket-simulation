@@ -53,6 +53,40 @@ export type SiteMatKey =
 
 const mats = new Map<SiteMatKey, THREE.Material>();
 
+/**
+ * Alpha-tested cut-outs (foliage cards, grating, chain link) without alpha to coverage: with it,
+ * partial coverage at a distance resolved into pale, sky-coloured specks. Instead the alpha is
+ * boosted with the texture's mip level (k per level) so thin cut-outs keep their coverage as the
+ * mips average them toward transparent, and the plain alpha test decides.
+ */
+export function alphaMip<T extends THREE.MeshStandardMaterial>(m: T, k: number): T {
+  m.alphaToCoverage = false;
+  const img = m.map?.image as { width?: number; height?: number } | undefined;
+  const w = img?.width ?? 256;
+  const h = img?.height ?? 256;
+  const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (shader, renderer) => {
+    prev?.call(m, shader, renderer);
+    if (k <= 0) return;
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <alphatest_fragment>',
+      `#ifdef USE_MAP
+{
+  vec2 mipT = vMapUv * vec2( ${w.toFixed(1)}, ${h.toFixed(1)} );
+  vec2 mdx = dFdx( mipT );
+  vec2 mdy = dFdy( mipT );
+  float mipL = max( 0.0, 0.5 * log2( max( dot( mdx, mdx ), dot( mdy, mdy ) ) ) );
+  diffuseColor.a *= 1.0 + mipL * ${k.toFixed(3)};
+}
+#endif
+#include <alphatest_fragment>`,
+    );
+  };
+  const prevKey = m.customProgramCacheKey?.bind(m);
+  m.customProgramCacheKey = () => `${prevKey ? prevKey() : ''}|alphamip:${w}x${h}:${k}`;
+  return m;
+}
+
 function fromPalette(key: MatKey, adjust: (m: THREE.MeshStandardMaterial) => void = () => {}): THREE.MeshStandardMaterial {
   const m = (M(key) as THREE.MeshStandardMaterial).clone();
   adjust(m);
@@ -95,9 +129,7 @@ function make(key: SiteMatKey): THREE.Material {
     case 'galv':
       return fromPalette('steelGalv');
     case 'grating': {
-      const m = std({ map: gratingTexture(), color: '#ffffff', roughness: 0.55, metalness: 0.8, alphaTest: 0.5, side: THREE.DoubleSide });
-      m.alphaToCoverage = true;
-      return m;
+      return alphaMip(std({ map: gratingTexture(), color: '#ffffff', roughness: 0.55, metalness: 0.8, alphaTest: 0.5, side: THREE.DoubleSide }), 0.1);
     }
     case 'yellow':
       return std({ color: '#c9a531', roughness: 0.5, metalness: 0, roughnessMap: paintRoughness() });
@@ -124,9 +156,8 @@ function make(key: SiteMatKey): THREE.Material {
     case 'roadPaint':
       return std({ color: '#e6e3da', roughness: 0.6, metalness: 0 });
     case 'chainLink': {
-      const m = std({ map: chainLinkTexture(), color: '#ffffff', roughness: 0.5, metalness: 0.8, alphaTest: 0.35, side: THREE.DoubleSide });
-      m.alphaToCoverage = true;
-      return m;
+      // no boost: seen from afar a chain-link fence is mostly air and fades out
+      return alphaMip(std({ map: chainLinkTexture(), color: '#ffffff', roughness: 0.5, metalness: 0.8, alphaTest: 0.35, side: THREE.DoubleSide }), 0);
     }
     case 'cladding': {
       const t = corrugationNormal();

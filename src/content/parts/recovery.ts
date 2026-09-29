@@ -20,7 +20,6 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
       at('leo', 'entry-burn', 'Hold attitude as the booster meets denser air.'),
       at('leo', 'aero-guidance', 'Steer the booster toward the landing zone.'),
       at('suborbital', 'aero-guidance', 'Steer the booster back to the landing zone after the hop.'),
-      at('station', 'aero-guidance', 'The same return on the station mission.'),
     ],
     environment: 'High dynamic pressure in the lower atmosphere, heating at high Mach after the entry burn (the booster\'s own plume also washes around it), and large aerodynamic loads on the hinges.',
     figures: [
@@ -33,7 +32,7 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
     manufacturing: 'Each fin is a single piece: cast and machined (or machined from a forging), so there are no joints in the lattice. Hinges and actuator fittings are machined and bolted on.',
     inspection: 'X-ray or CT scans for casting flaws, dye-penetrant checks for surface cracks, and post-flight inspection of hinge fittings and heat marks.',
     misconception: '"Grid fins are air brakes." They add some drag, but their job is steering. Most of the slowing down comes from the entry and landing burns and the drag of the whole booster.',
-    ifAbsent: 'Without aerodynamic steering, the booster would fall where its ballistic arc takes it and would need more propellant (and a larger reserve) to correct its path with the engines.',
+    ifAbsent: 'Without aerodynamic steering, the booster would fall where its ballistic arc takes it and would need more propellant (and a larger reserve) to correct its path with the engines. That is exactly what happens on the missions that expend the booster (transfer orbit, lunar flyby and the crewed station flight): it flies without fins and falls into the ocean far downrange.',
     depth: {
       quick: 'The waffle-like fins at the top of the booster fold out on the way down and tilt to steer it, like the feathers on an arrow.',
       engineering: 'Lattice fins have many short chords in parallel: high lift per unit span, low hinge moment, good effectiveness at high Mach. Near Mach 1 the cells can choke (the flow cannot pass through), reducing effectiveness, so the guidance allows for it. Drag is higher than a flat fin of the same span.',
@@ -51,11 +50,10 @@ export const RECOVERY: (PartLesson | PartNote)[] = [
     connections: ['thrust-structure', 's1-fuel-tank', 'grid-fins', 's1-engine-cluster'],
     function: 'Support the booster upright on the pad, absorb the last of its vertical speed at touchdown, and resist tipping over.',
     how: 'Pressurized gas drives the telescoping struts to swing the legs down and lock them. At touchdown, crushable aluminium honeycomb in the foot pads deforms permanently, turning the last of the kinetic energy into the work of folding its cell walls. The wide footprint puts the booster\'s centre of mass well inside the base, so it does not tip.',
-    why: `Every kilogram of leg rides the whole ascent and must also be decelerated and landed. The set weighs ${F.legMass}, adding ${F.legsFractionOfDry} to the booster's ${F.s1Dry} dry mass, so the legs must be light and stow flush to add little drag. In the ideal rocket-equation estimate for this vehicle, each 100 kg added to the booster costs about ${F.tradeS1} of LEO payload; the propellant reserve kept for the return costs far more.`,
+    why: `Every kilogram of leg rides the whole ascent and must also be decelerated and landed. The set weighs ${F.legMass}, adding ${F.legsFractionOfDry} to the booster's ${F.s1Dry} dry mass, so the legs must be light and stow flush to add little drag. In the ideal rocket-equation estimate for this vehicle, each 100 kg added to the booster costs about ${F.tradeS1} of LEO payload; the propellant reserve kept for the return costs far more. When the payload is heavy, the vehicle cannot afford either: on the station mission the ${F.crewStackMass} crew stack needs all of the booster's propellant, so the booster flies without legs or fins and is expended. Keeping the legs and a return reserve of about ${F.rtlsReserve} would have cost it about ${F.stationRecoveryCost} of ideal velocity change (computed): reusability is paid for in payload.`,
     phases: [
       at('leo', 'landing-burn', 'Deploy seconds before touchdown and take the landing load.'),
       at('suborbital', 'landing-burn', 'Deploy for the landing after the suborbital hop.'),
-      at('station', 'landing-burn', 'The same landing on the station mission.'),
     ],
     environment: 'Stowed against the body in the airflow during the climb and the return, swung open into the airflow during the landing burn, heated by the plume reflected from the landing pad, then hit by the touchdown load. The landing zone is by the sea, so salt spray matters for reuse.',
     figures: [

@@ -18,12 +18,45 @@ import { buildVegetation } from './vegetation';
 import { updateHaze } from './haze';
 import { SM } from './mats';
 import { siteState } from './state';
+import { thermalClass } from './geom';
 
 export interface Site {
   root: THREE.Group;
-  update(): void;
+  /** Per frame, after the root is placed; `fovDeg` is the camera's vertical field of view. */
+  update(fovDeg?: number): void;
   dispose(): void;
 }
+
+/**
+ * Camera-distance culling (m from the camera to the object's pad-local bounding box, scaled to a
+ * 60 deg field of view: a telephoto camera sees farther): beyond these distances the objects are
+ * well below a pixel, so they cost triangles and shimmer without adding anything. The vegetation
+ * sets its own (userData.lodMax, and userData.lodMaxH: the highest camera above the plants that
+ * still draws them; seen from above, foliage cards are edge-on specks) per scatter region.
+ */
+const LOD_MAX: Record<string, number> = {
+  'fence-posts': 2500,
+  'fence-mesh': 2500,
+  'tower-rails': 2500,
+  'tower-stairs': 2500,
+  'road-markings': 3500,
+  pad: 22000,
+  'service-tower': 22000,
+  facilities: 22000,
+  'landing-zone': 22000,
+};
+
+interface LodEntry {
+  o: THREE.Object3D;
+  box: THREE.Box3;
+  max: number;
+  maxH: number;
+}
+
+const TAN30 = Math.tan(Math.PI / 6);
+
+const _cam = new THREE.Vector3();
+const _qi = new THREE.Quaternion();
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -44,6 +77,20 @@ export function buildSite(maps: SiteMaps): Site {
   const vegetation = buildVegetation(maps, overlay);
   root.add(terrain.group, roads, pad.group, tower.group, facilities.group, lz.group, vegetation.group);
 
+  // every mesh carries a thermal-lens class (the plume-facing deflector and trench 3, the rest 1)
+  root.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh && typeof o.userData.thermal !== 'number') o.userData.thermal = thermalClass(o.userData.part as string | undefined);
+  });
+  // pad-local bounding boxes of the distance-culled objects (the root is still at the identity)
+  root.updateMatrixWorld(true);
+  const lods: LodEntry[] = [];
+  root.traverse((o) => {
+    const max = (o.userData.lodMax as number | undefined) ?? LOD_MAX[o.name];
+    if (max === undefined) return;
+    const box = new THREE.Box3().setFromObject(o);
+    if (!box.isEmpty()) lods.push({ o, box, max, maxH: (o.userData.lodMaxH as number | undefined) ?? Infinity });
+  });
+
   // the deck and trench darken and turn glossy under the sound-suppression water
   const wetMats = (['hardstand', 'concreteDark', 'refractory'] as const).map((k) => {
     const m = SM(k) as THREE.MeshStandardMaterial;
@@ -53,7 +100,11 @@ export function buildSite(maps: SiteMaps): Site {
 
   return {
     root,
-    update() {
+    update(fovDeg = 60) {
+      // the camera sits at the render origin: its pad-local position undoes the root's transform
+      _cam.copy(root.position).negate().applyQuaternion(_qi.copy(root.quaternion).invert());
+      const zoom = Math.min(2, Math.max(0.02, Math.tan((fovDeg * Math.PI) / 360) / TAN30));
+      for (const l of lods) l.o.visible = l.box.distanceToPoint(_cam) * zoom < l.max && _cam.y - l.box.max.y < l.maxH;
       updateHaze();
       terrain.update();
       pad.update();

@@ -20,6 +20,7 @@ import {
   ellipseEnergy,
   flyFirstStage,
   gimbalAngles,
+  groundDistance,
   padBurn,
   padSequence,
   s1Channels,
@@ -169,8 +170,10 @@ export function flyOrbitalAscent(ctx: Ctx, cfg: AscentConfig): AscentResult {
     landedBooster(ctx, booster, cfg.end);
     ctx.exists.booster = [cfg.padStart, cfg.end];
   } else {
-    disposeBooster(ctx, booster, sep.tSep + 300);
-    ctx.exists.booster = [cfg.padStart, sep.tSep + 300];
+    const impact = disposeBooster(ctx, booster, sep.tSep + 1500);
+    ctx.exists.booster = [cfg.padStart, impact];
+    times.boosterImpact = impact;
+    times.boosterImpactKm = groundDistance(booster.r, impact) / 1000;
   }
 
   // ── upper stage: fairing (or abort tower) release time from a preliminary trial, then solve
@@ -208,6 +211,10 @@ export function flyOrbitalAscent(ctx: Ctx, cfg: AscentConfig): AscentResult {
     drop: (c, id) => {
       if (id === 'fairing') detached.push(...releaseFairing(ctx, c, items, cfg));
       else detached.push(jettisonLes(ctx, c, items, cfg));
+    },
+    knee: (c) => {
+      ctx.rec(c, 0, true);
+      s2Channels(ctx, c);
     },
   });
   times.fairingSep = dropT;
@@ -351,20 +358,45 @@ function flyDetached(ctx: Ctx, d: Craft, until: number) {
   ctx.rec(d, 0, true);
 }
 
-/** Expended booster: tumbles slowly, falls toward the ocean; its track ends before impact. */
-export function disposeBooster(ctx: Ctx, b: Craft, until: number) {
-  b.aero = { area: areaOf(3.7), cd: () => 1.1 };
+/**
+ * Expended booster: no recovery hardware, engines off, tumbling slowly. It coasts over its
+ * apogee (150 to 190 km), falls back into the atmosphere and is tracked down to the sea surface
+ * downrange. Tumbling, it presents on average a quarter of its surface area to the flow
+ * (Cauchy's mean projected area of a convex body, about 134 m^2 for a 3.7 x 44.4 m cylinder)
+ * with a blunt-body drag coefficient: a peak deceleration of 10 to 14 g near 30 km, then about
+ * 50 m/s at the sea, 700 to 950 km downrange. Illustrative: a real expended stage breaks up
+ * during this entry.
+ * Returns the impact time.
+ */
+export function disposeBooster(ctx: Ctx, b: Craft, tMax: number): number {
+  const L = S1.length;
+  const D = 3.7;
+  b.aero = { area: (Math.PI * D * L + 2 * areaOf(D)) / 4, cd: cdTumbling };
   b.w = vadd(b.w, vscale(qrot(b.q, v3(0, 0, 1)), 1.5 * DEG));
   for (const g of b.groups) {
     g.thr = 0;
     g.next = 0;
   }
-  while (b.t < until - 1e-9) {
-    b.step(Math.min(0.5, until - b.t), null);
-    ctx.rec(b, 1.0);
+  const altOf = (c: Craft) => vlen(c.r) - R_EARTH;
+  while (b.t < tMax - 1e-9) {
+    const h0 = altOf(b);
+    // fine steps through the deceleration pulse, coarse above the air
+    const dt = Math.min(h0 > 120_000 ? 1 : b.q_dyn > 2000 ? 0.25 : 0.5, tMax - b.t);
+    const s0 = { t: b.t, r: { ...b.r }, v: { ...b.v }, q: { ...b.q }, w: { ...b.w } };
+    b.step(dt, null);
+    const h1 = altOf(b);
+    if (h1 <= 0) {
+      // redo the last step up to the sea surface (centre of mass at sea level)
+      Object.assign(b, { t: s0.t, r: s0.r, v: s0.v, q: s0.q, w: s0.w });
+      b.step(Math.max(1e-3, (dt * h0) / (h0 - h1)), null);
+      break;
+    }
+    ctx.rec(b, h1 > 120_000 ? 2.0 : 1.0);
     s1Channels(ctx, b, 6);
   }
   ctx.rec(b, 0, true);
+  s1Channels(ctx, b, 6);
+  return b.t;
 }
 
 /** Booster standing on the landing zone, carried by the rotating Earth. */
@@ -423,6 +455,10 @@ export function ascentFacts(ctx: Ctx, a: AscentResult, prefix = '') {
   f('stageSep.t', a.times.stageSep);
   f('ses1.t', a.times.ses1);
   if (!a.items.some((it) => it.tag === 'les')) f('fairingSep.t', a.times.fairingSep);
+  if (!a.rtls) {
+    f('boosterImpact.t', a.times.boosterImpact);
+    f('boosterImpact.downrangeKm', a.times.boosterImpactKm);
+  }
   if (a.rtls) {
     const r = a.rtls;
     f('rtls.reserveKg', a.reserve);

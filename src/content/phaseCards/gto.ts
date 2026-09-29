@@ -67,11 +67,11 @@ export const GTO_CARDS: PhaseCard[] = [
     equation: 'orbital-speed',
   }),
   card('gto', 'circularize', {
-    what: `At apogee the satellite's own apogee engine fires along the direction of motion, raising the low point of its orbit toward 35,786 km, the height where a circular orbit takes one day and the satellite appears to hang over one spot on the equator. Shown here as one long burn (explanatory, accelerated). With a small engine the burn lasts hours and is spread over a large arc of the orbit, so part of its effect is wasted: one reason real satellites split the job into several shorter burns at successive apogees.`,
+    what: `At apogee the satellite's own apogee engine fires along the direction of motion, raising the low point of its orbit toward 35,786 km, the height where a circular orbit takes one day and the satellite appears to hang over one spot on the equator. Shown here as one long burn (explanatory, accelerated). With a small engine the burn lasts about ${F.gtoBurnHours} and is spread over a large arc of the orbit, so part of its push lowers the far point instead of raising the near one: in this playback it uses about ${F.gtoBurnDv} and still leaves a nearly circular orbit about ${F.gtoFinalAlt} up, short of geostationary height. That is why real satellites split the job into several shorter burns centred on successive apogees.`,
     whyNow: `At apogee the satellite moves slowly (about ${F.gtoApogeeSpeed}) compared with circular speed there (about ${F.geoSpeed}), so the velocity change needed is smallest here: about ${F.circularizeDv} to circularize, or about ${F.circularizePlaneDv} if the same burns also remove the ${F.inclination} tilt (ideal, instantaneous burns, computed). Combining the tilt change with the apogee burns is cheap because the satellite is slow there.`,
     parts: ['apogee-engine', 'attitude-thrusters', 'satellite-bus', 'solar-arrays', 'antenna'],
     forces: 'A small thrust (hundreds of newtons) acting for a long time on a spacecraft of a few tonnes; attitude control must hold the engine pointed precisely along the planned direction.',
-    next: 'On station over the equator, the satellite unfolds its full arrays and reflectors and begins its service life.',
+    next: 'A real satellite finishes the climb with further short burns at its high points, drifts to its assigned longitude over the equator, unfolds its full arrays and reflectors and begins its service life.',
     equation: 'orbital-speed',
   }),
 ];

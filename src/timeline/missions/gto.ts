@@ -23,7 +23,7 @@ import { apsidesKm, coastKepler, incToEquator, progradeAttitude } from '../physi
 import { ENG_SAT, sumMass } from '../physics/vehicle';
 import { DEG, qaxisY, qlook, v3, vadd, vcross, vdot, vlen, vnorm, vscale, vsub, type Q, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, contiguous, num, phasesFrom, rateNote, shot, tidyShots } from './common';
 import { ascentFacts, coastSettleBurn, flyOrbitalAscent, s2Channels } from './flight';
 
 const START = -60;
@@ -96,7 +96,7 @@ export function buildGto(): MissionTimeline {
     rtls: null,
     insertion: { rp: 200e3, ra: 200e3 },
     // warm starts: the converged values of the deterministic searches
-    ltg0: { A: -0.088433, B: 0.00072872 },
+    ltg0: { A: -0.087125, B: 0.00072161 },
     kick0: 0.92638,
     gLimitS1: 4.5 * 9.80665,
     gLimitS2: 4.5 * 9.80665,
@@ -207,7 +207,7 @@ export function buildGto(): MissionTimeline {
   }
   const tApo = sat.t + (lo + hi) / 2;
   coastKepler(ctx, sat, tApo, 300, (r, v) => progradeAttitude(r, v));
-  ctx.ev('apogee', tApo, `Apogee: ${((vlen(sat.r) - R_EARTH) / 1000).toFixed(0)} km, the transfer orbit's highest point`, 'milestone', ['satellite']);
+  ctx.ev('apogee', tApo, `Apogee: ${num((vlen(sat.r) - R_EARTH) / 1000)} km, the transfer orbit's highest point`, 'milestone', ['satellite']);
 
   // ── explanatory apogee-engine burn: 450 N, one long burn starting just after apogee,
   // steered along the velocity still to be gained (circular velocity at the current radius,
@@ -231,12 +231,16 @@ export function buildGto(): MissionTimeline {
     return { q: qlook(d, vscale(hN, -1)), wMax: 0.5 * DEG, aMax: 0.2 * DEG, tau: 5 };
   };
   for (let guard = 0; guard < 5000; guard++) {
-    const dt = 10;
+    // the 2 s ignition ramp in 0.5 s steps, each recorded (as the throttle channel has it), then 10 s steps
+    const ramp = sat.t < tBurn0 + 2 - 1e-9;
+    const dt = ramp ? 0.5 : 10;
     g.next = clamp01((sat.t + dt - tBurn0) / 2);
     sat.step(dt, burnAtt());
-    ctx.rec(sat, 60);
+    ctx.rec(sat, ramp ? 0 : 60);
     if (vlen(toGain(sat.r, sat.v)) < 3 || (sat.tanks.sat ?? 0) < 20) {
       tCut = sat.t;
+      // a sample at the cutoff command: the shutdown is a knee in the thrust
+      ctx.rec(sat, 0, true);
       break;
     }
   }

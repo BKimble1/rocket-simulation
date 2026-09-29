@@ -331,7 +331,8 @@ export function buildPad(): Pad {
       ],
       96,
     );
-    MB.add(liner, SM('deflector'), undefined, { part: 'launch-mount', material: 'stainless' });
+    // the flame hole takes the plume at ignition: thermal class 3 like the deflector below it
+    MB.add(liner, SM('deflector'), undefined, { part: 'launch-mount', material: 'stainless', thermal: 3 });
     // legs, base plates, girders
     for (const ss of [-1, 1])
       for (const sv of [-1, 1]) {

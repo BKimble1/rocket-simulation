@@ -26,7 +26,7 @@ export const GROUND: (PartLesson | PartNote)[] = [
       { label: 'Net upward load held at full thrust', value: F.holdDownNet, note: 'Thrust minus weight, computed' },
     ],
     materials: mats('launch-mount'),
-    materialsWhy: 'The clamp mechanisms are stainless steel: strong, tough, and resistant to the corrosion of salt air near the coast and of deluge water, and able to take the heat and blast at the base of the vehicle.',
+    materialsWhy: 'Three materials, each where its strengths count. The clamp mechanisms are stainless steel: strong, tough, and resistant to the corrosion of salt air and deluge water, and able to take the heat and blast at the base of the vehicle. The mount frame is structural carbon steel, cheap, stiff and easy to weld into heavy sections, coated against corrosion. The foundations are reinforced concrete, massive and strong in compression, so the mount does not move under the vehicle\'s weight and the upward pull of the clamps. On the ground, mass costs nothing, so none of the flight vehicle\'s light alloys are needed.',
     manufacturing: 'Heavy steel weldments and machined clamp parts on a reinforced concrete structure; the clamps are tested for simultaneous release under load.',
     inspection: 'Release tests before each campaign, inspection for heat damage and corrosion after every launch, and checks of the release timing.',
     misconception: '"A rocket lifts off the moment its engines light." It is held down for a few seconds while the engines come up to full thrust and are checked. The release, not the ignition, is liftoff.',
@@ -34,7 +34,7 @@ export const GROUND: (PartLesson | PartNote)[] = [
     depth: {
       quick: 'Clamps hold the rocket down for a few seconds after the engines start, to be sure they are working, then let go all at once.',
       engineering: `Before release, the clamps carry thrust minus weight: ${F.s1ThrustSL} of thrust minus a weight of ${F.liftoffWeightLeo} leaves about ${F.holdDownNet}. Release must be simultaneous to avoid a rotation impulse, and the engines' thrust buildup is watched against limits before the release command.`,
-      materials: 'Stainless steel where heat, blast and corrosion meet; the concrete structure below is protected by the deflector and the deluge.',
+      materials: 'Stainless steel where heat, blast and corrosion meet; structural steel for the frame; reinforced concrete for foundations that must not move, protected from the plume by the deflector and the deluge.',
     },
     sources: ['nasa-bsf-14', 'nasa-sound-suppression'],
   }),
@@ -60,7 +60,7 @@ export const GROUND: (PartLesson | PartNote)[] = [
       { label: 'Crew hatch height above ground', value: F.crewHatchHeight, note: 'Capsule configuration' },
     ],
     materials: mats('service-tower'),
-    materialsWhy: 'The tower is galvanized and painted structural carbon steel: cheap, strong and easy to fabricate into a large lattice, with coatings against coastal corrosion. It is not part of the flight vehicle, so it has no entry in the vehicle materials table.',
+    materialsWhy: 'The tower, its platforms and its arms are galvanized and painted structural carbon steel: cheap, stiff and strong, easy to cut, weld and bolt into a large lattice, and designed with the same codes as buildings and bridges. Its weight, which would rule steel out on the rocket, is useful here: the tower must stay stiff and still in strong wind while its arms hold umbilicals and the crew walkway precisely. Coatings protect it against coastal corrosion.',
     manufacturing: 'Steel members are fabricated, galvanized, and erected as a bolted and welded lattice; arms and umbilical plates are machined mechanisms with their own drives.',
     inspection: 'Structural and corrosion inspection, arm retraction tests before each launch, and leak checks of every propellant and gas line.',
     misconception: '"The tower holds the rocket up." The vehicle stands on its own on the launch mount; the tower only supplies and gives access, and its arms swing away before liftoff.',
@@ -76,7 +76,7 @@ export const GROUND: (PartLesson | PartNote)[] = [
   note({
     id: 'flame-deflector',
     summary: 'The steel-faced wedge under the launch mount that turns the downward exhaust sideways into the flame trench.',
-    function: 'Seven engines at full thrust pour a supersonic, hot, sooty jet straight down. The deflector turns it through the trench and away from the vehicle and the pad, where it would otherwise reflect back as heat, debris and noise. Its steel plates are water cooled.',
+    function: 'Seven engines at full thrust pour a supersonic, hot, sooty jet straight down. The deflector turns it through the trench and away from the vehicle and the pad, where it would otherwise reflect back as heat, debris and noise. Its faces are water-cooled stainless steel plates, which stay strong and resist corrosion while water carries the heat away; the trench walls around it are lined with refractory concrete, which survives the brief blast where ordinary concrete would spall, and is patched between launches.',
     why: 'Without it, the exhaust would erode the pad, throw debris, and reflect heat and sound up onto the vehicle during the seconds it is held down and climbing slowly.',
     materials: mats('flame-deflector'),
     phases: [
@@ -89,7 +89,7 @@ export const GROUND: (PartLesson | PartNote)[] = [
   note({
     id: 'sound-suppression',
     summary: 'The water deluge system that floods the launch mount and trench with water just before ignition and through liftoff.',
-    function: 'Large volumes of water sprayed into the exhaust absorb acoustic energy (the jet mixes with the water and its turbulence and noise are reduced) and heat (much of the water turns to steam). Most of the huge white cloud at liftoff is steam from this water, not engine smoke.',
+    function: 'Large volumes of water sprayed into the exhaust absorb acoustic energy (the jet mixes with the water and its turbulence and noise are reduced) and heat (much of the water turns to steam). Most of the huge white cloud at liftoff is steam from this water, not engine smoke. The water waits in an elevated structural-steel tank and falls through large steel pipes, so gravity drives the flow within seconds, without waiting for large pumps to spin up.',
     why: 'Sound reflected from the pad at liftoff is intense enough to damage the vehicle, its payload and the pad itself. The deluge reduces those acoustic loads and cools the mount and deflector.',
     materials: mats('sound-suppression'),
     phases: [

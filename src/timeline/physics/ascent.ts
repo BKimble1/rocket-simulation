@@ -244,11 +244,13 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
   let throttleCmd = p.liftoffThrottle;
   let bucketState: 'pre' | 'down' | 'up' = 'pre';
   let bucketT = 0;
+  let lastSlope = 0;
   const kick = p.kickDeg * DEG;
   let maxTheta = 0;
   let prevDes: Q | null = null;
   const center = c.group('s1.center')!;
   const outer = c.group('s1.outer')!;
+  const side0 = qaxisZ(c.q);
   for (let guard = 0; guard < 20000; guard++) {
     const t = c.t;
     const dt = t < 20 ? 0.1 : 0.2;
@@ -273,7 +275,9 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
       if (theta > maxTheta) maxTheta = theta;
     }
     const nose = vadd(vscale(up, Math.cos(theta)), vscale(hor, Math.sin(theta)));
-    const des = qlook(nose, p.side);
+    // roll: the stack keeps the pad's roll until it clears the tower, then rolls to its flight
+    // azimuth (no roll program inside the tower)
+    const des = qlook(nose, Number.isNaN(towerClear) ? side0 : p.side);
     let wFF: V3 | null = null;
     if (prevDes) {
       // feedforward: the target's own rotation rate
@@ -301,9 +305,11 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
           }
         }
       }
-      // acceleration limit
+      // acceleration limit, on the mass at the end of the step (thrust / mass must not exceed it
+      // anywhere inside the step; drag only lowers the sensed acceleration further)
       const nEng = center.n + outer.n;
-      const thrG = (p.gLimit * mass) / (nEng * ENG_S1.thrustVac) + (c.pAmb * ENG_S1.area) / ENG_S1.thrustVac;
+      const mEnd = mass - ENG_S1.mdot * nEng * throttleCmd * dt;
+      const thrG = (p.gLimit * mEnd) / (nEng * ENG_S1.thrustVac) + (c.pAmb * ENG_S1.area) / ENG_S1.thrustVac;
       cmd = Math.min(cmd, Math.max(E1.minThrottle, thrG));
       // rate-limit throttle changes (valves move at a finite rate)
       const maxStep = (bucketState === 'down' && throttleCmd > cmd ? 0.18 : 0.15) * dt;
@@ -333,6 +339,12 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
       // exactly zero at the end of the transient (not a rounding residue that still burns)
       throttleCmd = u >= 1 - 1e-9 ? 0 : cutFrom * (1 - u);
     }
+    // a sample at every change of the throttle's slope (bucket, acceleration limit, cutoff): the
+    // track's cubic Hermite interpolation then follows the thrust instead of rounding the knee
+    // into a spurious acceleration spike
+    const slope = (throttleCmd - center.thr) / dt;
+    if (ctx && p.record && Math.abs(slope - lastSlope) > 0.02) ctx.rec(c, 0, true);
+    lastSlope = slope;
     center.next = throttleCmd;
     outer.next = throttleCmd;
     c.step(dt, att, wFF);
@@ -441,6 +453,8 @@ export interface BurnHooks {
   step(c: Craft): void;
   /** Called at a scheduled drop instead of the plain mass change. */
   drop(c: Craft, id: string): void;
+  /** Called where the throttle's slope changes, before the step (record a sample there). */
+  knee?(c: Craft): void;
 }
 
 const TAIL_S2 = 0.6;
@@ -494,6 +508,7 @@ export function upperBurn(c: Craft, plan: UpperBurnPlan, hooks: BurnHooks | null
   let cutFrom = 1;
   let depleted = false;
   let holdQ: Q = qclone(c.q);
+  let lastSlope = 0;
   const tailStepDt = 0.1;
   for (let guard = 0; guard < 20000; guard++) {
     const t = c.t;
@@ -532,9 +547,14 @@ export function upperBurn(c: Craft, plan: UpperBurnPlan, hooks: BurnHooks | null
     } else if (t + dt <= plan.tIgn + 1e-9) thr = 0;
     else if (t < plan.tIgn + IGN_S2) thr = clamp((t + dt - plan.tIgn) / IGN_S2, 0, 1);
     else {
-      const lim = clamp((plan.gLimit * c.mass) / ENG_S2.thrustVac, E1V.minThrottle, 1);
+      // acceleration limit on the mass at the end of the step (a 1 s step burns 1 to 2 % of it)
+      const lim = clamp((plan.gLimit * (c.mass - ENG_S2.mdot * thr * dt)) / ENG_S2.thrustVac, E1V.minThrottle, 1);
       thr = thr + clamp(lim - thr, -0.1 * dt, 0.1 * dt);
     }
+    // a sample at every change of the throttle's slope (ignition ramp, acceleration limit, tail-off)
+    const slope = (thr - g.thr) / dt;
+    if (hooks?.knee && Math.abs(slope - lastSlope) > 0.02) hooks.knee(c);
+    lastSlope = slope;
     g.next = thr;
     const snap = inTail ? null : snapshot(c);
     const e0 = energyWithTail(c, g);
@@ -567,7 +587,10 @@ export function upperBurn(c: Craft, plan: UpperBurnPlan, hooks: BurnHooks | null
       }
     }
     if (hooks) hooks.step(c);
-    if (inTail && thr <= 0) break;
+    if (inTail && thr <= 0) {
+      hooks?.knee?.(c);
+      break;
+    }
   }
   return { tCut: cutT, tEnd: c.t, r: { ...c.r }, v: { ...c.v }, prop: c.tanks.s2 ?? 0, depleted };
 }

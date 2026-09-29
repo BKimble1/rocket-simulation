@@ -170,7 +170,10 @@ vec4 withAir(vec4 c, float b, vec3 d, float tm) {
   float a0 = max(0.0, iA.x);
   vec3 Tap = vec3(1.0);
   vec3 Lap = vec3(0.0);
-  if (tm > a0) Lap = integrateScattering(uCamPos, d, uSun, a0, tm, 10, 0.5, uCamR < A_RT ? 1 : 2, Tap) * SUN_E;
+  // samples uniform along a path inside the cloud layer; from above it, dense toward the cloud,
+  // where the air is densest (dense at the camera end would starve a grazing path near the
+  // horizon of samples and redden far clouds)
+  if (tm > a0) Lap = integrateScattering(uCamPos, d, uSun, a0, tm, 10, 0.5, uRegime == 2 ? 2 : 0, Tap) * SUN_E;
   return vec4((Lap * c.a + Tap * c.rgb) * uFade, c.a * uFade);
 }
 

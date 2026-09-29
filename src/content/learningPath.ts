@@ -56,7 +56,7 @@ export const LEARNING_PATH: LearningStep[] = [
     topic: 'structures',
     title: 'Structures and materials: light, stiff and tough enough',
     blurb:
-      'Why tank walls are machined into ribs and flown pressurized, why the fairing is a sandwich, which alloys stay tough at 90 K or strong while glowing, and how parts are joined and inspected. Each material is shown where the vehicle uses it, with the reasons and the limits.',
+      'Why tank walls are machined into ribs and flown pressurized, why the fairing is a sandwich, which alloys stay tough at 90 K or strong while glowing, and how parts are joined and inspected. Each material is shown where the vehicle uses it, with the reasons and the limits. The step ends on the ground: the pad and tower use heavy, cheap steel and concrete, because on the ground mass costs nothing.',
     items: [
       { part: 's1-lox-tank' },
       { demo: 'tank-pressure' },
@@ -72,6 +72,10 @@ export const LEARNING_PATH: LearningStep[] = [
       { material: 'cfrp-sandwich' },
       { material: 'stainless' },
       { material: 'cryo-foam' },
+      { part: 'service-tower' },
+      { material: 'structural-steel' },
+      { part: 'flame-deflector' },
+      { material: 'refractory-concrete' },
     ],
   },
   {
@@ -135,7 +139,7 @@ export const LEARNING_PATH: LearningStep[] = [
     topic: 'return',
     title: 'Return and reuse: bringing hardware back',
     blurb:
-      'How the booster flies back and lands on its centre engine, and how a capsule sheds orbital speed behind an ablative heat shield and comes down under reefed parachutes. Reuse is not free: see what has to be inspected and replaced.',
+      'How the booster flies back and lands on its centre engine, and how a capsule sheds orbital speed behind an ablative heat shield and comes down under reefed parachutes. Reuse is not free: see what has to be inspected and replaced, and why the booster is expended when the payload is heavy (the crewed station flight needs all of its propellant).',
     items: [
       { demo: 'booster-recovery' },
       { mission: 'leo', phase: 'boostback' },
@@ -144,6 +148,8 @@ export const LEARNING_PATH: LearningStep[] = [
       { part: 'cold-gas-rcs' },
       { part: 'landing-legs' },
       { mission: 'leo', phase: 'landing-burn' },
+      { part: 'booster-avionics' },
+      { mission: 'station', phase: 'staging' },
       { demo: 'capsule-return' },
       { mission: 'return', phase: 'entry' },
       { part: 'heat-shield' },
@@ -160,7 +166,7 @@ export const LEARNING_PATH: LearningStep[] = [
     topic: 'missions',
     title: 'Mission comparisons: one vehicle, six jobs',
     blurb:
-      'Compare what changes from mission to mission: a suborbital hop that reaches space but not orbit, a direct climb to low orbit, a transfer toward geostationary altitude, a station rendezvous, a capsule return, and a lunar flyby that is not an orbit insertion.',
+      'Compare what changes from mission to mission: a suborbital hop that reaches space but not orbit, a direct climb to low orbit with the booster flying home, a transfer toward geostationary altitude, a station rendezvous with a crew stack heavy enough that the booster is expended, a capsule return, and a lunar flyby that is not an orbit insertion.',
     items: [{ mission: 'suborbital' }, { mission: 'leo' }, { mission: 'gto' }, { mission: 'station' }, { mission: 'return' }, { mission: 'lunar' }],
   },
 ];

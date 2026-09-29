@@ -177,9 +177,9 @@ describe.skipIf(!leo)('content claims against the LEO mission timeline', () => {
     expect((E1.minThrottle * (E1.thrustSL ?? 0)) / (touchdownMass * G0)).toBeGreaterThan(1);
   });
 
-  it('SECO about 8.5 minutes after liftoff; a short circularization burn at 400 km; 92.4-minute orbit', () => {
-    expect(Math.abs(f('seco.t') / 60 - 8.5)).toBeLessThan(0.5);
-    expect(gloss('seco')).toContain('about 8.5 minutes after liftoff');
+  it('SECO about 7.3 minutes after liftoff; a short circularization burn at 400 km; 92.4-minute orbit', () => {
+    expect(Math.abs(f('seco.t') / 60 - 7.3)).toBeLessThan(0.2);
+    expect(gloss('seco')).toContain('about 7.3 minutes after liftoff');
     expect(f('circ.dv')).toBeGreaterThan(0);
     expect(f('circ.dv')).toBeLessThan(150); // "a short one"
     expect(Math.abs(f('orbit.apoKm') - 400)).toBeLessThan(15);
@@ -228,12 +228,12 @@ describe.skipIf(!station)('content claims against the station mission timeline',
 const ret = tryBuild('return');
 describe.skipIf(!ret)('content claims against the capsule return timeline', () => {
   const m = ret as MissionTimeline;
-  it('deorbit about 100 m/s; entry interface about 120 km; splashdown at about 8 m/s', () => {
+  it('deorbit about 100 m/s; entry interface about 120 km; splashdown at about 7.6 m/s', () => {
     expect(Math.abs(factOf(m, 'deorbit.dv') - 100)).toBeLessThan(15);
     const ei = telemetryAt(m, 'capsule', ev(m, 'entry-interface'));
     expect(Math.abs(ei!.altitude / 1e3 - 120)).toBeLessThan(10);
-    expect(Math.round(factOf(m, 'splash.speed'))).toBe(8);
-    expect(check('return-capsule-order')).toContain('about 8 m/s');
+    expect(Math.abs(factOf(m, 'splash.speed') - 7.6)).toBeLessThan(0.3);
+    expect(check('return-capsule-order')).toContain('about 7.6 m/s');
     expect(gloss('entry-interface')).toContain('about 120 km');
     const order = ['deorbit-start', 'sm-sep', 'entry-interface', 'peak-heating', 'drogue-deploy', 'main-deploy', 'main-disreef', 'splashdown'];
     for (let k = 1; k < order.length; k++) expect(ev(m, order[k])).toBeGreaterThan(ev(m, order[k - 1]));

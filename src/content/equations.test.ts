@@ -54,9 +54,10 @@ describe('worked examples recomputed from spec.ts', () => {
     expect(ex).toContain(`${fmt(P_SEA)} Pa`);
     expect(ex).toContain(`${fmt(loss / 1e3, 1)} kN`);
     expect(ex).toContain(`${fmt(Fsl / 1e3, 1)} kN`);
-    // the listed sea-level rating and how far it is from the pressure-term result
-    expect(ex).toContain(`${fmt((E1.thrustSL ?? 0) / 1e3)} kN at sea level, ${fmt(((E1.thrustSL ?? 0) / Fsl - 1) * 100, 1)} % more`);
-    expect(Math.abs(Fsl / (E1.thrustSL ?? 1) - 1)).toBeLessThan(0.02);
+    // the listed sea-level rating agrees with the pressure-term result
+    expect(ex).toContain(`${fmt((E1.thrustSL ?? 0) / 1e3)} kN at sea level, in agreement`);
+    expect(Math.abs(Fsl / (E1.thrustSL ?? 1) - 1)).toBeLessThan(0.001);
+    expect(ex).toContain(`π·(${fmt(E1.exitDiameter, 3)} m)²/4`);
     expect(ex).toContain(`${fmt(E1.ispVac)} s`);
     expect(ex).toContain(`${fmt(mdot, 1)} kg/s`);
     expect(S1.engineCount).toBe(7);

@@ -3,9 +3,10 @@
  * slash pines and cabbage palms, placed once (seeded, deterministic) on land outside the mowed
  * and gravelled ground (read from the overlay), off the beach and the wet margins, growing in
  * thickets and hammocks and thinning with distance. Each plant is a few crossed foliage cards
- * (a procedural leaf atlas, alpha-tested, normals bent outward so a clump shades like a volume)
+ * (a procedural leaf atlas, alpha-tested with a mip-level coverage boost, normals bent outward so a clump shades like a volume)
  * on a trunk where it has one. Three instanced meshes (shrubs, pines, palms) with per-instance
- * tint: the whole scatter costs three draw calls. The terrain shader's colour variation carries
+ * tint, one set per scatter region (pad, tracking camera, landing zone), each hidden when the
+ * camera is too far for its plants to cover a pixel. The terrain shader's colour variation carries
  * the ground; this gives the ground cameras depth and a broken skyline beyond the complex.
  */
 import * as THREE from 'three';
@@ -16,6 +17,7 @@ import { overlayAt, type Overlay } from './overlay';
 import { rng } from './textures';
 import { withHaze } from './haze';
 import { mergeParts } from './geom';
+import { alphaMip } from './mats';
 
 export interface Vegetation {
   group: THREE.Group;
@@ -229,24 +231,27 @@ export function buildVegetation(maps: SiteMaps, overlay: Overlay): Vegetation {
   group.name = 'vegetation';
 
   // sampling regions: the complex's surroundings, the tracking camera's foreground, the landing zone
+  // (each region is drawn as its own instanced meshes, culled by camera distance: a region's
+  // shrubs are sub-pixel beyond ~1 km, its trees beyond ~3 km)
   const regions = [
-    { x: 0, z: 0, r0: 180, r1: 2300, w: 0.62 },
-    { x: GROUND_CAMS.tracking.x, z: GROUND_CAMS.tracking.z, r0: 25, r1: 800, w: 0.14 },
-    { x: LANDING_ZONE.x, z: LANDING_ZONE.z, r0: 170, r1: 1100, w: 0.24 },
+    { name: 'pad', x: 0, z: 0, r0: 180, r1: 2300, w: 0.62 },
+    { name: 'tracking', x: GROUND_CAMS.tracking.x, z: GROUND_CAMS.tracking.z, r0: 25, r1: 800, w: 0.14 },
+    { name: 'lz', x: LANDING_ZONE.x, z: LANDING_ZONE.z, r0: 170, r1: 1100, w: 0.24 },
   ];
   const pick = () => {
     let u = r();
-    let reg = regions[0];
-    for (const g of regions) {
-      if (u < g.w) {
-        reg = g;
+    let reg = 0;
+    for (let i = 0; i < regions.length; i++) {
+      if (u < regions[i].w) {
+        reg = i;
         break;
       }
-      u -= g.w;
+      u -= regions[i].w;
     }
+    const g = regions[reg];
     const a = r() * Math.PI * 2;
-    const rr = Math.sqrt(reg.r0 * reg.r0 + r() * (reg.r1 * reg.r1 - reg.r0 * reg.r0));
-    return { x: reg.x + Math.cos(a) * rr, z: reg.z + Math.sin(a) * rr, reg, rr };
+    const rr = Math.sqrt(g.r0 * g.r0 + r() * (g.r1 * g.r1 - g.r0 * g.r0));
+    return { x: g.x + Math.cos(a) * rr, z: g.z + Math.sin(a) * rr, reg, r1: g.r1, rr };
   };
   // keep trees out of the ground cameras' sight lines (camera to subject) and off their sites
   const C = GROUND_CAMS;
@@ -286,13 +291,14 @@ export function buildVegetation(maps: SiteMaps, overlay: Overlay): Vegetation {
     m: THREE.Matrix4;
     c: THREE.Color;
     palm: boolean;
+    reg: number;
   }
   const place = (n: number, tree: boolean): Plant[] => {
     const out: Plant[] = [];
     const q = new THREE.Quaternion();
     const e = new THREE.Euler();
     const tints = tree ? ['#ffffff', '#e6ead8', '#f2eed8', '#d6dcc6'] : ['#ffffff', '#e8ecd8', '#f4efd6', '#dfe6cf', '#c8d0b8', '#f0e4c4'];
-    const put = (x: number, z: number) => {
+    const put = (x: number, z: number, reg: number) => {
       const y = groundY(maps, x, z);
       const palm = tree && r() < 0.4;
       const s = !tree ? 1.6 + r() * 2.0 + (r() < 0.12 ? 1.2 : 0) : palm ? 7 + r() * 4 : 12 + r() * 8;
@@ -301,12 +307,12 @@ export function buildVegetation(maps: SiteMaps, overlay: Overlay): Vegetation {
       const sc = tree ? new THREE.Vector3(s * (0.85 + r() * 0.3), s, s * (0.85 + r() * 0.3)) : new THREE.Vector3(s * (0.8 + r() * 0.4), s * (0.55 + r() * 0.35), s * (0.8 + r() * 0.4));
       const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y - (tree ? 0.25 : 0.05), z), q, sc);
       const c = new THREE.Color(tints[Math.floor(r() * tints.length)]).multiplyScalar(0.82 + r() * 0.3);
-      out.push({ m, c, palm });
+      out.push({ m, c, palm, reg });
     };
     for (let tries = 0; tries < n * 6 && out.length < n; tries++) {
       const p = pick();
       // thin out with distance from each region's centre
-      const fall = 1 - 0.55 * THREE.MathUtils.smoothstep(p.rr, p.reg.r1 * 0.4, p.reg.r1);
+      const fall = 1 - 0.55 * THREE.MathUtils.smoothstep(p.rr, p.r1 * 0.4, p.r1);
       if (r() > suit(p.x, p.z, tree) * fall) continue;
       // plants grow in thickets and hammocks: a seed and its neighbours
       const k = tree ? 1 + Math.floor(r() * 5) : 6 + Math.floor(r() * 11);
@@ -317,7 +323,7 @@ export function buildVegetation(maps: SiteMaps, overlay: Overlay): Vegetation {
         const x = p.x + Math.cos(a) * d;
         const z = p.z + Math.sin(a) * d;
         if (i > 0 && suit(x, z, tree) <= 0) continue;
-        put(x, z);
+        put(x, z, p.reg);
       }
     }
     return out;
@@ -325,19 +331,25 @@ export function buildVegetation(maps: SiteMaps, overlay: Overlay): Vegetation {
 
   const atlas = leafAtlas();
   const mat = new THREE.MeshStandardMaterial({ map: atlas, color: '#ffffff', roughness: 0.92, metalness: 0, alphaTest: 0.42, side: THREE.DoubleSide });
-  mat.alphaToCoverage = true;
   // foliage cards are lit by their bent normals on both faces (no back-face flip)
   mat.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize( vNormal );');
   };
+  // distant clumps keep their coverage as the atlas mips thin them out
+  alphaMip(mat, 0.3);
   withHaze(mat, 'site-haze-foliage');
   mat.name = 'site.foliage';
   const geos: THREE.BufferGeometry[] = [];
 
-  const build = (geo: THREE.BufferGeometry, plants: Plant[], name: string, cast: boolean) => {
+  const build = (geo: THREE.BufferGeometry, all: Plant[], name: string, cast: boolean, lodMax: number, lodMaxH: number) => {
     geos.push(geo);
+    regions.forEach((reg, ri) => build1(geo, all.filter((p) => p.reg === ri), `${name}-${reg.name}`, cast, lodMax, lodMaxH));
+  };
+  const build1 = (geo: THREE.BufferGeometry, plants: Plant[], name: string, cast: boolean, lodMax: number, lodMaxH: number) => {
     if (!plants.length) return;
     const im = new THREE.InstancedMesh(geo, mat, plants.length);
+    im.userData.lodMax = lodMax;
+    im.userData.lodMaxH = lodMaxH;
     plants.forEach((p, i) => {
       im.setMatrixAt(i, p.m);
       im.setColorAt(i, p.c);
@@ -352,9 +364,9 @@ export function buildVegetation(maps: SiteMaps, overlay: Overlay): Vegetation {
   };
   const shrubs = place(nShrubs, false);
   const trees = place(nTrees, true);
-  build(shrubGeometry(r), shrubs, 'scrub', false);
-  build(pineGeometry(r), trees.filter((p) => !p.palm), 'pines', true);
-  build(palmGeometry(r), trees.filter((p) => p.palm), 'palms', true);
+  build(shrubGeometry(r), shrubs, 'scrub', false, 1100, 150);
+  build(pineGeometry(r), trees.filter((p) => !p.palm), 'pines', true, 3200, 700);
+  build(palmGeometry(r), trees.filter((p) => p.palm), 'palms', true, 3200, 700);
 
   return {
     group,

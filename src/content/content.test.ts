@@ -282,6 +282,15 @@ describe('knowledge checks', () => {
     // gimbal range
     expect(text('gnc-tvc')).toContain(`up to ${fmt(E1.gimbalRangeDeg)}°`);
   });
+
+  it('engine numbers quoted in the glossary match spec.ts', () => {
+    const def = (id: string) => GLOSSARY.find((g) => g.id === id)?.definition ?? '';
+    expect(def('specific-impulse')).toContain(`E-1: ${fmt(E1.ispSL ?? 0)} s at sea level, ${fmt(E1.ispVac)} s in vacuum`);
+    expect(def('specific-impulse')).toContain(`${fmt(E1V.ispVac)} s in vacuum`);
+    expect(def('expansion-ratio')).toContain(`${fmt(E1.expansionRatio)} for the sea-level E-1, ${fmt(E1V.expansionRatio)} for the vacuum E-1V`);
+    expect(E1V.throatDiameter).toBe(E1.throatDiameter); // "which has the same throat"
+    expect(def('throttling')).toContain(`${fmt(E1.minThrottle * 100)} % of rated thrust`);
+  });
 });
 
 describe('learning path', () => {

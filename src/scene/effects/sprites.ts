@@ -277,21 +277,23 @@ void main() {
   float g = 0.55;
   float hg = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) / 12.566;
   float sunVis = 1.0 - 0.72 * shadow;
-  vec3 light = uSunCol * sunVis * (wrap * 0.92 + hg * (1.0 - dens) * 5.0);
+  // a thick cloud scatters many times: its sunlit side is brighter than a white wall would be
+  vec3 light = uSunCol * sunVis * (wrap * 1.3 + hg * (1.0 - dens) * 5.0);
   float up = dot(n, uUpView) * 0.5 + 0.5;
-  light += mix(uGround, uSky, up) * (1.0 - 0.3 * shadow);
+  light += mix(uGround, uSky, up) * (1.25 - 0.35 * shadow);
+  // the flame is an extended source tens of metres long: soften the falloff near it
   for (int i = 0; i < 2; i++) {
     vec3 L = uFlamePos[i] - vView;
     float d2 = dot(L, L);
     float nl = dot(n, L * inversesqrt(max(d2, 1e-4))) * 0.5 + 0.5;
-    light += uFlameCol[i] * nl / (d2 + 25.0);
+    light += uFlameCol[i] * nl / (d2 + 400.0);
   }
   vec3 col = vAlb.rgb * light * RECIPROCAL_PI;
   float dist = length(vView);
   float fog = 1.0 - exp(-dist * uHazeDensity);
   col = mix(col, uHaze, fog);
   emitT *= 1.0 - fog;
-  gl_FragColor = vec4(fxOut(col) * a + fxFlame(emitT), a);
+  gl_FragColor = vec4(fxOut(col) * a + fxGlow(emitT), a);
 }
 `;
 

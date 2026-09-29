@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { EARTH_AXIS, MU_EARTH, OMEGA_EARTH, R_EARTH, siteFrameQuaternion, sitePosition } from '../../world/frames';
 import type { EffectsSource } from './input';
 import { TICK, SnapshotCache, type ClusterSnap, type EmitterSnap, type Snapshot } from './snapshot';
-import { airDensity, columnRadius, columnShape, makeColumnShape, mixingTau, RHO_SL, windAt } from './physics';
+import { airDensity, columnRadius, columnShape, makeColumnShape, mixingTau, RHO_SL, SMALL_THRUSTER, windAt } from './physics';
 import { DELUGE, MOUNT_HOLE, TRENCH_DIR, TRENCH_EXIT, VENTS, type PadJet } from './pad';
 
 // ───────────────────────────── records ─────────────────────────────
@@ -312,11 +312,13 @@ const TAIL: Species = {
     const solid = c.kind === 'solid';
     rec.group = Group.Smoke;
     rec.size0 = s0 * ctx.sizeK;
-    rec.size1 = rec.size0 + shape.uJet * rec.tau * (0.07 + 0.06 * rnd(12)) * ctx.sizeK;
-    rec.tauS = rec.tau * 1.3;
+    // turbulent growth while the jet slows to the air (in thin air it would take tens of
+    // seconds: capped so the tail stays about as wide as the plume)
+    rec.size1 = rec.size0 + Math.min(shape.uJet * rec.tau * (0.07 + 0.06 * rnd(12)), 1.4 * s0) * ctx.sizeK;
+    rec.tauS = Math.min(rec.tau, 1.5) * 1.3;
     rec.sizeLin = 1.2 + 0.8 * (1 - shape.smoke);
     rec.life = 3.4 + 1.4 * rnd(13);
-    rec.alpha0 = Math.min(1, (solid ? 0.8 : 0.5) * (0.35 + 0.65 * shape.smoke) * ctx.alphaK);
+    rec.alpha0 = Math.min(1, (solid ? 0.8 : 0.5) * Math.pow(shape.smoke, 0.8) * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.05;
     rec.fadeOut = 0.55;
@@ -328,15 +330,17 @@ const TAIL: Species = {
       rec.emit.setRGB(1.2, 0.5, 0.14).multiplyScalar(shape.lum);
       rec.tauE = 0.2;
     } else {
-      const soot = 0.16 + 0.1 * rnd(14);
-      rec.alb0.setRGB(soot * 1.12, soot, soot * 0.88);
-      rec.alb1.setRGB(0.56, 0.55, 0.53);
+      // kerosene soot: nearly black at the end of the flame, greying slowly as it mixes
+      const soot = 0.1 + 0.08 * rnd(14);
+      rec.alb0.setRGB(soot * 1.12, soot, soot * 0.9);
+      rec.alb1.setRGB(0.5, 0.49, 0.48);
       // the tail end of the afterburning flame: a brief, dim glow (many sprites overlap here)
       rec.emit.setRGB(0.3, 0.075, 0.012).multiplyScalar(shape.lum * (0.5 + 0.8 * rnd(15)));
       rec.tauE = 0.06 + 0.08 * rnd(16);
     }
-    rec.tauC = 1.1 + 0.8 * rnd(17);
-    rec.stretchLen = 0;
+    rec.tauC = solid ? 1.2 : 2.6 + 1.4 * rnd(17);
+    // overlap successive puffs along the path (a continuous column, not a string of beads)
+    rec.stretchLen = c.airVel.length() * dtS * 0.9;
     rec.stretchVel = 0;
     return true;
   },
@@ -345,14 +349,14 @@ const TAIL: Species = {
 const TRAIL: Species = {
   name: 'trail',
   salt: 23,
-  dtT: 36,
+  dtT: 24,
   life: 185,
   window: false,
   spawn(k, ts, dt, snap, rec, rnd, ctx) {
     const list = smokeSources(snap);
     if (!list.length) return false;
     const c = list[((k % list.length) + list.length) % list.length];
-    if (c.altitude > 62000) return false;
+    if (c.altitude > 52000) return false;
     const hN = nozzleHeight(c);
     if (hN < 11) return false;
     const dtS = dt * list.length;
@@ -362,12 +366,13 @@ const TRAIL: Species = {
     const spacing = c.airVel.length() * dtS;
     rec.group = Group.Trail;
     rec.size0 = s0 * ctx.sizeK;
-    rec.size1 = Math.max(rec.size0 + shape.uJet * rec.tau * 0.3, spacing * 0.62) * ctx.sizeK;
-    rec.tauS = rec.tau * 1.3;
+    rec.size1 = Math.max(Math.min(rec.size0 + shape.uJet * rec.tau * 0.3, 2.2 * rec.size0 + 10), spacing * 0.62) * ctx.sizeK;
+    rec.tauS = Math.min(rec.tau, 2) * 1.3;
     // turbulent diffusion widens the trail; faster in thin air
     rec.sizeLin = 0.7 + 1.6 * (1 - shape.smoke) + 0.4 * rnd(12);
     rec.life = 115 + 70 * rnd(13);
-    rec.alpha0 = Math.min(1, (solid ? 0.75 : 0.42) * (0.25 + 0.75 * shape.smoke) * ctx.alphaK);
+    // thinning with altitude: dense near the ground, faint by 30-40 km, gone above ~50 km
+    rec.alpha0 = Math.min(1, (solid ? 0.75 : 0.42) * Math.pow(shape.smoke, 0.75) * ctx.alphaK);
     rec.fadeIn0 = 2.0;
     rec.fadeIn1 = 4.6;
     rec.fadeOut = 0.5;
@@ -384,7 +389,9 @@ const TRAIL: Species = {
     rec.tauC = 25;
     rec.emit.setRGB(0, 0, 0);
     rec.tauE = 1;
-    rec.stretchLen = spacing * 0.55;
+    // soft wisps stretched along the path so the trail reads as one continuous column
+    rec.variant = rnd(10) < 0.7 ? 2 + Math.floor(rnd(18) * 2) : Math.floor(rnd(18) * 2);
+    rec.stretchLen = spacing * 0.9;
     rec.stretchVel = 0;
     return true;
   },
@@ -478,12 +485,15 @@ const GROUND: Species = {
     rec.fadeOut = 0.5;
     rec.thin = 0.3;
     rec.thinRef = rec.size0 * 2;
-    if (rnd(16) < 0.2) {
-      rec.alb0.setRGB(0.5, 0.46, 0.42);
-      rec.alb1.setRGB(0.76, 0.74, 0.72);
+    // mostly white steam (deluge water boiled by the exhaust, condensing as it cools), with
+    // some neutral grey combustion smoke that pales as it mixes with the steam
+    if (rnd(16) < 0.18) {
+      const g = 0.5 + 0.08 * rnd(17);
+      rec.alb0.setRGB(g, g, g * 1.01);
+      rec.alb1.setRGB(0.8, 0.8, 0.81);
     } else {
-      const w = 0.86 + 0.1 * rnd(17);
-      rec.alb0.setRGB(w, w, w * 0.99);
+      const w = 0.9 + 0.07 * rnd(17);
+      rec.alb0.setRGB(w, w, w);
       rec.alb1.setRGB(w, w, w);
     }
     rec.tauC = 10;
@@ -617,11 +627,13 @@ const PUFF: Species = {
   window: false,
   spawn(k, ts, _dt, snap, rec, rnd, ctx) {
     puffList.length = 0;
-    for (const e of snap.emitters) if ((e.kind === 'cold-gas' || e.kind === 'mono') && e.throttle > 0.03) puffList.push(e);
+    for (const e of snap.emitters) if ((e.kind === 'cold-gas' || e.kind === 'mono' || (e.kind === 'hypergolic' && e.exitRadius < SMALL_THRUSTER)) && e.throttle > 0.03) puffList.push(e);
     if (!puffList.length) return false;
     const e = puffList[((k % puffList.length) + puffList.length) % puffList.length];
     if (rnd(0) > e.throttle) return false;
-    const mono = e.kind === 'mono';
+    // hypergolic attitude thrusters: a small, brief, pale puff with a faint orange-pink flash
+    const hyp = e.kind === 'hypergolic';
+    const mono = e.kind === 'mono' || hyp;
     const rho = airDensity(e.ambientPressure, e.altitude) / RHO_SL;
     const vac = e.altitude > 85000 || rho < 1e-6;
     rec.p0.copy(e.pos).addScaledVector(e.dir, e.exitRadius * 2);
@@ -652,22 +664,30 @@ const PUFF: Species = {
     rec.tauS = 0.4;
     rec.sizeLin = vac ? (mono ? 0.8 : 2.4) : 0.5;
     rec.life = 0.8 + 0.6 * rnd(7);
-    rec.alpha0 = Math.min(1, (mono ? 0.22 : 0.55) * ctx.alphaK);
+    rec.alpha0 = Math.min(1, (hyp ? 0.3 : mono ? 0.22 : 0.55) * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.03;
     rec.fadeOut = 0.25;
     rec.thin = 0.8;
     rec.thinRef = rec.size0 * 4;
-    if (mono) {
+    if (hyp) {
+      rec.alb0.setRGB(0.96, 0.84, 0.76);
+      rec.alb1.setRGB(0.93, 0.9, 0.88);
+    } else if (mono) {
       rec.alb0.setRGB(0.92, 0.9, 0.84);
       rec.alb1.setRGB(0.92, 0.9, 0.84);
     } else {
       rec.alb0.setRGB(0.97, 0.98, 1);
       rec.alb1.setRGB(0.97, 0.98, 1);
     }
-    rec.tauC = 1;
-    rec.emit.setRGB(0, 0, 0);
-    rec.tauE = 1;
+    rec.tauC = hyp ? 0.25 : 1;
+    if (hyp) {
+      rec.emit.setRGB(1.0, 0.42, 0.34).multiplyScalar(0.9);
+      rec.tauE = 0.07;
+    } else {
+      rec.emit.setRGB(0, 0, 0);
+      rec.tauE = 1;
+    }
     rec.rot0 = rnd(8) * Math.PI * 2;
     rec.spin = (rnd(9) - 0.5) * 2;
     rec.variant = Math.floor(rnd(10) * 4);

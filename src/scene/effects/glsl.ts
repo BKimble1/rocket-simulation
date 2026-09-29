@@ -63,4 +63,15 @@ vec3 fxFlame(vec3 e) {
   vec3 m = 1.0 - exp(-max(e, vec3(0.0)));
   return linearToOutputTexel(vec4(m, 1.0)).rgb;
 }
+/**
+ * The same curve without the sRGB encoding, for emission that many overlapping sprites add up
+ * in the (display-encoded) framebuffer: the encoding lifts small values several times over, so
+ * dozens of faintly glowing sprites would sum to a bright glow. Matches fxFlame near white.
+ */
+vec3 fxGlow(vec3 e) {
+#ifdef TONE_MAPPING
+  e *= toneMappingExposure;
+#endif
+  return 1.0 - exp(-max(e, vec3(0.0)));
+}
 `;

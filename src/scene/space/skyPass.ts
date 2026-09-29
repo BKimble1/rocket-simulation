@@ -154,6 +154,83 @@ vec3 earthSurface(vec3 p, vec3 n, vec3 d, float padDist) {
   return col;
 }
 
+/* The ground seen along d at distance tG (a hit, or the closest approach for a ray grazing just
+   past the limb): aerial perspective plus the lit surface; depth for the depth buffer. */
+vec3 groundColor(vec3 d, vec3 dvn, vec2 iA, float tG, bool inside, out float depth) {
+  vec3 p = d * tG;
+  vec3 n = normalize(uCamPos + p);
+  float padDist = length(p - uPadRel);
+  // under the local terrain (opaque, drawn over this) a short, cheap march is enough: the
+  // colour only shows while the terrain is loading or in the dev harness
+  int steps = padDist < uHole.x ? min(uSteps, 4) : uSteps;
+  vec3 T = vec3(1.0);
+  vec3 L = vec3(0.0);
+  float tStart = max(0.0, iA.x);
+  // samples uniform along a low path, dense toward the ground when looking down from altitude
+  int warp = inside && uCamR - A_RB < 1000.0 ? 0 : 2;
+  if (iA.y > 0.0 && tG > tStart) L = integrateScattering(uCamPos, d, uSun, tStart, tG, steps, 0.5, warp, T) * SUN_E;
+  vec3 col = L + T * earthSurface(p, n, d, padDist);
+  depth = 1.0;
+  if (padDist < uHole.x) {
+    // the local terrain draws here: no depth, so it always wins (clean edge at its inner radius)
+    if (uHoleDebug > 0.5) col = mix(col, vec3(1.0, 0.0, 1.0), 0.6);
+  } else {
+    // push the globe back a hair under the terrain's fading edge so the terrain always wins
+    float push = padDist < uHole.y ? 1.0 + 3e-4 : 1.0;
+    float w = tG * (-dvn.z);
+#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
+    depth = log2(1.0 + w * push) * logDepthBufFC * 0.5;
+#else
+    vec4 clip = projectionMatrix * vec4(dvn * tG * push, 1.0);
+    depth = clamp(0.5 * clip.z / clip.w + 0.5, 0.0, 1.0);
+#endif
+  }
+  return col;
+}
+
+/* Sky (sky-view table), stars, Sun, and the air in front of the Moon when the ray meets it. */
+vec3 skyColor(vec3 d, vec3 dvn, bool hitM, vec2 iM, out float alpha, out float depth) {
+  vec4 sv = texture2D(uSkyView, skyViewUV(d));
+  vec3 col = sv.rgb;
+  float Tavg = sv.a;
+  alpha = 1.0;
+  depth = 1.0;
+  if (hitM) {
+    // the Moon (drawn before this pass) shows through the air: the air's light adds to the
+    // attenuated Moon (premultiplied), so a new Moon vanishes into the daytime sky as it should
+    alpha = 1.0 - Tavg;
+    float w = max(iM.x, 0.0) * (-dvn.z);
+#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
+    depth = log2(1.0 + w) * logDepthBufFC * 0.5;
+#endif
+    return col;
+  }
+  float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+#ifndef ENV_MODE
+  // gone against any daylit or twilight sky (the eye and camera adapt to the sky)
+  col += Tavg * starsAt(d) * uStarVis * exp(-lum * 150.0);
+#endif
+  float sinA = length(cross(d, uSun));
+  float cosA = dot(d, uSun);
+  if (cosA > 0.0) {
+#ifdef ENV_MODE
+    // a soft sun spot for reflections (the directional light carries the sharp highlight)
+    col += uSunViewT * SUN_E * 0.25 * exp(-sinA / 0.02) / (2.0 * PI * 0.0004);
+#else
+    float edge = max(uPixel * 0.75, 1e-5);
+    float disk = smoothstep(A_SUN_R + edge, A_SUN_R - edge, sinA);
+    float rr = clamp(sinA / A_SUN_R, 0.0, 1.0);
+    float limb = 1.0 - 0.6 * (1.0 - sqrt(1.0 - rr * rr));
+    vec3 sunRad = SUN_E / (PI * A_SUN_R * A_SUN_R) * limb;
+    col += min(uSunViewT * sunRad * disk, vec3(90.0));
+    // restrained glare of the optics around the disk
+    float g = 0.0018 * exp(-sinA / 0.006) + 0.00035 * exp(-sinA / 0.05);
+    col += uSunViewT * SUN_E * g * 4.0;
+#endif
+  }
+  return col;
+}
+
 void main() {
   vec3 d = normalize(vDir);
   vec3 dvn = normalize(vDirView);
@@ -161,7 +238,6 @@ void main() {
   vec2 iG = raySphere(b, uC.x);
   vec2 iA = raySphere(b, uC.y);
   bool hitG = iG.x > 0.0;
-  float tG = iG.x;
   // Moon (slightly enlarged so the mesh's antialiased edge is blended, not overwritten)
   float bm = dot(uMoonRel, d);
   vec2 iM = raySphere(bm, uC.w);
@@ -169,86 +245,40 @@ void main() {
 #ifdef ENV_MODE
   hitM = false;
 #endif
-  if (hitM && hitG && iM.x > tG) hitM = false;
-  if (hitM) hitG = false;
+  if (hitM && hitG && iM.x > iG.x) hitM = false;
+
+  // pixel coverage of the Earth's silhouette, antialiased analytically: the ray's distance from
+  // the limb (b^2 - c = -(p^2 - R^2), p = the ray's closest approach to the centre) over the
+  // tangent length, in pixels. The limb is a long, high-contrast edge from every altitude.
+  float gCov = hitG ? 1.0 : 0.0;
+  if (b < 0.0 && !hitM) {
+    float disc = b * b - uC.x;
+    gCov = clamp(0.5 + disc / (2.0 * A_RB * sqrt(max(uC.x, 1.0)) * max(uPixel, 1e-7)), 0.0, 1.0);
+  }
+  if (hitM) gCov = 0.0;
 
   bool inside = uCamR < A_RT;
-  vec3 col;
+  vec3 col = vec3(0.0);
   float alpha = 1.0;
   float depth = 1.0;
-  if (hitG) {
-    // ground: aerial perspective marched per pixel
-    vec3 p = d * tG;
-    vec3 n = normalize(uCamPos + p);
-    float padDist = length(p - uPadRel);
-    // under the local terrain (opaque, drawn over this) a short, cheap march is enough: the
-    // colour only shows while the terrain is loading or in the dev harness
-    int steps = padDist < uHole.x ? min(uSteps, 4) : uSteps;
-    vec3 T = vec3(1.0);
-    vec3 L = vec3(0.0);
-    float tStart = max(0.0, iA.x);
-    if (iA.y > 0.0 && tG > tStart) L = integrateScattering(uCamPos, d, uSun, tStart, tG, steps, 0.5, inside ? 0 : 2, T) * SUN_E;
-    vec3 surf = earthSurface(p, n, d, padDist);
-    col = L + T * surf;
-    float w = tG * (-dvn.z);
-    if (padDist < uHole.x) {
-      depth = 1.0;
-      if (uHoleDebug > 0.5) col = mix(col, vec3(1.0, 0.0, 1.0), 0.6);
-    } else {
-      // push the globe back a hair under the terrain's fading edge so the terrain always wins
-      float push = padDist < uHole.y ? 1.0 + 3e-4 : 1.0;
-#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
-      depth = log2(1.0 + w * push) * logDepthBufFC * 0.5;
-#else
-      vec4 clip = projectionMatrix * vec4(dvn * tG * push, 1.0);
-      depth = clamp(0.5 * clip.z / clip.w + 0.5, 0.0, 1.0);
-#endif
-    }
-  } else {
-    // sky: the precomputed sky-view table (the whole path through the air)
-    vec4 sv = texture2D(uSkyView, skyViewUV(d));
-    col = sv.rgb;
-    float Tavg = sv.a;
-    if (hitM) {
-      // the Moon (drawn before this pass) shows through the air: the air's light adds to the
-      // attenuated Moon (premultiplied), so a new Moon vanishes into the daytime sky as it should
-      alpha = 1.0 - Tavg;
-      float w = max(iM.x, 0.0) * (-dvn.z);
-#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
-      depth = log2(1.0 + w) * logDepthBufFC * 0.5;
-#endif
-    } else {
-      float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
-#ifndef ENV_MODE
-      // gone against any daylit or twilight sky (the eye and camera adapt to the sky)
-      col += Tavg * starsAt(d) * uStarVis * exp(-lum * 150.0);
-#endif
-      float sinA = length(cross(d, uSun));
-      float cosA = dot(d, uSun);
-      if (cosA > 0.0) {
-#ifdef ENV_MODE
-        // a soft sun spot for reflections (the directional light carries the sharp highlight)
-        col += uSunViewT * SUN_E * 0.25 * exp(-sinA / 0.02) / (2.0 * PI * 0.0004);
-#else
-        float edge = max(uPixel * 0.75, 1e-5);
-        float disk = smoothstep(A_SUN_R + edge, A_SUN_R - edge, sinA);
-        float rr = clamp(sinA / A_SUN_R, 0.0, 1.0);
-        float limb = 1.0 - 0.6 * (1.0 - sqrt(1.0 - rr * rr));
-        vec3 sunRad = SUN_E / (PI * A_SUN_R * A_SUN_R) * limb;
-        col += min(uSunViewT * sunRad * disk, vec3(90.0));
-        // restrained glare of the optics around the disk
-        float g = 0.0018 * exp(-sinA / 0.006) + 0.00035 * exp(-sinA / 0.05);
-        col += uSunViewT * SUN_E * g * 4.0;
-#endif
-      }
-    }
+  if (gCov > 0.0) {
+    // a grazing ray just past the limb shades the closest point (just above the ground)
+    float tG = hitG ? iG.x : -b;
+    col = groundColor(d, dvn, iA, tG, inside, depth);
+  }
+  if (gCov < 1.0) {
+    float aS, dS;
+    vec3 cS = skyColor(d, dvn, hitM, iM, aS, dS);
+    col = mix(cS, col, gCov);
+    alpha = mix(aS, 1.0, gCov);
+    if (gCov < 0.5) depth = dS;
   }
   // night-side airglow: a thin shell at 86-100 km, seen edge-on at the limb
   if (uAirglow > 0.0 && !hitM) {
     float r1 = A_RB + 100000.0, r0 = A_RB + 86000.0;
     vec2 a1 = raySphere(b, uC.y + (A_RT - r1) * (A_RT + r1));
     vec2 a0 = raySphere(b, uC.y + (A_RT - r0) * (A_RT + r0));
-    float lim = hitG ? tG : 1e12;
+    float lim = hitG ? iG.x : 1e12;
     float len = 0.0;
     if (a1.y > 0.0) {
       float s0 = max(a1.x, 0.0), s1 = min(a1.y, lim);

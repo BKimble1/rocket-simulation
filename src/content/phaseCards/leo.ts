@@ -29,7 +29,7 @@ export const LEO_CARDS: PhaseCard[] = [
     equation: 'rocket-equation',
   }),
   card('leo', 'seco', {
-    what: `The E-1V shuts down at ${F.leoInsPerigeeAlt}, moving at about ${F.insPerigeeSpeed} (computed). The stage and satellite are now in orbit: this is the low point of an orbit whose high point, half a lap later on the far side of Earth, is at ${F.leoAlt}.`,
+    what: `About ${F.leoSeco} after liftoff, the E-1V shuts down at ${F.leoInsPerigeeAlt}, moving at about ${F.insPerigeeSpeed} (computed). The stage and satellite are now in orbit: this is the low point of an orbit whose high point, half a lap later on the far side of Earth, is at ${F.leoAlt}.`,
     whyNow: 'Cutoff comes the moment the orbit is right: any later and the high point would overshoot, any earlier and the orbit would not reach its target height (or would dip back into the atmosphere).',
     parts: ['vacuum-engine', 'main-valves', 'avionics', 's2-tanks', 's2-rcs'],
     forces: `Only gravity now: the vehicle is in free fall, but moving sideways so fast that Earth's surface curves away beneath it as fast as it falls. It is moving slightly faster than a circular orbit at this height needs, so the path rises away from Earth as it goes. Gravity here is still about ${F.gravityAt200} of its surface value (computed).`,

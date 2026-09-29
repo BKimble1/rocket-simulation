@@ -1,7 +1,7 @@
 /**
  * Reference telemetry at a mission time, read from a body's sampled track (pure function of t):
  * altitude, speeds, the sensed (non-gravitational) acceleration from the track's velocity change
- * minus gravity (Earth, and the Moon on the lunar mission), Mach and dynamic pressure in the
+ * minus gravity (Earth, and the Moon on the lunar mission) near the body's centre of mass, Mach and dynamic pressure in the
  * co-rotating air, mass, ground distance from the pad, and the osculating apsides.
  */
 import type { BodyId } from '../../vehicle/parts';
@@ -45,6 +45,19 @@ export function telemetryPoint(tl: MissionTimeline, body: BodyId): THREE.Vector3
     : body === 'fairingB' ? fairingHalf('B', 1).c
     : { x: 0, y: 0, z: 0 };
   return new THREE.Vector3(c.x, c.y, c.z);
+}
+
+/**
+ * Where the sensed acceleration is measured (model frame): near the body's centre of mass, as an
+ * inertial unit there would read it. The model origin of a stage lies 20 to 50 m from its centre
+ * of mass, where a slew adds angular-acceleration and centripetal terms (1 deg/s^2 at 50 m reads
+ * as 0.09 g) that the vehicle does not feel. Stages: a fixed point near their mean centre of mass
+ * (booster 18 m up its axis, upper stack 50 m); spacecraft: their centre of mass (telemetryPoint).
+ */
+export function accelerationPoint(tl: MissionTimeline, body: BodyId): THREE.Vector3 {
+  if (body === 'booster') return new THREE.Vector3(0, 18, 0);
+  if (body === 'upper') return new THREE.Vector3(0, 50, 0);
+  return telemetryPoint(tl, body);
 }
 
 type Track = NonNullable<MissionTimeline['bodies'][BodyId]>;
@@ -110,8 +123,9 @@ export function telemetryAt(tl: MissionTimeline, body: BodyId, t: number): Telem
   const t1 = Math.min(tr.t[tr.t.length - 1], t + H);
   let acc = 0;
   if (t1 > t0) {
-    const v0 = pointState(tr, cLocal, t0).vel;
-    const v1 = pointState(tr, cLocal, t1).vel;
+    const aLocal = accelerationPoint(tl, body);
+    const v0 = pointState(tr, aLocal, t0).vel;
+    const v1 = pointState(tr, aLocal, t1).vel;
     const aTot = v1.sub(v0).divideScalar(t1 - t0);
     acc = aTot.sub(gravity(s.pos, moon)).length();
   }

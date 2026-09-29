@@ -6,11 +6,11 @@ export const STRUCTURAL_STEEL: MaterialDraft = {
   name: 'Structural carbon steel (hot-rolled sections, painted or galvanized)',
   family: 'Steels',
   focus:
-    'Ordinary carbon and low-alloy steel sections (beams, angles, tubes, plate) bolted and welded into towers, frames and tanks. On the ground mass hardly matters, so the cheapest stiff, strong, weldable material wins.',
+    'Ordinary carbon and low-alloy steel sections (beams, angles, tubes, plate) bolted and welded into towers, frames and tanks. On this pad: the service tower and its arms, the frame of the launch mount, and the elevated water tank and piping of the deluge system. On the ground mass hardly matters, so the cheapest stiff, strong, weldable material wins.',
   suits:
     'High stiffness (about three times aluminium), good strength, easy to cut, weld and bolt, cheap per kilogram, and backed by a century of design codes. A tower must stay stiff in hurricane-force wind, hold umbilical arms and a crew access arm precisely, and carry cables, pipes and an elevator: exactly what steel frames do in buildings and bridges.',
   limits:
-    'Heavy, which is irrelevant on the ground but rules it out for the flight structure. Plain carbon steel rusts quickly in salt air, so pad steel is hot-dip galvanized (zinc coated) or painted and inspected. Below a transition temperature ordinary carbon steels become brittle, which is why cryogenic tanks and lines use austenitic stainless steel instead.',
+    'Heavy, which is irrelevant on the ground but rules it out for the flight structure. Plain carbon steel rusts quickly in salt air, so pad steel is hot-dip galvanized (the zinc corrodes first and protects the steel beneath) or painted, and inspected. It loses much of its strength when heated to several hundred degrees Celsius, so steel near the plume is set back, shielded or wetted by the deluge. Below a transition temperature ordinary carbon steels become brittle, which is why cryogenic tanks and lines use austenitic stainless steel instead.',
   elsewhere: [{ text: 'Launch towers and service structures worldwide are steel frames designed with building and bridge codes, protected against coastal corrosion.', source: 'aisc-360' }],
   compare: [
     { axis: 'Stiffness', text: 'About 200 GPa: roughly three times aluminium, so a steel frame deflects little under wind and arm loads.' },
@@ -35,11 +35,11 @@ export const REFRACTORY_CONCRETE: MaterialDraft = {
   name: 'Refractory concrete and reinforced concrete (pad and flame trench)',
   family: 'Ceramics and concrete',
   focus:
-    'Reinforced concrete forms the elevated pad, the launch mount foundations and the flame trench; surfaces the exhaust touches are lined with refractory (heat-resistant) concrete, and the deflector itself is faced with water-cooled steel.',
+    'Reinforced concrete forms the elevated pad, the launch mount foundations and the flame trench; surfaces the exhaust touches are lined with refractory (heat-resistant) concrete, and the deflector itself is faced with water-cooled steel. The refractory lining is used only where the jet strikes: it costs more than structural concrete and is not needed elsewhere.',
   suits:
     'Concrete is massive and cheap, strong in compression, and a poor conductor of heat, so a thick slab or trench wall absorbs a short blast without deep damage. Refractory mixes (calcium aluminate cements with heat-resistant aggregates) keep their integrity at temperatures that would make ordinary concrete spall.',
   limits:
-    'Weak in tension (steel reinforcement carries it), and it spalls when trapped moisture turns to steam in a sudden hot blast; the exhaust also erodes surfaces. Trench linings are inspected and repaired after launches.',
+    'Weak in tension (steel reinforcement carries it), and it spalls when trapped moisture turns to steam in a sudden hot blast; the fast, hot jet also erodes the surface a little on every launch, and salt spray attacks the reinforcing steel if cracks let it in. Trench linings are inspected and repaired after launches, so the lining is a maintained, consumable surface rather than a permanent one.',
   elsewhere: [{ text: 'Launch-pad flame trenches have been lined with refractory concrete and the material has been the subject of long-running corrosion and erosion research at launch sites.', source: 'nasa-ksc-refractory' }],
   compare: [
     { axis: 'Heat', text: 'Refractory grades tolerate the brief blast; ordinary concrete spalls. Neither would survive continuous exposure like an engine wall.' },

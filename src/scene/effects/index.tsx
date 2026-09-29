@@ -148,7 +148,8 @@ export class EffectsSystem {
     this.flameLight.intensity = f0.intensity;
     const sf = L.flames;
     sf[0].pos.subVectors(f0.pos, origin);
-    sf[0].col.copy(f0.col).multiplyScalar(f0.intensity);
+    // on the smoke the flame light is kept below the Sun's (daylight launch clouds read white)
+    sf[0].col.copy(f0.col).multiplyScalar(f0.intensity * 0.7);
 
     // entry plasma (the secondary light goes to the plasma when there is one)
     const pl = this.nowCache.plasmaAt(t, this.plasmaList);
@@ -176,7 +177,7 @@ export class EffectsSystem {
     this.auxLight.color.copy(auxCol);
     this.auxLight.intensity = auxI;
     sf[1].pos.copy(auxPos);
-    sf[1].col.copy(auxCol).multiplyScalar(auxI);
+    sf[1].col.copy(auxCol).multiplyScalar(auxI * 0.45);
 
     // smoke, steam and spray sprites, layered around the plume
     const n = this.sprites.update(this.particles, origin, camera, this.plumes.splitDepth, L);

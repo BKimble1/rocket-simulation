@@ -13,7 +13,7 @@ export const RETURN_CARDS: PhaseCard[] = [
   }),
   card('return', 'deorbit', {
     what: `The service module's engine fires against the direction of motion (retrograde), removing about ${F.deorbitDv}: about ${F.smDeorbitProp} of propellant in about ${F.smDeorbitBurn} (computed).`,
-    whyNow: `The burn is timed so the new orbit dips into the atmosphere over the planned splashdown zone. From a ${F.leoAlt} circular orbit, exactly ${F.deorbitDv} lowers the far side of the orbit to about ${F.deorbitPerigee}, deep enough that the atmosphere will certainly capture the capsule, and each extra metre per second lowers it by about ${F.deorbitSensitivity} more (two-body estimates). That sensitivity is why the burn is sized and timed precisely for the splashdown zone.`,
+    whyNow: `The burn is timed so the new orbit dips into the atmosphere over the planned splashdown zone. From a ${F.leoAlt} circular orbit, exactly ${F.deorbitDv} lowers the far side of the orbit to about ${F.deorbitPerigee}, deep enough that the atmosphere will certainly capture the capsule, and each extra metre per second lowers it by about ${F.deorbitSensitivity} more (two-body estimates; the burn flown here is a few metres per second larger and reaches lower, as the telemetry shows). That sensitivity is why the burn is sized and timed precisely for the splashdown zone.`,
     parts: ['service-module', 'attitude-thrusters', 'capsule'],
     forces: `The burn removes only about ${F.deorbitFraction} of the capsule's ${F.leoSpeed}: deorbiting does not mean stopping. The atmosphere will do the rest of the braking.`,
     next: 'Now on a path that meets the atmosphere, the capsule no longer needs the service module.',

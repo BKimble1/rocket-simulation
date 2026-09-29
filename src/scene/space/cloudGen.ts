@@ -191,7 +191,7 @@ void main() {
     + 0.18 * exp(-pow((a - 55.0) / 11.0, 2.0))            // storm tracks
     - 0.08 * smoothstep(70.0, 85.0, a);
   float midlat = exp(-pow((a - 50.0) / 14.0, 2.0));
-  float c = clim + 0.95 * big + 0.32 * meso + 0.35 * midlat * fronts;
+  float c = clim + 0.85 * big + 0.45 * meso + 0.35 * midlat * fronts;
 
   // deserts stay clear: bright, reddish land away from water
   vec3 m = normalize(vDir);
@@ -203,8 +203,10 @@ void main() {
   float desert = (1.0 - water) * smoothstep(0.18, 0.4, day.r) * smoothstep(0.0, 0.08, day.r - day.b);
   c -= 0.35 * desert * (1.0 - midlat);
 
-  // fairly sharp edges: organised systems read as distinct cloud from orbit, not a grey veil
-  float cov = smoothstep(0.47, 0.7, c);
+  // fairly sharp edges: organised systems read as distinct cloud from orbit, not a grey veil.
+  // Capped below 1 so even the densest systems keep gaps and a lumpy top (the cumulus cells
+  // decide the shape) instead of a flat, featureless slab seen from above.
+  float cov = 0.76 * smoothstep(0.43, 0.68, c);
   // convective towers in the tropics, flatter decks elsewhere
   float tropic = exp(-pow(latD / 18.0, 2.0));
   float top = clamp(0.25 + 0.55 * cov * (0.5 + 0.5 * tropic) + 0.25 * meso, 0.0, 1.0);

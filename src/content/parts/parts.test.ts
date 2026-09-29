@@ -215,9 +215,7 @@ describe('phase cards', () => {
     // Timeline activeParts that the cards deliberately leave out, because the part is not doing
     // that work there (reported to the timeline owner):
     //  - 'avionics' in the booster's return phases: the avionics ring flies away on the upper stage;
-    //  - 'main-valves' at max-q: throttling is done through the gas generator, the valves stay open;
-    //  - 'attitude-thrusters' on the suborbital capsule: the part is not carried in that configuration
-    //    (partFlies filters it out).
+    //  - 'main-valves' at max-q: throttling is done through the gas generator, the valves stay open.
     const branchIds = new Set(MISSION_ORDER.flatMap((m) => OUTLINES[m].branch?.phases.map((p) => `${m}:${p.id}`) ?? []));
     const allowedMissing = (m: MissionId, phase: string, part: PartId) =>
       (part === 'avionics' && branchIds.has(`${m}:${phase}`)) || (part === 'main-valves' && phase === 'maxq');

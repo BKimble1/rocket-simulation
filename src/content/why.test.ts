@@ -174,7 +174,7 @@ describe('why-demos: numbers recomputed', () => {
     const Rstar = 8.31446261815324;
     const M = 0.0289644;
     const H = (288.15 / 0.0065) * (1 - (pe1 / P_SEA) ** ((Rstar * 0.0065) / (G0 * M)));
-    expect(H).toBeGreaterThan(5000);
+    expect(H).toBeGreaterThan(4000);
     expect(H).toBeLessThan(6500);
     expect(t).toContain(`about ${fmt(H / 1000)} km altitude`);
     expect(pe1).toBeLessThan(P_SEA);
@@ -187,6 +187,9 @@ describe('why-demos: numbers recomputed', () => {
     expect(t).toContain(`${fmt((E1V.thrustVac - P_SEA * Ae) / 1e3)} kN`);
     expect(t).toContain(`${fmt(E1V.thrustVac / 1e3)} kN`);
     expect(t).toContain(`about ${fmt((E1V.ispVac / E1.ispVac - 1) * 100)} % more`);
+    // the E-1V shares the E-1 core (same flow), so it also makes more vacuum thrust
+    expect(t).toContain(`${fmt(E1V.thrustVac / 1e3)} kN against ${fmt(E1.thrustVac / 1e3)} kN in vacuum`);
+    expect(E1V.thrustVac).toBeGreaterThan(E1.thrustVac);
   });
 
   it('chamber cooling: melting points, fuel flow, conduction temperature drops', () => {

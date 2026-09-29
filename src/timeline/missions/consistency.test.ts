@@ -482,7 +482,8 @@ describe('headline facts recomputed independently', () => {
   });
 
   it('boosters: the landing reserve is spent to a thin margin, and the aerodynamic deceleration is plausible', () => {
-    for (const id of ['leo', 'station'] as MissionId[]) {
+    // the only orbital flight that recovers its booster (the station mission expends it for the crew stack)
+    for (const id of ['leo'] as MissionId[]) {
       const f = tl(id).facts;
       // RTLS: about 15 % of the load kept at MECO, a few hundred kg to a tonne left on the pad
       expect(f['rtls.reservePct']).toBeGreaterThan(10);

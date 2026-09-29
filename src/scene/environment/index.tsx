@@ -26,12 +26,13 @@ export function LaunchSite() {
   const maps = useSiteMaps();
   const site = useMemo(() => buildSite(maps), [maps]);
   useEffect(() => () => site.dispose(), [site]);
-  useFrame(() => {
+  useFrame((state) => {
     const t = frame.missionTime;
     sitePosition(t, 0, _p);
     site.root.position.set(_p.x - frame.origin.x, _p.y - frame.origin.y, _p.z - frame.origin.z);
     siteFrameQuaternion(t, site.root.quaternion);
-    site.update();
+    const cam = state.camera as THREE.PerspectiveCamera;
+    site.update(cam.isPerspectiveCamera ? cam.fov : 60);
   }, 0);
   return <primitive object={site.root} />;
 }

@@ -10,6 +10,9 @@ import { E1, E1V } from '../../vehicle/spec';
 import type { EmitterKind } from './input';
 
 export const P_SL = 101325;
+
+/** Hypergolic thrusters with a smaller exit radius (m) are attitude thrusters: puffs, no plume volume. */
+export const SMALL_THRUSTER = 0.1;
 export const RHO_SL = 1.225;
 const R_AIR = 287.05;
 
@@ -222,12 +225,13 @@ export function columnShape(kind: EmitterKind, Rc: number, Req: number, throttle
   out.Lb = 0.9 * out.Rbal + 2;
   const thick = Math.min(1, rhoRatio * 3);
   out.spread = 0.05 + 0.035 * thick;
-  out.flameLen = 44 * sq * (0.6 + 0.4 * thick);
-  out.L = Math.max(78 * sq, 4.6 * out.Rbal);
-  out.smokeStart = 26 * sq;
+  // luminous afterburning flame about one vehicle length long at sea level
+  out.flameLen = 66 * sq * (0.55 + 0.45 * thick);
+  out.L = Math.max(96 * sq, 4.6 * out.Rbal);
+  out.smokeStart = 30 * sq;
   out.lum = 0.5 + 0.5 * Math.min(1, rhoRatio * 4);
   out.smoke = kind === 'kerolox-sl' ? smokiness(rhoRatio) : 0;
-  out.handoff = Math.min(out.L * 0.62, 50 * sq + 0.4 * out.Rbal);
+  out.handoff = Math.min(out.L * 0.72, 64 * sq + 0.4 * out.Rbal);
   out.uJet = 210 * sq;
   return out;
 }

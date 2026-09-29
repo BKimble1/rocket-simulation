@@ -29,6 +29,16 @@ export interface MeshOpts {
   part?: string;
   material?: string;
   name?: string;
+  /** Thermal-lens class (0 cryogenic .. 4 very hot); defaults to thermalClass(part). */
+  thermal?: number;
+}
+
+/**
+ * Thermal-lens class of a ground part (userData.thermal, the vehicle's scale 0..4): the flame
+ * deflector and the trench take the plume (3); every other structure stays near ambient (1).
+ */
+export function thermalClass(part: string | undefined): number {
+  return part === 'flame-deflector' ? 3 : 1;
 }
 
 /**
@@ -42,6 +52,7 @@ const SITE_MATERIAL_IDS: Record<string, string> = {
   'site.galv': 'structural-steel',
   'site.grating': 'structural-steel',
   'site.yellow': 'structural-steel',
+  'site.white': 'structural-steel',
   'site.stainless': 'stainless',
   'site.deflector': 'stainless',
   'site.hardstand': 'refractory-concrete',
@@ -87,7 +98,7 @@ export function mergeParts(parts: { g: THREE.BufferGeometry; m?: THREE.Matrix4 }
  * for adds that do not name one (set it around a sub-assembly with `as(part, fn)`).
  */
 export class Batch {
-  private groups = new Map<string, { m: THREE.Material; list: THREE.BufferGeometry[]; opts: MeshOpts; part?: string; tag?: string }>();
+  private groups = new Map<string, { m: THREE.Material; list: THREE.BufferGeometry[]; opts: MeshOpts; part?: string; tag?: string; thermal: number }>();
   part: string | undefined;
   constructor(private defaults: MeshOpts = { cast: true, receive: true }) {
     this.part = defaults.part;
@@ -104,10 +115,11 @@ export class Batch {
     if (matrix) geo.applyMatrix4(matrix);
     const part = opts?.part ?? this.part;
     const tag = opts?.material ?? materialTag(part, m);
-    const key = `${m.uuid}|${part ?? ''}|${tag ?? ''}`;
+    const thermal = opts?.thermal ?? thermalClass(part);
+    const key = `${m.uuid}|${part ?? ''}|${tag ?? ''}|${thermal}`;
     let e = this.groups.get(key);
     if (!e) {
-      e = { m, list: [], opts: { ...(opts ?? {}) }, part, tag };
+      e = { m, list: [], opts: { ...(opts ?? {}) }, part, tag, thermal };
       this.groups.set(key, e);
     } else if (opts) {
       // the first add that sets shadow flags or a name decides them for the merged mesh
@@ -150,6 +162,7 @@ export class Batch {
       mesh.receiveShadow = !!o.receive;
       if (e.part) mesh.userData.part = e.part;
       if (e.tag) mesh.userData.material = e.tag;
+      mesh.userData.thermal = e.thermal;
       parent.add(mesh);
       out.push(mesh);
     }
@@ -261,6 +274,7 @@ export class Instances {
     if (opts.part) im.userData.part = opts.part;
     const tag = opts.material ?? materialTag(opts.part, this.mat);
     if (tag) im.userData.material = tag;
+    im.userData.thermal = opts.thermal ?? thermalClass(opts.part);
     parent.add(im);
     return im;
   }

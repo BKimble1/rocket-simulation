@@ -86,6 +86,14 @@ function DevShadows() {
   const state = useMemo(() => ({ light: null as THREE.DirectionalLight | null, managed: false, checked: 0 }), []);
   useFrame(() => {
     if (hide.length && state.checked < 120) scene.traverse((o) => void (hide.includes(o.name) && (o.visible = false)));
+    if (q.get('a2c') === '0' && state.checked < 120)
+      scene.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+        if (m && !Array.isArray(m) && m.alphaToCoverage) {
+          m.alphaToCoverage = false;
+          m.needsUpdate = true;
+        }
+      });
     if (!state.light && state.checked < 120) {
       state.checked++;
       const found: THREE.DirectionalLight[] = [];

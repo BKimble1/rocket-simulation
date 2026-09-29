@@ -88,6 +88,8 @@ uniform vec3 uSmokeB;
 uniform float uScatSigma;
 uniform vec3 uScatAlb;
 uniform float uEndFade;
+// dilution exponent of the glow and the sunlit envelope as the plume expands (1: mass conserved)
+uniform float uExK;
 uniform float uSootOuter;
 uniform float uDebug;
 // light (already divided by pi)
@@ -209,21 +211,22 @@ void main() {
     float turb = mix(1.0, 0.15 + 1.7 * n2, uTurb);
     float endF = 1.0 - smoothstep(uY1 - uEndFade, uY1, y);
     // flame: luminous soot, emission-absorption (radiance saturates at the source colour)
-    float fa = smoothstep(uFlameIn.x, uFlameIn.y, y) * (1.0 - smoothstep(uFlameLen * 0.45, uFlameLen, y));
+    float fa = smoothstep(uFlameIn.x, uFlameIn.y, y) * (1.0 - smoothstep(uFlameLen * 0.5, uFlameLen, y));
     float u = clamp(y / uFlameLen, 0.0, 1.0);
     float dF = fa * rad * turb * ex;
     float sigF = uFlameSigma * dF;
     // soot cools downstream: colour reddens and brightness falls; turbulence shows as hot and cool patches
-    float cool = 1.0 - 0.78 * u;
+    float cool = 1.0 - 0.66 * u;
     // outer layers mix with air and run cooler (redder, dimmer) than the core
     float xr = clamp(x, 0.0, 1.2);
     vec3 src = mix(uFlameA, uFlameB, clamp(u + 0.32 * xr + (0.5 - n2) * 0.3 * uTurb, 0.0, 1.0)) * (uFlameI * cool * cool * (1.0 - 0.45 * xr) * (0.3 + 1.35 * n2));
     // thin glow (optically thin emission)
-    vec3 e = mix(uGlowCore, uGlowRim, clamp(x, 0.0, 1.0)) * (uGlowI * rad * ex * exp(-y / uGlowDecay));
+    float exS = pow(ex, uExK);
+    vec3 e = mix(uGlowCore, uGlowRim, clamp(x, 0.0, 1.0)) * (uGlowI * rad * exS * exp(-y / uGlowDecay));
     // absorption and scattering
     float sa = smoothstep(uSmokeIn.x, uSmokeIn.y, y) * mix(1.0, (0.15 + smoothstep(0.25, 0.9, x)) * (1.6 - 1.4 * n2), uSootOuter);
     float sig = uSmokeSigma * sa * rad * mix(turb, 1.0, uSootOuter) * endF * min(1.0, ex * 8.0);
-    float sigS = uScatSigma * rad * ex * endF * (0.6 + 0.8 * n2);
+    float sigS = uScatSigma * rad * exS * endF * (0.6 + 0.8 * n2);
     float ext = sig + sigS + sigF * endF;
     vec3 alb = mix(uSmokeA, uSmokeB, smoothstep(uSmokeIn.x, uY1, y));
     vec3 S = (alb * sig + uScatAlb * sigS) * light;
@@ -281,6 +284,11 @@ export interface VolumeParams {
   scatSigma: number;
   scatAlb: THREE.Color;
   endFade: number;
+  /**
+   * Dilution of the glow and the sunlit envelope with expansion: 1 conserves mass (the column
+   * density falls as 1/R), smaller keeps a ballooning plume visible (condensation, afterburning).
+   */
+  exK: number;
   /** 0: smoke spread through the section; 1: soot concentrated in the outer, cooler layers. */
   sootOuter: number;
   /** Bounding margin factor on the plume radius. */
@@ -320,6 +328,7 @@ export const makeParams = (): VolumeParams => ({
   scatSigma: 0,
   scatAlb: new THREE.Color(),
   endFade: 1,
+  exK: 1,
   sootOuter: 0,
   margin: 1.3,
 });
@@ -338,6 +347,7 @@ export function resetParams(p: VolumeParams): VolumeParams {
   p.noiseK = 1.2;
   p.margin = 1.3;
   p.endFade = 1;
+  p.exK = 1;
   p.sootOuter = 0;
   return p;
 }
@@ -394,6 +404,7 @@ function baseMaterial(): THREE.ShaderMaterial {
       uScatSigma: { value: 0 },
       uScatAlb: { value: new THREE.Color() },
       uEndFade: { value: 1 },
+      uExK: { value: 1 },
       uSootOuter: { value: 0 },
       uDebug: { value: 0 },
       uSunLocal: { value: new THREE.Vector3(0, 1, 0) },
@@ -531,6 +542,7 @@ export class Volume {
     u.uScatSigma.value = p.scatSigma;
     (u.uScatAlb.value as THREE.Color).copy(p.scatAlb);
     u.uEndFade.value = Math.max(0.01, p.endFade);
+    u.uExK.value = p.exK;
     u.uSootOuter.value = p.sootOuter;
     u.uDebug.value = volumeDebug.mode;
     this.depth = tv.copy(dir).multiplyScalar((y0 + y1) * 0.5).add(exit).dot(camFwd);

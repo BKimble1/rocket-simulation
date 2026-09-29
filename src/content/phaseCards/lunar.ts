@@ -76,11 +76,11 @@ export const LUNAR_CARDS: PhaseCard[] = [
     equation: 'orbital-speed',
   }),
   card('lunar', 'outbound', {
-    what: 'The probe leaves the Moon\'s sphere of influence on a new path set by the flyby and continues outward.',
-    whyNow: 'A flyby is not an orbit insertion. To stay at the Moon, the probe would have had to fire an engine near closest approach to shed speed relative to the Moon; this mission does not.',
+    what: 'The probe climbs out of the Moon\'s sphere of influence on a new path set by the flyby. Swinging around the far side has turned it back toward Earth: in this model it is now on a free-return path, which without a correction would bring it back into Earth\'s atmosphere about three days later.',
+    whyNow: 'A flyby is not an orbit insertion. To stay at the Moon, the probe would have had to fire an engine near closest approach to shed speed relative to the Moon; this mission does not. Where it goes next depends on how it passes the Moon: around the far side the path bends back toward Earth (the free return that crewed lunar missions kept as a safety option), while passing behind the Moon in the direction of its orbital motion would add speed relative to Earth and could fling the probe out of the Earth-Moon system.',
     parts: ['satellite-bus', 'antenna', 'solar-arrays', 'attitude-thrusters', 'mli-blankets'],
-    forces: 'Gravity of Earth and Moon (and further out, the Sun) shapes the path; the probe is again a small body coasting on its own.',
-    next: 'The probe continues its science and communications on its outbound path. The mission lesson ends here.',
+    forces: 'Gravity of Earth and Moon (and further out, the Sun) shapes the path; the probe is again a small body coasting on its own, falling back toward Earth.',
+    next: 'A real science probe would plan its flyby, or a small correction burn, for the path it needs next; this one would otherwise return to Earth. The mission lesson ends here.',
     equation: 'orbital-speed',
   }),
 ];

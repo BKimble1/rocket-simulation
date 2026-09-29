@@ -6,8 +6,10 @@
  *   moon=d,az,el           put the camera d metres from the Moon's centre (az/el in degrees,
  *                          around the Earth-Moon line) looking at the Moon
  *   earth=1                look at the Earth's centre from the camera position, north up
- *   ll=lat,lon,alt         put the camera above a geographic point (deg, deg, m) at time t,
- *                          looking at the Earth's centre, north up (seam and orientation checks)
+ *   ll=lat,lon,alt[,hdg,pitch]
+ *                          put the camera above a geographic point (deg, deg, m) at time t,
+ *                          looking at the Earth's centre, north up (seam and orientation checks);
+ *                          with hdg/pitch (deg), look along that heading and pitch instead
  *   subj=<m>               put the focus subject this far along the view (default 100 m)
  *   rocket=1               a 3.7 m x 60 m white stand-in cylinder, upright at the subject (to judge
  *                          cloud occlusion as it climbs through the layer)
@@ -65,8 +67,20 @@ function CameraOverrides() {
         p.up.copy(up);
       } else if (lookEarth) {
         if (llArg) {
-          const [lat, lon, alt] = llArg.split(',').map(Number);
+          const [lat, lon, alt, hdg, pitch] = llArg.split(',').map(Number);
           surfacePoint(lat || 0, lon || 0, alt || 2e7, frame.missionTime, p.pos);
+          if (Number.isFinite(hdg) && Number.isFinite(pitch)) {
+            // local horizon frame at the camera: up, north (Earth's axis projected), east
+            up.copy(p.pos).normalize();
+            side.copy(EARTH_AXIS).addScaledVector(up, -EARTH_AXIS.dot(up)).normalize();
+            toEarth.crossVectors(side, up); // east
+            const h = THREE.MathUtils.degToRad(hdg);
+            const e = THREE.MathUtils.degToRad(pitch);
+            m.copy(side).multiplyScalar(Math.cos(h) * Math.cos(e)).addScaledVector(toEarth, Math.sin(h) * Math.cos(e)).addScaledVector(up, Math.sin(e));
+            p.target.copy(p.pos).addScaledVector(m, subj > 0 ? subj : 1000);
+            p.up.copy(up);
+            return;
+          }
         }
         // north up: the Earth's axis (or the pad's north when looking straight along the axis)
         p.target.set(0, 0, 0);

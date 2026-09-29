@@ -8,10 +8,13 @@
  *
  * Physics note: with a direct three-day transfer in the Moon's orbital plane, a pass behind the
  * Moon (far side, as seen from the Earth) is on the Moon's leading side: the Moon takes energy
- * and bends the path back toward the Earth (the free-return geometry), so after leaving the
- * sphere of influence the probe is on a high elliptical Earth orbit, not escaping. A pass on
- * the trailing side (near the limb, seen from the Earth) would add energy and send it outward
- * (findMoonPhase(..., 'trailing')).
+ * and angular momentum and bends the path back toward the Earth (the free-return geometry of
+ * Apollo 13). After leaving the sphere of influence the probe is on a long Earth orbit whose
+ * perigee lies below the surface (about -6,000 km): uncorrected, it would re-enter about three
+ * days after leaving the sphere of influence, and the soi-exit label says so (the outbound.*
+ * facts give the numbers). A pass
+ * on the trailing side (near the limb, seen from the Earth) would add energy instead and send
+ * it out of the Earth-Moon system (findMoonPhase(..., 'trailing'): hyperbolic, e about 1.9).
  *
  * The Moon's orbit lies in the parking-orbit plane (the launch is assumed timed for that
  * geometry, as in world/frames.ts). The TLI energy is chosen for a three-day trip to the Moon's
@@ -28,15 +31,27 @@ import { cloneCraft, comFrom } from '../physics/ascent';
 import { coastCislunar, findMoonPhase, moonAt, SOI_MOON, timeToRadiusOut } from '../physics/cislunar';
 import { Craft } from '../physics/craft';
 import { Ctx } from '../physics/context';
-import { elements, kepler } from '../physics/kepler';
+import { elements, kepler, timeToAnomaly } from '../physics/kepler';
 import { apsidesKm, incToEquator, progradeAttitude } from '../physics/orbit';
 import { sumMass } from '../physics/vehicle';
-import { DEG, qaxisY, v3, vadd, vdot, vlen, vnorm, vscale, vsub } from '../physics/vec';
+import { DEG, qaxisY, v3, vadd, vdot, vlen, vnorm, vscale, vsub, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, contiguous, num, phasesFrom, rateNote, shot, tidyShots } from './common';
 import { ascentFacts, coastSettleBurn, flyOrbitalAscent, s2Channels } from './flight';
 
 const START = -60;
+/** Entry interface altitude for the free-return estimate (m). */
+const ENTRY_ALT = 120e3;
+
+/** Two-body time (s) from an inbound elliptic state to the radius rt (below the current radius). */
+function timeToRadiusIn(r: V3, v: V3, rt: number): number {
+  const el = elements(r, v, MU_EARTH);
+  const p = (vlen(el.h) ** 2) / MU_EARTH;
+  const c = (p / rt - 1) / el.e;
+  if (c > 1) return NaN;
+  // the inbound crossing of rt: true anomaly -acos(c), i.e. 2 pi - acos(c)
+  return timeToAnomaly(r, v, MU_EARTH, 2 * Math.PI - Math.acos(Math.max(-1, c)));
+}
 /** Wanted closest-approach altitude above the lunar surface (m). */
 const FLYBY_ALT = 1500e3;
 /** Two-body time of flight from TLI to the Moon's distance (s): about three days. */
@@ -71,7 +86,7 @@ export function buildLunar(): MissionTimeline {
     rtls: null,
     insertion: { rp: 200e3, ra: 200e3 },
     // warm starts: the converged values of the deterministic searches
-    ltg0: { A: -0.14665, B: 0.0010442 },
+    ltg0: { A: -0.15264, B: 0.00108 },
     kick0: 0.97544,
     gLimitS1: 4.5 * 9.80665,
     gLimitS2: 4.5 * 9.80665,
@@ -180,8 +195,17 @@ export function buildLunar(): MissionTimeline {
   const end = probe.t;
   if (Number.isNaN(fb.soiExit)) throw new Error('lunar flyby: the probe did not leave the sphere of influence');
   ctx.ev('soi-enter', fb.soiEnter, `Entering the Moon's sphere of influence (${(SOI_MOON / 1e6).toFixed(0)},000 km): the Moon's pull now dominates`, 'milestone', ['satellite']);
-  ctx.ev('closest-approach', fb.t, `Closest approach: ${(fb.alt / 1000).toFixed(0)} km above the far side`, 'milestone', ['satellite']);
-  ctx.ev('soi-exit', fb.soiExit, "Leaving the Moon's sphere of influence: not captured, on a new, high Earth orbit", 'milestone', ['satellite']);
+  ctx.ev('closest-approach', fb.t, `Closest approach: ${num(fb.alt / 1000)} km above the far side`, 'milestone', ['satellite']);
+  // where the flyby leaves the probe (two-body Earth orbit from the final state)
+  const elEnd = elements(probe.r, probe.v, MU_EARTH);
+  const returns = elEnd.e < 1 && elEnd.rp < R_EARTH + ENTRY_ALT;
+  const tReturn = returns ? timeToRadiusIn(probe.r, probe.v, R_EARTH + ENTRY_ALT) : NaN;
+  const exitLabel = returns
+    ? `Leaving the Moon's sphere of influence: not captured. The flyby has turned the path back toward the Earth (a free-return path): uncorrected, it would re-enter about ${Math.round((probe.t + tReturn - fb.soiExit) / 86400)} days later`
+    : elEnd.e < 1
+      ? "Leaving the Moon's sphere of influence: not captured, on a new, high Earth orbit"
+      : "Leaving the Moon's sphere of influence: not captured, leaving the Earth-Moon system";
+  ctx.ev('soi-exit', fb.soiExit, exitLabel, 'milestone', ['satellite']);
   ctx.exists.upper = [START, upEnd];
   ctx.exists.satellite = [START, end];
 
@@ -267,6 +291,8 @@ export function buildLunar(): MissionTimeline {
   ctx.fact('outbound.ecc', elOut.e);
   ctx.fact('outbound.radialSpeed', vdot(probe.r, probe.v) / vlen(probe.r));
   ctx.fact('outbound.distanceKm', vlen(probe.r) / 1000);
+  ctx.fact('outbound.perigeeAltKm', (elEnd.rp - R_EARTH) / 1000);
+  ctx.fact('outbound.earthReturnDays', returns ? (probe.t + tReturn - fb.soiExit) / 86400 : 0);
   void kepler;
   void R_MOON;
 

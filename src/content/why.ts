@@ -143,15 +143,15 @@ export const WHY_DEMOS: WhyDemo[] = [
         visual: 'nozzle-pressure:expansion-gradient',
       },
       {
-        text: 'The E-1 (expansion ratio 18, 1.06 m exit) releases its exhaust at roughly 49 kPa (an estimate assuming a constant ratio of specific heats of 1.2). That matches the outside air at about 6 km altitude: a compromise for an engine that fires from sea level into near vacuum. At sea level the exhaust is overexpanded, but not far enough to make the flow separate from the wall.',
+        text: 'The E-1 (expansion ratio 16, 1.07 m exit) releases its exhaust at roughly 58 kPa (an estimate assuming a constant ratio of specific heats of 1.2). That matches the outside air at about 5 km altitude: a compromise for an engine that fires from sea level into near vacuum. At sea level the exhaust is overexpanded, but not far enough to make the flow separate from the wall.',
         visual: 'nozzle-pressure:e1-sea-level',
       },
       {
-        text: 'The E-1V (expansion ratio 110, 2.41 m exit) expands its exhaust to about 5 kPa. At sea level the outside air would push on its 4.56 m² exit with 462 kN, leaving only 238 kN of its 700 kN, and the badly overexpanded flow would separate from the wall and shake the nozzle with side loads.',
+        text: 'The E-1V (expansion ratio 110, 2.80 m exit) expands its exhaust to about 5 kPa. At sea level the outside air would push on its 6.16 m² exit with 624 kN, leaving only 286 kN of its 910 kN, and the badly overexpanded flow would separate from the wall and shake the nozzle with side loads.',
         visual: 'nozzle-pressure:e1v-separated-at-sea-level',
       },
       {
-        text: 'In vacuum nothing pushes back, and the extra expansion pays off: 342 s for the E-1V against 312 s for the E-1 in vacuum, about 10 % more impulse from every kilogram of propellant.',
+        text: 'In vacuum nothing pushes back, and the extra expansion pays off: 342 s for the E-1V against 312 s for the E-1 in vacuum, about 10 % more impulse from every kilogram of propellant. The E-1V shares the E-1’s chamber, throat and propellant flow, so the gain also shows as thrust: 910 kN against 835 kN in vacuum.',
         visual: 'nozzle-pressure:e1v-vacuum-plume',
       },
     ],
@@ -169,7 +169,7 @@ export const WHY_DEMOS: WhyDemo[] = [
       caveat:
         'Valid while the flow stays attached to the nozzle wall. The exit pressures quoted come from ideal one-dimensional expansion at the E-1 chamber pressure of 8.5 MPa with a ratio of specific heats of 1.2; real combustion gas properties change along the nozzle.',
       example:
-        'E-1V: A_e = π·(2.41 m)²/4 = 4.562 m². At sea level p_a·A_e = 101,325 Pa × 4.562 m² = 462 kN, so even the ideal thrust would fall from 700 kN to 238 kN before counting flow separation. In vacuum the full 700 kN remains.',
+        'E-1V: A_e = π·(2.80 m)²/4 = 6.158 m². At sea level p_a·A_e = 101,325 Pa × 6.158 m² = 624 kN, so even the ideal thrust would fall from 910 kN to 286 kN before counting flow separation. In vacuum the full 910 kN remains.',
     },
     takeaway:
       'Each nozzle is sized for where it works: moderate for the thick lower atmosphere, long and wide for vacuum. That is why the upper stage carries a different nozzle on the same engine core.',
@@ -229,7 +229,7 @@ export const WHY_DEMOS: WhyDemo[] = [
         visual: 'gnc-loop:trajectory-arc',
       },
       {
-        text: 'At liftoff (443,100 kg with the LEO satellite, not counting landing legs) the seven E-1 engines give 5,320 kN (rated sea-level thrust) against a weight of about 4,345 kN: a thrust-to-weight ratio of 1.22. Of the 12.0 m/s² that thrust provides, gravity cancels 9.81, leaving 2.2 m/s² upward. Every second spent climbing vertically loses 9.81 m/s of velocity to gravity.',
+        text: 'At liftoff (443,100 kg with the LEO satellite, not counting landing legs) the seven E-1 engines give 5,208 kN (rated sea-level thrust) against a weight of about 4,345 kN: a thrust-to-weight ratio of 1.20. Of the 11.75 m/s² that thrust provides, gravity cancels 9.81, leaving 1.9 m/s² upward. Every second spent climbing vertically loses 9.81 m/s of velocity to gravity.',
         visual: 'gnc-loop:force-arrows-liftoff',
       },
       {
@@ -256,7 +256,7 @@ export const WHY_DEMOS: WhyDemo[] = [
       caveat:
         'A point mass flying along its path: it leaves out lift, thrust misalignment, and the curvature and rotation of the Earth. Thrust is taken at its rated sea-level value; it rises as the air thins. The 2,100 kg landing legs of the recovery missions add about 0.5 % to the mass and lower these accelerations slightly.',
       example:
-        'At liftoff (γ = 90°, D = 0): T = 7 × 760 kN = 5,320 kN and m = 443,100 kg, so T/m = 12.0 m/s² and dv/dt = 12.0 − 9.81 = 2.2 m/s². Once γ has fallen to 30°, gravity costs only 9.81 × sin 30° = 4.9 m/s per second.',
+        'At liftoff (γ = 90°, D = 0): T = 7 × 744 kN = 5,208 kN and m = 443,100 kg, so T/m = 11.8 m/s² (11.75) and dv/dt = 11.75 − 9.81 = 1.9 m/s². Once γ has fallen to 30°, gravity costs only 9.81 × sin 30° = 4.9 m/s per second.',
     },
     takeaway:
       'Turning early and gradually trades a little extra time in the air for much less velocity lost to gravity, while keeping aerodynamic loads low. The ascent is a curve because orbit is a speed, not a height.',

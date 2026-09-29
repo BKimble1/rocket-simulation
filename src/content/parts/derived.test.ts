@@ -8,10 +8,11 @@ import { describe, expect, it } from 'vitest';
 import { ABORT_TOWER, CAPSULE, E1, E1V, FAIRING, G0, LEGS, PAYLOADS, S1, S2, SERVICE_MODULE } from '../../vehicle/spec';
 import { MU_EARTH, OMEGA_EARTH, R_EARTH, SITE } from '../../world/frames';
 import type { MissionId, MissionTimeline } from '../../timeline/types';
-import { buildMission } from '../../timeline/build';
+import { buildMission, telemetryAt } from '../../timeline/build';
 import { D, F, PROFILE, REFERENCE, exitPressureRatio, fmt, perigeeAfterRetroBurn, sig, thrustCoefficient } from './derived';
 import { LESSONS } from './index';
 import { PHASE_CARDS } from '../phaseCards';
+import { OUTLINES } from '../../timeline/missions/outline';
 
 const text = JSON.stringify(LESSONS) + JSON.stringify(PHASE_CARDS);
 const quoted = (s: string) => expect(text.includes(s), `text should quote "${s}"`).toBe(true);
@@ -33,9 +34,9 @@ describe('number formatting', () => {
 
 describe('engine and stage numbers', () => {
   it('first-stage thrust, flow and burn time', () => {
-    const thrustSL = 7 * 760e3;
+    const thrustSL = 7 * 744e3;
     expect(S1.engineCount * (E1.thrustSL ?? 0)).toBe(thrustSL);
-    expect(F.s1ThrustSL).toBe('5,320 kN');
+    expect(F.s1ThrustSL).toBe('5,208 kN');
     const mdot = E1.thrustVac / (E1.ispVac * G0);
     expect(mdot).toBeCloseTo(272.9, 1);
     expect(F.e1Mdot).toBe('273 kg/s');
@@ -46,13 +47,26 @@ describe('engine and stage numbers', () => {
     quoted(F.s1FullThrustBurn);
   });
 
-  it('sea-level thrust from the pressure formula, and its mismatch with the dataset rating', () => {
+  it('sea-level thrust from the pressure formula agrees with the dataset rating', () => {
     const fromFormula = E1.thrustVac - 101325 * Math.PI * (E1.exitDiameter / 2) ** 2;
     expect(fromFormula).toBeGreaterThan(740e3);
     expect(fromFormula).toBeLessThan(750e3);
+    expect(Math.abs(fromFormula / (E1.thrustSL ?? 1) - 1)).toBeLessThan(0.001);
     expect(F.e1ThrustSLFromPressure).toBe(`${fmt(fromFormula / 1e3)} kN`);
-    expect(F.e1ThrustSLMismatch).toBe('2 %');
+    expect(F.e1ThrustSLFromPressure).toBe(F.e1ThrustSL);
     quoted(F.e1ThrustSLFromPressure);
+  });
+
+  it('the E-1V shares the E-1 core: same throat and flow, more vacuum thrust in proportion to Isp', () => {
+    expect(E1V.throatDiameter).toBe(E1.throatDiameter);
+    expect(E1V.chamberPressure).toBe(E1.chamberPressure);
+    const flowV = E1V.thrustVac / (E1V.ispVac * G0);
+    const flow1 = E1.thrustVac / (E1.ispVac * G0);
+    expect(Math.abs(flowV / flow1 - 1)).toBeLessThan(0.01);
+    expect(E1V.thrustVac).toBeGreaterThan(E1.thrustVac);
+    // the exit diameter follows from the throat and the expansion ratio
+    expect(Math.abs((E1V.exitDiameter / E1V.throatDiameter) ** 2 / E1V.expansionRatio - 1)).toBeLessThan(0.005);
+    expect(text).not.toMatch(/smaller throat|less thrust than the E-1/);
   });
 
   it('propellant split and tank volumes follow the dataset', () => {
@@ -65,20 +79,23 @@ describe('engine and stage numbers', () => {
     quoted(F.s1LoxVolume);
   });
 
-  it('liftoff mass, thrust-to-weight and hold-down load (the LEO booster carries its legs)', () => {
+  it('liftoff mass, thrust-to-weight and hold-down load (the LEO booster carries its legs, the station booster does not)', () => {
     const m = S1.dry + LEGS.mass + S1.propellant + S2.dry + S2.propellant + PAYLOADS.leoSat.mass + FAIRING.mass;
     expect(m).toBe(445200);
     expect(D.liftoffMass.leo).toBe(m);
     expect(F.liftoffMassLeo).toBe('445 t');
-    const tw = (7 * 760e3) / (m * G0);
-    expect(tw).toBeCloseTo(1.2185, 3);
-    expect(F.liftoffTWLeo).toBe('1.22');
-    expect(D.holdDownNet).toBeCloseTo(7 * 760e3 - m * G0, 3);
-    expect(F.holdDownNet).toBe('950 kN');
-    expect(F.liftoffAccel).toBe('2.1 m/s²');
-    // expendable missions: no legs
+    const tw = (7 * 744e3) / (m * G0);
+    expect(tw).toBeCloseTo(1.1929, 3);
+    expect(F.liftoffTWLeo).toBe('1.19');
+    expect(D.holdDownNet).toBeCloseTo(7 * 744e3 - m * G0, 3);
+    expect(F.holdDownNet).toBe('840 kN');
+    expect(F.liftoffAccel).toBe('1.9 m/s²');
+    // expendable missions (the station mission too, since the crew stack needs the whole booster): no legs
     expect(D.liftoffMass.gto).toBe(S1.dry + S1.propellant + S2.dry + S2.propellant + PAYLOADS.gtoSat.mass + FAIRING.mass);
-    expect(D.liftoffMass.station).toBe(S1.dry + LEGS.mass + S1.propellant + S2.dry + S2.propellant + PAYLOADS.capsule.mass + ABORT_TOWER.mass);
+    const station = S1.dry + S1.propellant + S2.dry + S2.propellant + PAYLOADS.capsule.mass + ABORT_TOWER.mass;
+    expect(D.liftoffMass.station).toBe(station);
+    expect(F.liftoffMassStation).toBe('453 t');
+    expect(F.stack.station.tw).toBe(fmt((7 * 744e3) / (station * G0), 2));
     quoted(F.holdDownNet);
     quoted(F.liftoffMassLeo);
   });
@@ -262,13 +279,13 @@ describe('capsule and recovery numbers', () => {
     expect(D.landingTWDry).toBeCloseTo((E1.minThrottle * (E1.thrustSL ?? 0)) / empty, 6);
     expect(D.landingTWDry).toBeGreaterThan(1);
     expect(F.boosterDryWeight).toBe('270 kN');
-    expect(D.singleEngineHoverThrottle).toBeCloseTo(empty / (7 * 760e3), 6);
+    expect(D.singleEngineHoverThrottle).toBeCloseTo(empty / (7 * 744e3), 6);
     quoted(F.landingThrustMin);
     quoted(F.singleEngineHoverThrottle);
   });
 
   it('suborbital fall: speed by the drag altitude and the energy compared with an orbital entry', () => {
-    const v = Math.sqrt(2 * MU_EARTH * (1 / (R_EARTH + 50e3) - 1 / (R_EARTH + 115e3)));
+    const v = Math.sqrt(2 * MU_EARTH * (1 / (R_EARTH + 50e3) - 1 / (R_EARTH + 117e3)));
     expect(D.suborbitalFallSpeed).toBeCloseTo(v, 6);
     expect(F.suborbitalFallSpeed).toBe('1.1 km/s');
     expect(D.suborbitalEnergyRatio).toBeCloseTo(D.entryAir ** 2 / v ** 2, 6);
@@ -311,6 +328,8 @@ describe('profile values match the built timelines', () => {
     const label = (id: string) => tl.events.find((e) => e.id === id)?.label ?? '';
     expect(label('throttle-down')).toContain(F.throttleBucket);
     expect(label('payload-sep')).toContain(F.payloadSepSpeed);
+    near(f['rtls.reserveKg'], PROFILE.rtlsReserve, 0.05 * PROFILE.rtlsReserve, 'return reserve at cutoff');
+    near(f['seco.t'], PROFILE.leoSeco, 10, 'upper-stage cutoff time');
     // the fairing goes after upper-stage ignition, as the cards say
     expect(tl.events.find((e) => e.id === 'fairing-sep')!.t).toBeGreaterThan(tl.events.find((e) => e.id === 'ses1')!.t);
   });
@@ -323,6 +342,11 @@ describe('profile values match the built timelines', () => {
     near(f['parking.apoKm'], PROFILE.parkingAlt / 1e3, 10, 'parking apogee');
     near(f['injection.dvIdeal'], D.gtoInjectionDv, 0.03 * D.gtoInjectionDv, 'injection velocity change');
     near(f['gto.apoKm'], 35786, 300, 'transfer apogee');
+    // the explanatory apogee burn as flown (the cards say it ends short of geostationary height)
+    near(f['apogeeBurn.dv'], PROFILE.gtoBurnDv, 50, 'apogee burn velocity change');
+    near(f['apogeeBurn.durationH'], PROFILE.gtoBurnHours, 0.5, 'apogee burn duration');
+    near(f['final.periKm'], PROFILE.gtoFinalAlt / 1e3, 1000, 'final orbit perigee');
+    near(f['final.apoKm'], PROFILE.gtoFinalAlt / 1e3, 1000, 'final orbit apogee');
   });
 
   it('lunar: parking orbit, trans-lunar injection speed, sphere of influence and the three-day coast', () => {
@@ -333,6 +357,10 @@ describe('profile values match the built timelines', () => {
     near(f['tli.speed'], D.tliSpeed, 0.01 * D.tliSpeed, 'speed after trans-lunar injection');
     near(f['soiKm'], D.soiRadius / 1e3, 0.02 * (D.soiRadius / 1e3), 'sphere of influence');
     near(f['cruise.days'], 3, 0.5, 'coast to the Moon (the cards say about three days)');
+    // the outbound card describes a free-return path that falls back to Earth about three days later
+    expect(f['closestApproach.farSide']).toBe(1);
+    expect(f['outbound.perigeeAltKm']).toBeLessThan(0);
+    near(f['outbound.earthReturnDays'], 3, 0.5, 'return to Earth after leaving the sphere of influence');
   });
 
   it('station: insertion orbit, phasing laps, hold points, closing speed, tower jettison after ignition', () => {
@@ -349,11 +377,22 @@ describe('profile values match the built timelines', () => {
     expect(t('les-jettison')).toBeGreaterThan(t('ses1'));
   });
 
-  // Known cross-module conflict, reported to the lead: the station timeline flies a 9.3 t crew
-  // stack (timeline/missions/station.ts CREW) because the dataset's 17.8 t stack (PAYLOADS.capsule
-  // plus ABORT_TOWER) is more than the K-1 can place in the insertion orbit with its return
-  // reserve. The lessons and cards quote the dataset; the telemetry shows the lighter stack.
-  it.todo('station: liftoff mass in the cards (dataset crew stack) matches the flown trajectory');
+  it('station: the dataset crew stack is flown on an expended booster, liftoff mass and thrust-to-weight as quoted', () => {
+    const tl = built('station');
+    if (!tl) return;
+    const f = tl.facts;
+    expect(f['crew.dataset']).toBe(1);
+    near(f['crew.capsuleKg'] + f['crew.serviceModuleKg'], PAYLOADS.capsule.mass, 1, 'capsule and service module');
+    near(f['crew.abortTowerKg'], ABORT_TOWER.mass, 1, 'abort tower');
+    // the timeline burns a few tonnes on the pad before release
+    near(f['liftoffMass'], D.liftoffMass.station, 0.02 * D.liftoffMass.station, 'liftoff mass');
+    near(f['liftoffTW'], D.liftoffTW.station, 0.02, 'liftoff thrust-to-weight');
+    // no return: the booster burns to its depletion margin and reports no landing
+    expect(f['meco.s1PropLeft']).toBeLessThan(0.02 * S1.propellant);
+    expect(f['rtls.touchdown.t']).toBeUndefined();
+    expect(f['boosterImpact.downrangeKm']).toBeGreaterThan(300);
+    expect(OUTLINES.station.recovery).toBe(false);
+  });
 
   it('return: deorbit burn and far-side altitude, entry interface, parachute altitudes, splashdown speed', () => {
     const tl = built('return');
@@ -372,6 +411,10 @@ describe('profile values match the built timelines', () => {
   it('suborbital: planned high point', () => {
     const tl = built('suborbital');
     if (!tl) return;
-    near(tl.facts['apogee.km'], PROFILE.suborbitalApogee / 1e3, 10, 'capsule apogee');
+    near(tl.facts['apogee.km'], PROFILE.suborbitalApogee / 1e3, 2, 'capsule apogee');
+    near(tl.facts['karman.freeFallS'], D.suborbitalAboveKarman, 5, 'time above 100 km');
+    const sep = telemetryAt(tl, 'capsule', tl.facts['capsuleSep.t']);
+    near(sep?.altitude, PROFILE.suborbitalReleaseAlt, 5e3, 'capsule release altitude');
+    near(tl.facts['capsuleSep.t'] - tl.facts['meco.t'], 36, 6, 'release about half a minute after cutoff');
   });
 });

@@ -132,16 +132,16 @@ const AUTHORED: KnowledgeCheck[] = [
     id: 'prop-isp-vs-thrust',
     kind: 'distinguish',
     topic: 'propulsion',
-    prompt: 'In vacuum the E-1V makes less thrust than the E-1 (700 kN against 835 kN) but has a higher specific impulse (342 s against 312 s). What does the higher specific impulse mean?',
+    prompt: 'The E-1V is the E-1’s core with a much larger nozzle. In vacuum it makes 910 kN against 835 kN and has a higher specific impulse, 342 s against 312 s. What does the higher specific impulse mean?',
     choices: [
       'Each kilogram of propellant gives more impulse, so more velocity change',
-      'It pushes harder, so it accelerates the stage faster',
-      'It burns its propellant faster, so each burn is shorter',
+      'It burns more propellant every second, and that is where the extra thrust comes from',
+      'Specific impulse is just another name for thrust, so the two numbers say the same thing',
       'Its flame is hotter, because its chamber runs at a higher pressure than the E-1',
     ],
     answer: 0,
     explain:
-      'Thrust is force; specific impulse is efficiency, the impulse per unit weight of propellant. The E-1V burns the same propellants at the same mixture ratio and chamber pressure as the E-1 but expands its exhaust much further in its large nozzle, so each kilogram leaves faster. It actually pushes less and burns propellant more slowly (about 209 kg/s against 273 kg/s), and its combustion temperature is essentially the same.',
+      'Thrust is force; specific impulse is efficiency, the impulse per unit weight of propellant (thrust = propellant flow × Isp × g0). The E-1V burns the same propellants at the same mixture ratio and chamber pressure, through the same throat, as the E-1, so its flow is essentially the same: about 271 kg/s against 273 kg/s. Its large nozzle expands the exhaust much further, so each kilogram leaves faster; with the same flow, that is why its vacuum thrust rises in nearly the same proportion as its Isp (about 9 to 10 %). The tempting answer mixes cause and effect: it does push harder, but not because it burns more, and its combustion temperature is essentially the same.',
     showAgain: { part: 'vacuum-engine' },
     sources: ['nasa-grc-thrust', 'sutton-rpe'],
   },
@@ -699,7 +699,7 @@ const AUTHORED: KnowledgeCheck[] = [
     ],
     answer: [1, 4, 6, 2, 5, 0, 3],
     explain:
-      'The service module engine performs the deorbit burn, then the service module is discarded before entry so that the heat shield is exposed. The capsule reaches entry interface and goes through peak heating; then, far lower and slower, the drogues stabilize and slow it, and the mains (reefed, then fully open) bring it down to about 8 m/s for splashdown.',
+      'The service module engine performs the deorbit burn, then the service module is discarded before entry so that the heat shield is exposed. The capsule reaches entry interface and goes through peak heating; then, far lower and slower, the drogues stabilize and slow it, and the mains (reefed, then fully open) bring it down to about 7.6 m/s for splashdown.',
     showAgain: { mission: 'return', phase: 'entry' },
     sources: ['nasa-ablators', 'knacke-parachutes'],
   },
@@ -750,7 +750,7 @@ const AUTHORED: KnowledgeCheck[] = [
     ],
     answer: 0,
     explain:
-      'One E-1 at its 55 % minimum throttle makes about 418 kN at sea level, against about 271 kN of weight for the booster near its 27,600 kg dry mass with landing legs: a thrust-to-weight ratio of about 1.54 even with the tanks nearly empty. It cannot hover, so the burn is timed to reach zero speed just at the ground, and more engines would only make that harder. All engines draw from the same tanks, three of them already restarted for the boostback and entry burns, and the legs do not decide how many engines fire.',
+      'One E-1 at its 55 % minimum throttle makes about 409 kN at sea level, against about 271 kN of weight for the booster near its 27,600 kg dry mass with landing legs: a thrust-to-weight ratio of about 1.51 even with the tanks nearly empty. It cannot hover, so the burn is timed to reach zero speed just at the ground, and more engines would only make that harder. All engines draw from the same tanks, three of them already restarted for the boostback and entry burns, and the legs do not decide how many engines fire.',
     showAgain: { mission: 'leo', phase: 'landing-burn' },
     sources: ['nasa-grc-thrust'],
   },
@@ -821,7 +821,7 @@ const AUTHORED: KnowledgeCheck[] = [
     ],
     answer: [4, 1, 2, 3, 0, 5],
     explain:
-      'The upper stage waits in a parking orbit for the right departure point, then the trans-lunar injection burn raises the orbit out to the Moon’s distance, and the probe separates. It then coasts for about three days: late in the coast it crosses into the Moon’s sphere of influence (about 66,000 km), passes closest behind the Moon and, having made no braking burn, leaves on its bent, outbound path.',
+      'The upper stage waits in a parking orbit for the right departure point, then the trans-lunar injection burn raises the orbit out to the Moon’s distance, and the probe separates. It then coasts for about three days: late in the coast it crosses into the Moon’s sphere of influence (about 66,000 km), passes closest behind the Moon and, having made no braking burn, climbs back out on its bent path (in this model, a free-return path that heads back toward Earth).',
     showAgain: { mission: 'lunar', phase: 'soi' },
     sources: ['nasa-bsf-4'],
   },

@@ -114,11 +114,18 @@ export function orbitBurn(ctx: Ctx | null, c: Craft, o: OrbitBurnOpts, recEvery 
     return o.done(cc.r, vadd(cc.v, vscale(qaxisY(cc.q), dv)));
   };
   let cut = NaN;
+  let lastSlope = 0;
   for (let guard = 0; guard < 200000; guard++) {
     const t = c.t;
     let thr = clamp((t + o.dt - start) / o.ignition, 0, 1) * o.throttle;
-    if (o.gLimit) thr = Math.min(thr, Math.max(g.eng.minThrottle, (o.gLimit * c.mass) / (g.n * g.eng.thrustVac)));
+    // acceleration limit on the mass at the end of the step
+    if (o.gLimit) thr = Math.min(thr, Math.max(g.eng.minThrottle, (o.gLimit * (c.mass - g.n * g.eng.mdot * g.thr * o.dt)) / (g.n * g.eng.thrustVac)));
     g.next = thr;
+    // a sample at every change of the throttle's slope (ramp start and end, acceleration limit),
+    // so the track's cubic interpolation follows the thrust instead of rounding the knee
+    const slope = (thr - g.thr) / o.dt;
+    if (ctx && Math.abs(slope - lastSlope) > 0.02) ctx.rec(c, 0, true);
+    lastSlope = slope;
     const d = o.dir(c);
     const att: AttitudeCmd = { q: qlook(d, vscale(vnorm(vcross(c.r, c.v)), -1)), wMax: o.rate.wMax, aMax: o.rate.aMax, tau: 1.5 };
     const before = predicted(c);

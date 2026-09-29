@@ -5,7 +5,7 @@
  *
  * URL parameters (besides the DevStage camera `cam=e,n,u,heading,pitch,fov`):
  *   t=<s>            mission time
- *   alt=<m>          hold the vehicle at this altitude above the pad (plume tests)
+ *   alt=<m>          vehicle at this altitude at time t, climbing through it (plume tests)
  *   throttle=<0..1>  override engine throttle (or plasma intensity)
  *   kind=<k>         scenario: kerolox-sl (default ascent), kerolox-vac, hypergolic, solid,
  *                    cold-gas, mono, entry, booster-entry
@@ -15,8 +15,11 @@
  *   decor=<s>        freeze the decorative clock (flicker) for pixel comparisons
  *   ground=0|1       stand-in ground (default: only while the launch site module draws nothing)
  *   hud=1            small text overlay (time, altitude, particle counts)
- *   only=core|column|gg|vac|cold   draw only that kind of plume volume
+ *   only=core|column|gg|vac        draw only that kind of plume volume
  *   vdbg=1|2|3       volume debug: bounds, raw emission, opacity
+ * At run time (tests, captures): window.__fxDev.vcam = [d, az, el, fov, look] moves the orbit
+ * camera, window.__fxDev.set({ scenario, alt, throttle }) swaps the synthetic source, and
+ * window.__rocketFrame.missionTime sets the time.
  */
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -43,12 +46,21 @@ const OPTS = {
   scenario: scenarioFor(q.get('kind')),
   alt: num('alt'),
   throttle: num('throttle'),
+  // held scenarios pass their nominal point at the displayed time
+  tRef: num('t') ?? 0,
 };
 const PLAY = q.get('play') === '1';
 const RATE = num('rate') ?? 1;
 const UNTIL = num('until');
 const DECOR = num('decor');
-const VCAM = q.get('vcam')?.split(',').map(Number) ?? null;
+/** Mutable at run time through window.__fxDev (hooks): { vcam, set(options) }. */
+const devState = {
+  vcam: q.get('vcam')?.split(',').map(Number) ?? (null as number[] | null),
+  set: null as null | ((o: Partial<typeof OPTS>) => void),
+  plume: plumeDebug,
+  volume: volumeDebug,
+};
+if (typeof window !== 'undefined') (window as unknown as Record<string, unknown>).__fxDev = devState;
 const GROUND = q.get('ground');
 const HUD = q.get('hud') === '1';
 plumeDebug.only = q.get('only');
@@ -235,8 +247,8 @@ function Controls({ src, hud }: { src: SyntheticSource; hud: HTMLDivElement | nu
   }, -35);
   useFrame(() => {
     if (DECOR !== null) frame.decor = DECOR;
-    if (!VCAM) return;
-    const [d, az, el, fov, look = 0] = VCAM;
+    if (!devState.vcam) return;
+    const [d, az, el, fov, look = 0] = devState.vcam;
     const t = frame.missionTime;
     src.vehicleAt(t, pose);
     const qs = siteFrameQuaternion(t, tmp.q);
@@ -268,7 +280,13 @@ function Controls({ src, hud }: { src: SyntheticSource; hud: HTMLDivElement | nu
 }
 
 export default function Dev() {
-  const src = useMemo(() => new SyntheticSource(OPTS), []);
+  const [src, setSrc] = useState(() => new SyntheticSource(OPTS));
+  useEffect(() => {
+    devState.set = (o) => setSrc(new SyntheticSource({ ...OPTS, ...o }));
+    return () => {
+      devState.set = null;
+    };
+  }, []);
   const siteRef = useRef<THREE.Group>(null);
   const [hud] = useState<HTMLDivElement | null>(() => {
     if (!HUD || typeof document === 'undefined') return null;

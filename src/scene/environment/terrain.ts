@@ -99,6 +99,7 @@ uniform vec3 uLz;           // x, z, apron radius
 uniform sampler2D uGlobeWater;
 uniform vec2 uGlobeBlend;   // distances (m) over which the shading becomes the globe's
 float siteWater;
+float siteWaterVar;
 vec3 siteImg;
 float siteGW;
 float siteFoam;
@@ -205,6 +206,13 @@ vec2 waveSlope( vec2 p, float t, float px, float ocean, out float var ) {
   float ampK = mix( 0.22, 1.0, ocean );
   float wl = mix( 16.0, 110.0, ocean );
   float base = atan( 0.38, -0.92 );
+  // wind slicks and cat's paws: streaks of calmer and rougher water drawn out along the wind,
+  // strongest on the sheltered lagoons (they carry the water's texture where the waves themselves
+  // are finer than a pixel: from the tracking camera's low angle and from altitude)
+  vec2 wd = vec2( cos( base ), sin( base ) );
+  vec2 sq = vec2( dot( p, wd ) / 3.5, dot( p, vec2( -wd.y, wd.x ) ) );
+  float slick = smoothstep( -0.3, 0.35, fbmS( sq, 240.0, 3, 73, px ) );
+  ampK *= mix( mix( 0.3, 0.8, ocean ), mix( 1.6, 1.15, ocean ), slick );
   for ( int i = 0; i < 12; i++ ) {
     float fi = float( i );
     float spread = mix( 0.8, 1.4, fi / 11.0 );
@@ -364,6 +372,7 @@ const CLASSIFY = /* glsl */ `
     body = mix( waterBody( sdf, ocean ), globeAlbedo( img, 1.0 ), edgeW * ocean );
   }
   siteWater = wet;
+  siteWaterVar = wvar;
   siteFoam = foam * wet;
   siteWaterN = wN;
   diffuseColor.rgb = mix( albedo, mix( body, srgbC( 236.0, 240.0, 240.0 ), foam ), wet );
@@ -387,7 +396,9 @@ const AFTER_OPAQUE = /* glsl */ `
   float NV = max( dot( N, V ), 0.0 );
   float F = 0.02 + 0.98 * pow( 1.0 - NV, 5.0 );
   vec3 R = reflect( -V, N );
-  float el = dot( R, upV );
+  // sub-pixel roughness spreads the reflection toward the higher, darker sky: rough patches read
+  // darker, calm slicks mirror the bright horizon
+  float el = dot( R, upV ) + min( sqrt( siteWaterVar ) * 5.0, 0.35 );
   vec3 sky = mix( uSkyHorizon, uSkyZenith, smoothstep( 0.02, 0.7, el ) );
   sky = mix( uSkyHorizon * 0.85, sky, smoothstep( -0.2, 0.02, el ) );
   gl_FragColor.rgb += siteWater * ( 1.0 - siteFoam ) * F * sky;
