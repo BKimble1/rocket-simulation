@@ -1,0 +1,15 @@
+import { chromium } from '@playwright/test';
+const [, , url, out, w = '1280', h = '720', wait = '15000'] = process.argv;
+const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'] });
+const page = await browser.newPage({ viewport: { width: +w, height: +h } });
+const logs = [];
+page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`[${m.type()}] ${m.text().slice(0, 200)}`); });
+page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
+const t0 = Date.now();
+await page.goto(url + (url.includes('?') ? '&' : '?') + 'capture=1&hooks=1', { waitUntil: 'load', timeout: 120000 });
+await page.waitForTimeout(+wait);
+const info = await page.evaluate(() => { const gl = window.__rocketGL; const f = window.__rocketFrame; return gl ? { n: f?.n, calls: gl.info.render.calls, tris: gl.info.render.triangles, geos: gl.info.memory.geometries, tex: gl.info.memory.textures, progs: gl.info.programs?.length } : null; });
+console.log(JSON.stringify(info), 'elapsed', Date.now() - t0);
+await page.screenshot({ path: out, timeout: 120000 });
+console.log(logs.slice(0, 15).join('\n'));
+await browser.close();
