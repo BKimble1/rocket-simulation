@@ -91,7 +91,11 @@ export class EffectsSystem {
     this.root.matrixAutoUpdate = true;
   }
 
+  /** The camera of the last update (diagnostics). */
+  lastCam: THREE.Camera | null = null;
+
   update(camera: THREE.Camera) {
+    this.lastCam = camera;
     const src = effects.source;
     this.particles.setSource(src);
     this.nowCache.setSource(src);
