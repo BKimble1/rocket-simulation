@@ -71,7 +71,7 @@ export function assemble(kind: SpacecraftKind, kit: Kit, built: Built): Spacecra
     if (a !== appliedCut) {
       appliedCut = a;
       kit.applyCut(a);
-    }
+    } else kit.syncFades();
   };
   const base = () => {
     Object.assign(pose, state);

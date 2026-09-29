@@ -175,10 +175,10 @@ export function buildSuborbital(): MissionTimeline {
   // ── recorded flight
   const ctx = new Ctx();
   const { bodies } = stackItems(SPEC);
-  const h = hop(ctx, ctx.env, load, az, kick);
+  // the countdown first: channels only take keys in time order
   const liftoffMass = sumMass(stackItems(SPEC).items).m + load - padBurn(PT);
-  const burned = padBurn(PT);
-  padSequence(ctx, bodies, (t) => liftoffMass + burned * clamp01(t / PT.engineStart), PT, { crew: false });
+  padSequence(ctx, bodies, PT, { crew: false, liftoffMass, s1AtLiftoff: load - padBurn(PT) });
+  const h = hop(ctx, ctx.env, load, az, kick);
   const tSep = h.sep;
   const meco = h.meco;
   const r = flyBoosterReturn(ctx, h.booster, { tSep, bias: { e: 0, n: 0 }, record: true, side: SIDE, hop: true });
@@ -329,4 +329,3 @@ export function buildSuborbital(): MissionTimeline {
   };
 }
 
-const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);

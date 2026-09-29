@@ -157,6 +157,8 @@ export function createSpace(opts: SpaceOptions) {
   const camUp = new THREE.Vector3();
   const subject = new THREE.Vector3();
   const anchor = new THREE.Vector3();
+  const shadowY = new THREE.Vector3();
+  const shadowRel = new THREE.Vector3();
 
   function ensureGenerated(gl: THREE.WebGLRenderer) {
     const spec = tierSpec();
@@ -302,9 +304,9 @@ export function createSpace(opts: SpaceOptions) {
     anchor.copy(padAbs).sub(O);
     const z = SUN_DIRECTION;
     const x = tmpV2.set(0, 1, 0).cross(z).normalize();
-    const y = new THREE.Vector3().crossVectors(z, x);
+    const y = shadowY.crossVectors(z, x);
     const texel = (2 * SHADOW_HALF) / sun.shadow.mapSize.x;
-    const rel = new THREE.Vector3().subVectors(target, anchor);
+    const rel = shadowRel.subVectors(target, anchor);
     const a = rel.dot(x);
     const b2 = rel.dot(y);
     target.addScaledVector(x, Math.round(a / texel) * texel - a).addScaledVector(y, Math.round(b2 / texel) * texel - b2);

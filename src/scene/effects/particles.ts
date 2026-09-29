@@ -266,7 +266,8 @@ function exhaustStart(c: ClusterSnap, ts: number, rec: Rec, rnd: (j: number) => 
   const lat = perp(c.dir, rnd(2) * Math.PI * 2, v1);
   const rr = Math.sqrt(rnd(3)) * R * 0.4;
   rec.p0.copy(c.centroid).addScaledVector(c.dir, y).addScaledVector(lat, rr);
-  rec.u0.copy(c.dir).multiplyScalar(shape.uJet * (0.8 + 0.4 * rnd(4))).addScaledVector(lat, shape.uJet * 0.12 * (rnd(5) - 0.3));
+  // the gas leaves the column at uJet relative to the vehicle, which itself moves through the air
+  rec.u0.copy(c.dir).multiplyScalar(shape.uJet * (0.8 + 0.4 * rnd(4))).addScaledVector(lat, shape.uJet * 0.12 * (rnd(5) - 0.3)).add(c.airVel);
   rec.tau = mixingTau(shape.rhoRatio) * (0.8 + 0.4 * rnd(6));
   rec.mode = Mode.Air;
   rec.up.copy(rec.p0).normalize();
@@ -324,13 +325,13 @@ const TAIL: Species = {
     if (solid) {
       rec.alb0.setRGB(0.86, 0.84, 0.8);
       rec.alb1.setRGB(0.9, 0.89, 0.87);
-      rec.emit.setRGB(3.2, 1.9, 0.9).multiplyScalar(shape.lum);
+      rec.emit.setRGB(2.2, 1.0, 0.3).multiplyScalar(shape.lum);
       rec.tauE = 0.25;
     } else {
       const soot = 0.16 + 0.1 * rnd(14);
       rec.alb0.setRGB(soot * 1.12, soot, soot * 0.88);
       rec.alb1.setRGB(0.56, 0.55, 0.53);
-      rec.emit.setRGB(2.4, 0.85, 0.2).multiplyScalar(shape.lum * (0.6 + 0.8 * rnd(15)));
+      rec.emit.setRGB(1.0, 0.3, 0.06).multiplyScalar(shape.lum * (0.5 + 0.8 * rnd(15)));
       rec.tauE = 0.12 + 0.12 * rnd(16);
     }
     rec.tauC = 1.1 + 0.8 * rnd(17);

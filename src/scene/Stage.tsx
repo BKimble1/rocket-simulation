@@ -128,11 +128,15 @@ function Loop() {
     const k = director.reduced ? 1 : 1 - Math.exp(-frame.dt / 0.4);
     shown.top += (goal.top - shown.top) * k;
     shown.bottom += (goal.bottom - shown.bottom) * k;
+    shown.left += (goal.left - shown.left) * k;
+    shown.right += (goal.right - shown.right) * k;
+    const W = size.width;
     const H = size.height;
-    if (shown.bottom > 1 && H > 0) {
-      const free = Math.max(H * 0.2, H - shown.top - shown.bottom);
-      cam.zoom = free / H;
-      cam.setViewOffset(size.width, H, 0, (shown.bottom - shown.top) / 2, size.width, H);
+    const vertical = shown.bottom > 1;
+    if ((vertical || Math.abs(shown.left - shown.right) > 1) && H > 0) {
+      // a bottom sheet also widens the view to fit the free height; a side panel only shifts it
+      cam.zoom = vertical ? Math.max(H * 0.2, H - shown.top - shown.bottom) / H : 1;
+      cam.setViewOffset(W, H, (shown.right - shown.left) / 2, vertical ? (shown.bottom - shown.top) / 2 : 0, W, H);
     } else if (cam.view?.enabled || cam.zoom !== 1) {
       cam.zoom = 1;
       cam.clearViewOffset();

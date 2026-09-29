@@ -18,15 +18,29 @@ interface Sample {
   wet: boolean;
 }
 
-function resample(pts: [number, number][], step: number): [number, number][] {
-  const out: [number, number][] = [];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [ax, az] = pts[i];
-    const [bx, bz] = pts[i + 1];
-    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / step));
-    for (let k = 0; k < n; k++) out.push([ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n]);
+/** Samples along a polyline at most `step(x, z)` apart (the step may grow with distance). */
+function resample(pts: [number, number][], step: number | ((x: number, z: number) => number)): [number, number][] {
+  const stepAt = typeof step === 'number' ? () => step : step;
+  const out: [number, number][] = [pts[0]];
+  let [px, pz] = pts[0];
+  for (let i = 1; i < pts.length; i++) {
+    const [bx, bz] = pts[i];
+    for (;;) {
+      const d = Math.hypot(bx - px, bz - pz);
+      const st = stepAt(px, pz);
+      if (d <= st * 1.001) break;
+      px += ((bx - px) * st) / d;
+      pz += ((bz - pz) * st) / d;
+      out.push([px, pz]);
+    }
+    // keep the polyline's own corners unless they are much closer than the step
+    const last = out[out.length - 1];
+    if (typeof step === 'number' || i === pts.length - 1 || Math.hypot(bx - last[0], bz - last[1]) > stepAt(bx, bz) * 0.6) {
+      out.push([bx, bz]);
+      px = bx;
+      pz = bz;
+    }
   }
-  out.push(pts[pts.length - 1]);
   return out;
 }
 
@@ -116,7 +130,7 @@ export function buildRoads(maps: SiteMaps): THREE.Group {
   const paint: THREE.BufferGeometry[] = [];
   const bank: THREE.BufferGeometry[] = [];
 
-  const sampleRoad = (pts: [number, number][], step: number): Sample[] =>
+  const sampleRoad = (pts: [number, number][], step: number | ((x: number, z: number) => number)): Sample[] =>
     resample(pts, step).map(([x, z]) => {
       const wet = coastDist(maps, x, z) < 6;
       return { x, z, h: groundH(maps, x, z), wet };
@@ -143,7 +157,8 @@ export function buildRoads(maps: SiteMaps): THREE.Group {
   for (const r of REGIONAL_ROADS) {
     const raw: [number, number][] = [];
     for (let i = 0; i < r.pts.length; i += 2) raw.push([r.pts[i], r.pts[i + 1]]);
-    const s = sampleRoad(raw, 25);
+    // 25 m samples near the complex, growing to 160 m far out (the terrain cells grow too)
+    const s = sampleRoad(raw, (x, z) => Math.min(160, Math.max(25, Math.hypot(x, z) * 0.02)));
     // smooth the wet flag into causeway spans with ramps at each end
     const causeway = s.map((p) => {
       const d = Math.hypot(p.x, p.z);
@@ -153,7 +168,8 @@ export function buildRoads(maps: SiteMaps): THREE.Group {
     for (let i = 1; i < causeway.length - 1; i++) {
       if (!causeway[i].wet && (causeway[i - 1].wet || causeway[i + 1].wet)) causeway[i].h = Math.max(causeway[i].h, (causeway[i - 1].h + causeway[i + 1].h) / 2);
     }
-    const lift = (p: Sample) => p.h + 0.2 + Math.hypot(p.x, p.z) * 2e-5;
+    // lifted a little more with distance: the coarser terrain cells there sag between vertices
+    const lift = (p: Sample) => p.h + 0.2 + Math.hypot(p.x, p.z) * 3e-5;
     asphalt.push(ribbon(causeway, r.w / 2, lift, 8, 0.2, r.w / 2 + 0.6));
     // embankments along wet spans
     let run: Sample[] = [];

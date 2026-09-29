@@ -1507,6 +1507,26 @@ code {
   .brand {
     padding: 6px 2px;
   }
+  .home h1 {
+    font-size: 21px;
+  }
+  .home .lead {
+    font-size: 14.5px;
+    line-height: 1.45;
+  }
+  .home__actions {
+    margin: 12px 0 8px;
+    gap: 6px;
+  }
+  .action {
+    padding: 9px 12px;
+  }
+  .action__title {
+    font-size: 15px;
+  }
+  .action__text {
+    font-size: 12.5px;
+  }
   .header .icon-btn {
     width: 34px;
     height: 34px;

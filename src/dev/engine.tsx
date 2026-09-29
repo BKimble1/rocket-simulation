@@ -148,7 +148,7 @@ export default function Dev() {
     } else add(kind === 'E-1V' ? 'E-1V' : 'E-1', 0, 0, true);
     // thermal=1: the hangar's thermal view (flat colour per userData.thermal class)
     if (q.get('thermal') === '1') for (const e of engines) applyThermal(e.root, true);
-    (window as unknown as Record<string, unknown>).__engineDev = { group, engines };
+    (window as unknown as Record<string, unknown>).__engineDev = { group, engines, director };
     return { group, engines };
   }, [detail, kind]);
 
@@ -160,6 +160,8 @@ export default function Dev() {
     });
   }, [setup]);
 
+  // priority -1: before the stage positions the camera, so the first frame that shows the
+  // engines is already framed (frames are slow under software rendering)
   useFrame(() => {
     if (director.input.active) touched.v = true;
     if (!touched.v) {
@@ -167,6 +169,9 @@ export default function Dev() {
       const f = framing;
       if (g.dist !== f.dist || g.az !== f.az || g.el !== f.el || g.target.x !== f.tx || g.target.y !== f.ty || g.target.z !== f.tz) applyFraming();
     }
+  }, -1);
+
+  useFrame(() => {
     const t = frame.decor;
     const anim = q.get('anim') === '1';
     const cut = anim ? 0.5 - 0.5 * Math.cos((t / 6) * Math.PI) : num('cut', 0);

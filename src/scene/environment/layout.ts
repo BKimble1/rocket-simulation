@@ -84,7 +84,7 @@ function pointInPoly(poly: [number, number][], x: number, z: number): boolean {
   return inside;
 }
 
-function distToPolyEdge(poly: [number, number][], x: number, z: number): number {
+export function distToPolyEdge(poly: [number, number][], x: number, z: number): number {
   let best = Infinity;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
     const [ax, az] = poly[j];
@@ -97,17 +97,29 @@ function distToPolyEdge(poly: [number, number][], x: number, z: number): number 
   return best;
 }
 
-/** Inside the region hidden below the hardstand, its embankment and the trench (terrain dips away). */
-export function inPadPit(x: number, z: number): boolean {
-  if (Math.abs(x) > 70 || Math.abs(z) > 150) return false;
-  const inTop = pointInPoly(HARDSTAND, x, z);
-  if (inTop) return true;
-  const dEdge = distToPolyEdge(HARDSTAND, x, z);
-  if (dEdge < EMBANK.run - 2.5) return true;
+/** Inside the hardstand's top outline (the ground below it is hidden). */
+export function underHardstand(x: number, z: number): boolean {
+  if (Math.abs(x) > 60 || Math.abs(z) > 60) return false;
+  return pointInPoly(HARDSTAND, x, z);
+}
+
+/**
+ * Natural-ground height override around the pad (m, pad frame), or null: the ground is pushed
+ * well below the hardstand top, just below the flame-trench floor inside the trench walls (only
+ * half a metre at the mouth, so no groove shows along the walls where the trench reaches the
+ * grade) and 15 cm below the transporter ramp near its foot (no coplanar surfaces). The
+ * embankment covers the grade by itself (its 1:2 slope crosses it cleanly at the toe).
+ */
+export function padPitH(x: number, z: number): number | null {
+  if (Math.abs(x) > 70 || Math.abs(z) > 150) return null;
+  if (pointInPoly(HARDSTAND, x, z)) return -12;
   const t = toTrench(x, z);
-  if (Math.abs(t.v) < TRENCH.halfWidth + 0.6 && t.s > 0 && t.s < TRENCH.sMouth - 2.5) return true;
-  if (Math.abs(x - RAMP.x) < RAMP.halfWidth + 6 && z > RAMP.z0 && z < RAMP.z0 + RAMP.length - 4) return true;
-  return false;
+  if (Math.abs(t.v) < TRENCH.halfWidth - 0.02 && t.s > TRENCH.sBack && t.s < TRENCH.sMouth) return trenchFloor(t.s) - 0.6;
+  if (Math.abs(x - RAMP.x) < RAMP.halfWidth && z > RAMP.z0 && z < RAMP.z0 + RAMP.length) {
+    const rampY = (GRADE * (z - RAMP.z0)) / RAMP.length;
+    return Math.min(GRADE, rampY - 0.15);
+  }
+  return null;
 }
 
 // ───────────────────────────── launch mount ─────────────────────────────

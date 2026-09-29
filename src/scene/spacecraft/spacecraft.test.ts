@@ -221,9 +221,60 @@ describe('every kind', () => {
       });
 });
 
+describe('draw-call budgets and thermal classes', () => {
+  /** Visible meshes (main-pass draw calls) and shadow casters among them. */
+  const calls = (m: SpacecraftModel) => {
+    let vis = 0;
+    let shadow = 0;
+    for (const g of Object.values(m.bodies))
+      g?.traverse((o) => {
+        if (!(o as THREE.Mesh).isMesh || !o.visible) return;
+        let v = true;
+        o.traverseAncestors((a) => (v = v && a.visible));
+        if (!v) return;
+        vis++;
+        if (o.castShadow) shadow++;
+      });
+    return { vis, shadow };
+  };
+  const kinds: SpacecraftKind[] = ['leoSat', 'gtoSat', 'lunarProbe', 'capsule', 'researchCapsule', 'station'];
+  for (const kind of kinds)
+    it(`${kind}: hangar <= 250 calls with shadows, flight <= 60 (station 120) in every state`, () => {
+      for (const detail of ['hangar', 'flight'] as const) {
+        const m = build(kind, detail, MOUNT_Y.upperStage);
+        const states = [{}, { satArrays: 1, satAntenna: 1, smArrays: 1, capNoseCone: 1 }, { capDrogue: 1 }, { capMain: 0.5 }, { capMain: 1 }];
+        for (const st of states)
+          for (const cut of [0, 0.5, 1]) {
+            m.setState({ satArrays: 0, satAntenna: 0, smArrays: 0, capNoseCone: 0, capDrogue: 0, capMain: 0, ...st });
+            m.setCut(cut);
+            const c = calls(m);
+            if (detail === 'hangar') expect(c.vis + c.shadow, `${JSON.stringify(st)} cut ${cut}`).toBeLessThanOrEqual(kind === 'station' ? 120 : 250);
+            else expect(c.vis, `${JSON.stringify(st)} cut ${cut}`).toBeLessThanOrEqual(kind === 'station' ? 120 : 60);
+          }
+        m.dispose();
+      }
+    });
+  it('tags every mesh with a thermal class (heat shield 4, backshell tiles 3)', () => {
+    for (const kind of kinds) {
+      const m = build(kind, 'flight', MOUNT_Y.upperStage);
+      for (const g of Object.values(m.bodies))
+        g?.traverse((o) => {
+          if (!(o as THREE.Mesh).isMesh) return;
+          const k = o.userData.thermal as number;
+          expect(Number.isInteger(k) && k >= 0 && k <= 4, `${kind} ${o.name}`).toBe(true);
+          if (o.userData.part === 'heat-shield') expect(k).toBe(4);
+          if (o.userData.part === 'backshell-tps') expect(k).toBe(3);
+          if (o.userData.part === 'mli-blankets') expect(k).toBe(1);
+        });
+      m.dispose();
+    }
+  });
+});
+
 describe('material tags agree with the assignments table (known gaps listed)', () => {
   it('uses only assigned materials per part, except documented gaps', () => {
-    const gaps = new Set(['heat-shield:ceramic-tiles', 'station:al-2219', 'station:mli', 'station:cfrp-sandwich', 'service-module:titanium']);
+    // the heat shield's fibrous insulation layer has no assignment row of its own
+    const gaps = new Set(['heat-shield:ceramic-tiles']);
     const bad = new Set<string>();
     for (const kind of ['leoSat', 'gtoSat', 'lunarProbe', 'capsule', 'researchCapsule', 'station'] as SpacecraftKind[]) {
       const m = build(kind, 'hangar', MOUNT_Y.upperStage);

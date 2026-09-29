@@ -401,7 +401,8 @@ export function buildGtoSat(kit: Kit, mountY: number): Built {
     wings.push(w);
     wingRoots.push(w.root);
   }
-  kit.cutHide.push(wingRoots[0]);
+  // the +Z wing covers the section: it fades with the wedge (hangar detail has the section)
+  if (kit.hangar) kit.cutHide.push(wingRoots[0]);
 
   // ── two reflectors folded against the east/west (+/-X) faces
   const refl: THREE.Group[] = [];

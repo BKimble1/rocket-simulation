@@ -101,6 +101,7 @@ function engineCore(e: EmitterSnap, p: VolumeParams, steps: number) {
   const coreCol = bcol(solid ? COL.solidCore : COL.core).lerp(COL.green, green * 0.7);
   const rCore = re * 0.6 * Math.sqrt(p.Rbal / re);
   const coreI = (solid ? 16 : 3.6) * thr * st;
+  p.blobOcc = solid ? 0.3 : 0.75;
   blob(p, Lcore * 0.1, Lcore * 0.3, rCore, coreI, coreCol);
   blob(p, Lcore * 0.55, Lcore * 0.34, rCore * 0.8, coreI * 0.55, bcol(coreCol));
   // shock diamonds: Mach disks in the over- or near-ideally-expanded jet, fading as it balloons
@@ -174,32 +175,36 @@ function ggJet(e: EmitterSnap, p: VolumeParams, steps: number) {
   resetParams(p);
   const rhoR = airDensity(e.ambientPressure, e.altitude) / RHO_SL;
   const sm = smokiness(rhoR);
-  const rg = 0.12 * (e.exitRadius / 0.53);
+  // duct radius about 0.3 of the nozzle exit radius (E-1: ~16 cm)
+  const rg = 0.3 * e.exitRadius;
   const st = startUp(e.sinceIgnition - 0.15);
   p.Rc = rg;
-  p.Rbal = rg * (1 + 5 * (1 - sm));
-  p.Lb = 1.5 + 4 * (1 - sm);
-  p.spread = 0.07 + 0.12 * (1 - sm);
+  // in thin air the turbine exhaust expands into a wide, faint fan
+  p.Rbal = rg * (1.15 + 6 * (1 - sm));
+  p.Lb = 0.8 + 4 * (1 - sm);
+  p.spread = 0.085 + 0.12 * (1 - sm);
   p.y0 = 0;
-  p.y1 = (13 + 26 * (1 - sm)) * (0.3 + 0.7 * st);
+  p.y1 = (17 + 26 * (1 - sm)) * (0.3 + 0.7 * st);
   p.steps = steps;
   p.seed = hashId(e.id) * 31 + 5;
   p.margin = 1.4;
-  p.smokeSigma = (0.8 + 6 * sm) * e.throttle * st;
-  p.smokeIn = [0, 0.4];
+  // fuel-rich, sooty and nearly black at the outlet, turning grey-brown as it mixes
+  p.smokeSigma = (1.2 + 9 * sm) * e.throttle * st;
+  p.smokeIn = [0, 0.3];
   p.smokeA.copy(COL.ggSoot);
   p.smokeB.copy(COL.ggSootB);
-  p.flameI = 1.6 * sm * e.throttle * st;
-  p.flameSigma = 3;
-  p.flameIn = [0, 0.25];
-  p.flameLen = 2.2;
+  // in dense air the rich exhaust afterburns in patches along its edge
+  p.flameI = 1.2 * sm * e.throttle * st;
+  p.flameSigma = 2.5;
+  p.flameIn = [0.4, 1.2];
+  p.flameLen = 5;
   p.flameA.copy(COL.ggFlameA);
   p.flameB.copy(COL.ggFlameB);
-  p.turb = 0.6;
+  p.turb = 0.75;
   p.flow = 60;
-  p.noiseK = 0.8;
-  p.radK = 2.2;
-  p.endFade = p.y1 * 0.45;
+  p.noiseK = 0.9;
+  p.radK = 2.0;
+  p.endFade = p.y1 * 0.5;
 }
 
 /** Vacuum-type plume (kerosene vacuum engine, hypergolic engine): faint, very wide, fading fast. */

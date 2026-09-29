@@ -34,7 +34,6 @@ export function buildLandingZone(): LandingZone {
   const B = new Batch();
   const sockMat = withHaze(new THREE.MeshStandardMaterial({ color: '#d4622e', roughness: 0.8, metalness: 0, side: THREE.DoubleSide }));
   sockMat.name = 'site.windSock';
-  const tag = { part: 'landing-zone' };
 
   // slab top with the marking (its own material: the texture spans the slab diameter)
   const topMat = withHaze(new THREE.MeshStandardMaterial({ map: lzTexture(R), roughness: 0.88, metalness: 0 }));
@@ -47,7 +46,6 @@ export function buildLandingZone(): LandingZone {
   const topMesh = new THREE.Mesh(top, topMat);
   topMesh.name = 'lz-slab';
   topMesh.receiveShadow = true;
-  topMesh.userData.part = 'landing-zone';
   group.add(topMesh);
 
   // thickened edge: a chamfered lip down to the graded apron, 0.45 m below the slab top
@@ -60,7 +58,7 @@ export function buildLandingZone(): LandingZone {
     ],
     128,
   );
-  B.add(lip, SM('concreteLight'), undefined, { cast: false, receive: true, ...tag });
+  B.add(lip, SM('concreteLight'), undefined, { cast: false, receive: true });
   // drainage grate ring just outside the lip
   const drain = new THREE.RingGeometry(R + 1.7, R + 2.3, 128, 1);
   drain.rotateX(-Math.PI / 2);
@@ -83,7 +81,7 @@ export function buildLandingZone(): LandingZone {
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
     const hgt = 22;
-    B.add(new THREE.CylinderGeometry(0.14, 0.32, hgt, 14).translate(x, -0.45 + hgt / 2, z), SM('galv'), undefined, tag);
+    B.add(new THREE.CylinderGeometry(0.14, 0.32, hgt, 14).translate(x, -0.45 + hgt / 2, z), SM('galv'), undefined);
     B.at(bevelBox(1.4, 0.6, 1.4, 0.06), SM('concreteLight'), x, -0.35, z, 0);
     const face = Math.atan2(-x, -z);
     const head = new THREE.Matrix4().makeRotationY(face).setPosition(x, -0.45 + hgt, z);
@@ -120,7 +118,7 @@ export function buildLandingZone(): LandingZone {
   {
     const x = -R - 38;
     const z = 22;
-    B.at(bevelBox(7, 3.0, 4.5, 0.06), SM('claddingGrey'), x, -0.45 + 1.5, z, 0, tag);
+    B.at(bevelBox(7, 3.0, 4.5, 0.06), SM('claddingGrey'), x, -0.45 + 1.5, z, 0);
     B.at(box(7.3, 0.25, 4.8), SM('concreteLight'), x, -0.45 + 3.1, z, 0);
     B.at(box(1.1, 2.1, 0.05), SM('steelDark'), x + 1.8, -0.45 + 1.05, z - 2.28, 0);
     for (const dz of [-8, 34]) B.at(cyl(0.2, 1.0, 12), SM('yellow'), -R - 10, -0.45 + 0.5, dz, 0);

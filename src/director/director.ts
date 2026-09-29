@@ -25,10 +25,10 @@ export interface HangarOrbit {
   fov: number;
 }
 
-const makeOrbit = (): HangarOrbit => ({ target: new THREE.Vector3(0, 30, 0), az: 32, el: 8, dist: 105, fov: 38 });
+const makeOrbit = (): HangarOrbit => ({ target: new THREE.Vector3(0, 34, 0), az: 27, el: 7, dist: 124, fov: 36 });
 
 /** Hangar framing of the whole vehicle. */
-export const HANGAR_HOME: HangarOrbit = { target: new THREE.Vector3(0, 32, 0), az: 35, el: 6, dist: 112, fov: 36 };
+export const HANGAR_HOME: HangarOrbit = { target: new THREE.Vector3(0, 34.5, 0), az: 35, el: 6, dist: 132, fov: 36 };
 
 interface Blend {
   /** Pose producer evaluated live. */
@@ -83,30 +83,41 @@ export const director = {
   onUserCamera: null as null | (() => void),
 
   /**
-   * Screen area hidden by interface panels that span the width (phone bottom sheets, the phone
-   * home card), in CSS px, by panel key. The stage moves the projection centre into the free area
-   * and widens the view to fit it (see viewInsetShown), so the subject is never behind a panel.
+   * Screen area hidden by interface panels, in CSS px, by panel key: sheets that span the width
+   * (phone) hide the bottom, side panels (desktop, phone landscape) hide a side. The stage moves
+   * the projection centre into the free area (and, for a bottom sheet, widens the view to fit the
+   * free height), so the subject is never behind a panel. See viewInsetShown.
    */
-  insets: {} as Record<string, { top: number; bottom: number }>,
+  insets: {} as Record<string, Partial<ViewInset>>,
   /** Smoothed inset actually applied this frame. */
-  viewInsetShown: { top: 0, bottom: 0 },
+  viewInsetShown: { top: 0, bottom: 0, left: 0, right: 0 } as ViewInset,
 };
 
+export interface ViewInset {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
 /** Register (or clear, with null) the screen area a panel hides. */
-export function setViewInset(key: string, inset: { top: number; bottom: number } | null) {
+export function setViewInset(key: string, inset: Partial<ViewInset> | null) {
   if (inset) director.insets[key] = inset;
   else delete director.insets[key];
 }
 
-/** The inset to apply now: the largest of the registered ones. */
-export function viewInsetGoal(): { top: number; bottom: number } {
-  let top = 0;
-  let bottom = 0;
+const insetGoal: ViewInset = { top: 0, bottom: 0, left: 0, right: 0 };
+/** The inset to apply now: the largest of the registered ones on each side. */
+export function viewInsetGoal(): ViewInset {
+  insetGoal.top = insetGoal.bottom = insetGoal.left = insetGoal.right = 0;
   for (const k in director.insets) {
-    top = Math.max(top, director.insets[k].top);
-    bottom = Math.max(bottom, director.insets[k].bottom);
+    const i = director.insets[k];
+    insetGoal.top = Math.max(insetGoal.top, i.top ?? 0);
+    insetGoal.bottom = Math.max(insetGoal.bottom, i.bottom ?? 0);
+    insetGoal.left = Math.max(insetGoal.left, i.left ?? 0);
+    insetGoal.right = Math.max(insetGoal.right, i.right ?? 0);
   }
-  return { top, bottom };
+  return insetGoal;
 }
 
 export function goLocation(loc: Location) {
@@ -135,7 +146,7 @@ export function hangarHome() {
   g.target.copy(HANGAR_HOME.target);
   g.az = HANGAR_HOME.az;
   g.el = HANGAR_HOME.el;
-  g.dist = HANGAR_HOME.dist * (director.aspect < 1 ? 1.35 : 1);
+  g.dist = HANGAR_HOME.dist;
   g.fov = HANGAR_HOME.fov;
   director.hangarMinDist = 3;
   director.hangarTau = director.reduced ? 0.12 : 0.7;

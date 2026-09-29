@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three';
 import { asset } from '../../config';
-import { LOCAL_TERRAIN, LANDING_ZONE } from '../../world/site';
+import { LOCAL_TERRAIN, LANDING_ZONE, GROUND_CAMS } from '../../world/site';
 import { SITE, deg } from '../../world/frames';
 import { skyState } from '../space/skyState';
 import { tierSpec } from '../quality';
@@ -23,103 +23,45 @@ import { groundH, sphereY, type SiteMaps } from './map';
 import { hazeUniforms, HAZE_PARS_FRAGMENT, HAZE_PARS_VERTEX, HAZE_VERTEX, HAZE_FRAGMENT } from './haze';
 import { NOISE_GLSL, COLOR_GLSL } from './glsl';
 import { OVERLAY, type Overlay } from './overlay';
-import { LZ } from './layout';
+import { LZ, TRENCH, trenchXZ, underHardstand } from './layout';
+import { Quadtree, triangulate, type Focus, type Leaf } from './lod';
 
 // ───────────────────────────── geometry ─────────────────────────────
 
-function radii(r0: number, rEnd: number, nTheta: number): number[] {
-  const g = 1 + (2 * Math.PI) / nTheta;
-  const out: number[] = [];
-  for (let r = r0; r < rEnd; r *= g) out.push(r);
-  out.push(rEnd);
-  return out;
+/**
+ * Where the terrain needs detail: cell size cMin (m) at the point, growing by k per metre of
+ * distance (plus d^2 / FAR): about 1.6 m on the pad, 0.8 m where the flame trench reaches the
+ * grade, a few metres around the landing zone and the ground camera sites.
+ */
+function terrainFoci(detail: number): Focus[] {
+  const s = detail >= 1 ? 1 : detail >= 0.75 ? 1.25 : 1.6;
+  const mouth = trenchXZ(TRENCH.sMouth - 4, 0);
+  const C = GROUND_CAMS;
+  return [
+    { x: 0, z: 0, cMin: 1.6, k: 0.06 * s },
+    { x: mouth.x, z: mouth.z, cMin: 0.8, k: 0.2 },
+    { x: LANDING_ZONE.x, z: LANDING_ZONE.z, cMin: 5, k: 0.1 * s },
+    { x: C.landing.x, z: C.landing.z, cMin: 3, k: 0.12 * s },
+    { x: C.tracking.x, z: C.tracking.z, cMin: 4, k: 0.12 * s },
+    { x: C.padWide.x, z: C.padWide.z, cMin: 3, k: 0.12 * s },
+  ];
 }
 
-/** A polar-grid annulus (or disk when rIn is 0) with vertices on the terrain surface. */
-function annulus(maps: SiteMaps, rs: number[], nTheta: number, withCentre: boolean): THREE.BufferGeometry {
-  const nr = rs.length;
-  const nv = nr * nTheta + (withCentre ? 1 : 0);
-  const pos = new Float32Array(nv * 3);
-  const cosT = new Float64Array(nTheta);
-  const sinT = new Float64Array(nTheta);
-  for (let j = 0; j < nTheta; j++) {
-    const a = (j / nTheta) * Math.PI * 2;
-    cosT[j] = Math.cos(a);
-    sinT[j] = Math.sin(a);
-  }
-  let k = 0;
-  for (let i = 0; i < nr; i++) {
-    const r = rs[i];
-    // stagger alternate rings by half a cell: fewer long aligned edges, better triangles
-    const off = i % 2 ? 0.5 : 0;
-    for (let j = 0; j < nTheta; j++) {
-      let x: number;
-      let z: number;
-      if (off) {
-        const a = ((j + off) / nTheta) * Math.PI * 2;
-        x = r * Math.cos(a);
-        z = r * Math.sin(a);
-      } else {
-        x = r * cosT[j];
-        z = r * sinT[j];
-      }
-      pos[k++] = x;
-      pos[k++] = sphereY(x, z, groundH(maps, x, z));
-      pos[k++] = z;
-    }
-  }
-  if (withCentre) {
-    pos[k++] = 0;
-    pos[k++] = groundH(maps, 0, 0);
-    pos[k++] = 0;
-  }
-  const quads = (nr - 1) * nTheta;
-  const idx = new Uint32Array(quads * 6 + (withCentre ? nTheta * 3 : 0));
-  let t = 0;
-  for (let i = 0; i < nr - 1; i++) {
-    const a0 = i * nTheta;
-    const b0 = (i + 1) * nTheta;
-    const odd = i % 2 === 1;
-    for (let j = 0; j < nTheta; j++) {
-      const j1 = (j + 1) % nTheta;
-      const a = a0 + j;
-      const b = a0 + j1;
-      const c = b0 + j;
-      const d = b0 + j1;
-      if (odd) {
-        // ring i is offset by +half: a sits between c and d
-        idx[t++] = a;
-        idx[t++] = d;
-        idx[t++] = c;
-        idx[t++] = a;
-        idx[t++] = b;
-        idx[t++] = d;
-      } else {
-        // ring i+1 is offset by +half: c sits between a and b
-        idx[t++] = a;
-        idx[t++] = b;
-        idx[t++] = c;
-        idx[t++] = b;
-        idx[t++] = d;
-        idx[t++] = c;
-      }
-    }
-  }
-  if (withCentre) {
-    const cIdx = nr * nTheta;
-    for (let j = 0; j < nTheta; j++) {
-      idx[t++] = cIdx;
-      idx[t++] = (j + 1) % nTheta;
-      idx[t++] = j;
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setIndex(new THREE.BufferAttribute(idx, 1));
-  geo.computeVertexNormals();
-  const rMax = rs[nr - 1];
-  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, -rMax * rMax / (2 * 6371000), 0), rMax * 1.01);
-  return geo;
+/** The terrain meshes: the opaque inner disk and the fading ring, on the spherical Earth. */
+function terrainGeometry(maps: SiteMaps, detail: number, rIn: number, rOut: number): { inner: THREE.BufferGeometry; ring: THREE.BufferGeometry } {
+  const tree = new Quadtree({ ext: SITE_MAP.ext, q: 8, foci: terrainFoci(detail), far: 100000, rOuter: rOut, maxLevel: 15 });
+  const maxDist = (t: Leaf) => Math.hypot(Math.max(Math.abs(t.x0), Math.abs(t.x0 + t.size)), Math.max(Math.abs(t.z0), Math.abs(t.z0 + t.size)));
+  const surface = (x: number, z: number): [number, number, number] => [x, sphereY(x, z, groundH(maps, x, z)), z];
+  const make = (use: (t: Leaf) => boolean) => {
+    const m = triangulate(tree, use, surface, underHardstand);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(m.position, 3));
+    geo.setIndex(new THREE.BufferAttribute(m.index, 1));
+    geo.computeVertexNormals();
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, (-rOut * rOut) / (2 * 6371000), 0), rOut * 1.5);
+    return geo;
+  };
+  return { inner: make((t) => maxDist(t) <= rIn), ring: make((t) => maxDist(t) > rIn) };
 }
 
 // ───────────────────────────── shader ─────────────────────────────
@@ -479,21 +421,14 @@ const SKY_ZENITH_TINT = new THREE.Color(0.42, 0.6, 1.0);
 
 export function buildTerrain(maps: SiteMaps, overlay: Overlay): Terrain {
   const spec = tierSpec();
-  const nTheta = spec.detail >= 1 ? 512 : spec.detail >= 0.75 ? 384 : 256;
-  const r0 = 16;
   const rIn = LOCAL_TERRAIN.innerKm * 1000;
   const rOut = LOCAL_TERRAIN.outerKm * 1000;
-  const all = radii(r0, rOut, nTheta);
-  const split = all.findIndex((r) => r >= rIn);
-  const inner = [...all.slice(0, split), rIn];
-  const outer = [rIn, ...all.slice(split).filter((r) => r > rIn + 1)];
   const uniforms: TerrainUniforms = {
     uTime: { value: 0 },
     uSkyHorizon: { value: new THREE.Color() },
     uSkyZenith: { value: new THREE.Color() },
   };
-  const gIn = annulus(maps, inner, nTheta, true);
-  const gOut = annulus(maps, outer, nTheta, false);
+  const { inner: gIn, ring: gOut } = terrainGeometry(maps, spec.detail, rIn, rOut);
   const mIn = makeTerrainMaterial(maps, overlay, false, uniforms);
   const mOut = makeTerrainMaterial(maps, overlay, true, uniforms);
   const inside = new THREE.Mesh(gIn, mIn);

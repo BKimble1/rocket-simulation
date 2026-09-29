@@ -69,7 +69,10 @@ export function buildWing(kit: Kit, s: WingSpec): Wing {
   const sadm = kit.mesh(cyl(0.11, 0.13, xH + 0.02, kit.seg(24, 12)), P.whitePaint(), part, 'cfrp-sandwich', root);
   sadm.rotation.z = -D90;
   sadm.position.set((xH + 0.02) / 2 - 0.02, 0, 0);
-  const rods: THREE.Mesh[] = [];
+  // tie-down rods (released at deployment) in one group so they merge and hide together
+  const rods = new THREE.Group();
+  rods.name = 'tie-downs';
+  root.add(rods);
   const stackDepth = xH + (n + 0.5) * g + t / 2;
   if (hangar) {
     kit.mesh(cyl(0.05, 0.05, 0.06, 16), P.anod(), part, mat, root, xH, 0, 0).rotation.z = -D90;
@@ -77,11 +80,8 @@ export function buildWing(kit: Kit, s: WingSpec): Wing {
       for (const yy of [-0.42 * h, 0.42 * h]) {
         const unit = kit.mesh(rbox(0.09, 0.12, 0.09, 0.012, 2), P.anod(), part, mat, root, 0.045, yy, zz);
         unit.name = 'hold-down';
-        const rod = kit.mesh(cyl(0.012, 0.012, stackDepth + 0.02, 8), P.steel(), part, 'cfrp-sandwich', root, (stackDepth + 0.02) / 2, yy, zz);
-        rod.rotation.z = -D90;
-        rod.userData.keep = true;
-        rods.push(rod);
-        kit.mesh(cyl(0.028, 0.028, 0.012, 12), P.steel(), part, 'cfrp-sandwich', rod, 0, stackDepth / 2 + 0.01, 0).userData.keep = true;
+        kit.mesh(cyl(0.012, 0.012, stackDepth + 0.02, 8), P.steel(), part, 'cfrp-sandwich', rods, (stackDepth + 0.02) / 2, yy, zz).rotation.z = -D90;
+        kit.mesh(cyl(0.028, 0.028, 0.012, 12), P.steel(), part, 'cfrp-sandwich', rods, stackDepth + 0.02, yy, zz).rotation.z = -D90;
       }
   }
 
@@ -153,7 +153,7 @@ export function buildWing(kit: Kit, s: WingSpec): Wing {
       else pivots[k].rotation.y = (k % 2 === 0 ? -Math.PI : Math.PI) * (1 - b);
     }
     drive.rotation.x = driveAngle;
-    for (const r of rods) r.visible = d < 0.004;
+    rods.visible = d < 0.004;
   };
   set(0);
   return { root, set, stackDepth, span: xH + Ly + n * w };

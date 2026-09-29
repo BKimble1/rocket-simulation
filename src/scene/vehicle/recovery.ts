@@ -9,7 +9,7 @@ import { BODY_RADIUS as R, LEGS, GRID_FINS } from '../../vehicle/spec';
 import type { Ctx } from './ctx';
 import type { Section } from './kit';
 import { AZ } from './layout';
-import { radialFrame, loft, bevelBox, rod, mergeAll, lathe, polar, pipe, type P2 } from './geom';
+import { radialFrame, loft, bevelBox, rod, mergeAll, lathe, polar, pipe, ringGeom, type P2 } from './geom';
 import { RigInstances, azimuthCopies } from './instancing';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -363,19 +363,19 @@ function avionicsBay(ctx: Ctx, s: Section) {
   const yB = 37.12; // box centres: clear of the LOX dome below and the ring frame above
   const rPlate = R - 0.045; // cold plates bolted to the stringers
   for (const [a, b] of [
-    [150, 210],
-    [232, 262],
+    [152, 208],
+    [233, 262],
   ]) {
-    const phiC = ((a + b) / 2) * DEG;
-    const w = ((b - a) * DEG) * rPlate;
-    kit.add(s.group, bevelBox(w, 0.36, 0.012, 0.004), { ...inner, look: 'aluMilled' }, radialFrame(rPlate, phiC, yB));
+    // curved plate following the skin (a flat panel this wide would cut through it), closed ends
+    kit.add(s.group, ringGeom(rPlate - 0.006, rPlate + 0.006, yB - 0.18, yB + 0.18, Math.ceil((b - a) / 2), 0.003, a * DEG, (b - a) * DEG), { ...inner, look: 'aluMilled' });
+    for (const e of [a, b]) kit.add(s.group, new THREE.BoxGeometry(0.004, 0.36, 0.012), { ...inner, look: 'aluMilled' }, radialFrame(rPlate, e * DEG, yB));
     // standoffs to the skin stringers at the plate corners
-    for (const dx of [-w / 2 + 0.05, w / 2 - 0.05])
+    for (const e of [a + 2, b - 2])
       for (const dy of [-0.15, 0.15]) {
-        const so = new THREE.CylinderGeometry(0.012, 0.012, 0.03, 8);
+        const so = new THREE.CylinderGeometry(0.012, 0.012, 0.034, 8);
         so.rotateX(Math.PI / 2);
-        so.translate(dx, dy, 0.02);
-        kit.add(s.group, so, { ...inner, look: 'stainless' }, radialFrame(rPlate, phiC, yB));
+        so.translate(0, dy, 0.023);
+        kit.add(s.group, so, { ...inner, look: 'stainless' }, radialFrame(rPlate, e * DEG, yB));
       }
   }
   const ports: THREE.Vector3[] = [];

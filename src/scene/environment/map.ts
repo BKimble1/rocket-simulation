@@ -12,7 +12,7 @@ import { asset } from '../../config';
 import { R_EARTH } from '../../world/frames';
 import { LANDING_ZONE } from '../../world/site';
 import { SITE_MAP } from './generated/regionalMap';
-import { LZ_TOP_H, GRADE, inPadPit } from './layout';
+import { LZ_TOP_H, GRADE, padPitH } from './layout';
 
 export interface SiteMaps {
   sdfTex: THREE.Texture;
@@ -201,7 +201,8 @@ export function groundH(m: SiteMaps, x: number, z: number): number {
   // launch complex grading
   const w = 1 - smooth(420, 700, d);
   if (w > 0) h = lerp(h, GRADE, w);
-  if (inPadPit(x, z)) h = -12;
+  const pit = padPitH(x, z);
+  if (pit !== null) h = pit;
   // landing zone grading (top of the slab at LZ_TOP_H)
   const dl = Math.hypot(x - LANDING_ZONE.x, z - LANDING_ZONE.z);
   const wl = 1 - smooth(LANDING_ZONE.radius + 60, LANDING_ZONE.radius + 160, dl);

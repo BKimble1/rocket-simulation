@@ -62,6 +62,8 @@ uniform float uSpread;
 // analytic emitters: (y centre, sigma y, sigma r, intensity)
 uniform vec4 uBlob[${MAX_BLOBS}];
 uniform vec3 uBlobCol[${MAX_BLOBS}];
+// opacity of the analytic emitters per unit of emission (luminous soot hides what is behind)
+uniform float uBlobOcc;
 // flame
 uniform float uFlameI;
 uniform float uFlameSigma;
@@ -152,6 +154,7 @@ void main() {
   if (t1 <= t0) discard;
 
   vec3 emit = vec3(0.0);
+  float occ = 0.0;
   // analytic Gaussian emitters
   for (int i = 0; i < ${MAX_BLOBS}; i++) {
     vec4 b = uBlob[i];
@@ -168,13 +171,14 @@ void main() {
     float sa = sqrt(A);
     float I = exp(-dm) * 0.886227 / sa * (fxErf(sa * (t1 - ts)) - fxErf(sa * (t0 - ts)));
     emit += uBlobCol[i] * (b.w * I);
+    occ += b.w * I;
   }
 
   // marched components
   float n = uSteps;
   float dt = (t1 - t0) / n;
   float jit = fxIGN(gl_FragCoord.xy);
-  float T = 1.0;
+  float T = exp(-occ * uBlobOcc);
   vec3 scat = vec3(0.0);
   float mu = dot(-uSunLocal, -d);
   float hg = (1.0 - 0.09) / pow(1.0 + 0.09 - 0.6 * mu, 1.5) * 0.08;
@@ -253,6 +257,8 @@ export interface VolumeParams {
   seed: number;
   opacity: number;
   blobs: { y: number; sy: number; sr: number; i: number; col: THREE.Color }[];
+  /** Opacity of the blobs per unit of emission (0: pure glow). */
+  blobOcc: number;
   /** Flame source brightness, and its absorption scale (1/m; 0: optically thin emission). */
   flameI: number;
   flameSigma: number;
@@ -292,6 +298,7 @@ export const makeParams = (): VolumeParams => ({
   seed: 0,
   opacity: 1,
   blobs: [],
+  blobOcc: 0,
   flameI: 0,
   flameSigma: 0,
   flameIn: [0, 1],
@@ -319,6 +326,7 @@ export const makeParams = (): VolumeParams => ({
 
 export function resetParams(p: VolumeParams): VolumeParams {
   p.blobs.length = 0;
+  p.blobOcc = 0;
   p.flameI = 0;
   p.flameSigma = 0;
   p.glowI = 0;
@@ -364,6 +372,7 @@ function baseMaterial(): THREE.ShaderMaterial {
       uSpread: { value: 0.05 },
       uBlob: { value: blobs },
       uBlobCol: { value: blobCols },
+      uBlobOcc: { value: 0 },
       uFlameI: { value: 0 },
       uFlameSigma: { value: 0 },
       uFlameIn: { value: new THREE.Vector2(0, 1) },
@@ -500,6 +509,7 @@ export class Volume {
         BC[i].copy(b.col);
       } else B[i].set(0, 1, 1, 0);
     }
+    u.uBlobOcc.value = p.blobOcc;
     u.uFlameI.value = p.flameI;
     u.uFlameSigma.value = p.flameSigma;
     (u.uFlameIn.value as THREE.Vector2).set(p.flameIn[0], Math.max(p.flameIn[1], p.flameIn[0] + 1e-3));

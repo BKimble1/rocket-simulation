@@ -147,7 +147,7 @@ export function flyOrbitalAscent(ctx: Ctx, cfg: AscentConfig): AscentResult {
   // ── recorded flight
   const stack = stackAtLiftoff(ctx.env, cfg.spec, s1Load, S2.propellant, pt, cfg.payloadKg);
   const liftoffMass = stack.mass;
-  padSequence(ctx, bodies, (t) => liftoffMass + burned * padFrac(t, pt), pt, { crew: cfg.spec.crew });
+  padSequence(ctx, bodies, pt, { crew: cfg.spec.crew, liftoffMass, s1AtLiftoff: s1Load });
   stack.record();
   const s1 = flyFirstStage(ctx, stack, { ...s1Params(cfg, reserve), kickDeg: kick, record: true });
   const times: Record<string, number> = {};
@@ -250,11 +250,6 @@ export function flyOrbitalAscent(ctx: Ctx, cfg: AscentConfig): AscentResult {
 
 export const FAIRING_OPEN_TIME = 1.2;
 
-function padFrac(t: number, pt: PadTimes): number {
-  // propellant still to be burned on the pad (1 before engine start, 0 at T-0), roughly linear
-  if (t <= pt.engineStart) return 1;
-  return clamp(-t / -pt.engineStart, 0, 1);
-}
 
 /** First step time after ignition when the trajectory is above 112 km (trial run). */
 function fairingTime(stack: Craft, plan: UpperBurnPlan): number {

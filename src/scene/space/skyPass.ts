@@ -103,7 +103,7 @@ float ggx(float NdotH, float a) {
   return a2 / (PI * d * d);
 }
 
-vec3 earthSurface(vec3 p, vec3 n, vec3 d, out float padDist) {
+vec3 earthSurface(vec3 p, vec3 n, vec3 d, float padDist) {
   vec3 nEF = normalize(uToEF * n);
   vec3 day = sampleEquirect(uDay, nEF).rgb;
   float water = sampleEquirect(uWater, nEF).r;
@@ -119,14 +119,14 @@ vec3 earthSurface(vec3 p, vec3 n, vec3 d, out float padDist) {
   vec3 Ts = transmittanceSun(A_RB + 2.0, muS);
   // cloud shadow: where the ray to the Sun crosses the middle of the cloud layer
   float shadow = 1.0;
-  if (uCloudsOn > 0.5 && muS > -0.05) {
+  // (not under the local terrain, which covers the globe there and shades its own ground)
+  if (uCloudsOn > 0.5 && muS > -0.05 && padDist >= uHole.x) {
     float hMid = ${((CLOUD_BASE + CLOUD_TOP) * 0.5).toFixed(1)};
     float ts = hMid / max(muS, 0.08);
     vec3 pc = uToEF * (uCamPos + p + uSun * ts);
     float lodS = smoothstep(150.0, 1500.0, length(p) * uPixel / max(-dot(n, d), 0.2));
     shadow = 1.0 - 0.8 * cloudColumn(pc, lodS);
   }
-  padDist = length(p - uPadRel);
   vec3 Esun = SUN_E * Ts * max(muS, 0.0);
   vec3 Esky = SUN_E * skyIrradiance(muS);
   vec3 col = albedo / PI * (Esun * shadow + Esky * mix(1.0, 0.75, 1.0 - shadow));
@@ -178,13 +178,16 @@ void main() {
   float depth = 1.0;
   if (hitG) {
     // ground: aerial perspective marched per pixel
+    vec3 p = d * tG;
+    vec3 n = normalize(uCamPos + p);
+    float padDist = length(p - uPadRel);
+    // under the local terrain (opaque, drawn over this) a short, cheap march is enough: the
+    // colour only shows while the terrain is loading or in the dev harness
+    int steps = padDist < uHole.x ? min(uSteps, 4) : uSteps;
     vec3 T = vec3(1.0);
     vec3 L = vec3(0.0);
     float tStart = max(0.0, iA.x);
-    if (iA.y > 0.0 && tG > tStart) L = integrateScattering(uCamPos, d, uSun, tStart, tG, uSteps, 0.5, inside ? 0 : 2, T) * SUN_E;
-    vec3 p = d * tG;
-    vec3 n = normalize(uCamPos + p);
-    float padDist;
+    if (iA.y > 0.0 && tG > tStart) L = integrateScattering(uCamPos, d, uSun, tStart, tG, steps, 0.5, inside ? 0 : 2, T) * SUN_E;
     vec3 surf = earthSurface(p, n, d, padDist);
     col = L + T * surf;
     float w = tG * (-dvn.z);
@@ -217,7 +220,8 @@ void main() {
     } else {
       float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
 #ifndef ENV_MODE
-      col += Tavg * starsAt(d) * uStarVis * exp(-lum * 60.0);
+      // gone against any daylit or twilight sky (the eye and camera adapt to the sky)
+      col += Tavg * starsAt(d) * uStarVis * exp(-lum * 150.0);
 #endif
       float sinA = length(cross(d, uSun));
       float cosA = dot(d, uSun);

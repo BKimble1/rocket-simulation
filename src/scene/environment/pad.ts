@@ -264,6 +264,7 @@ export function buildPad(): Pad {
   const mountRot = -Math.atan2(TU.z, TU.x); // mount local +X along the trench
   // the mount is static: its parts merge with the pad's (one draw call per material)
   const MB = B.view(new THREE.Matrix4().makeRotationY(mountRot));
+  B.part = 'launch-mount';
   {
     const hs = MOUNT.halfS;
     const hv = MOUNT.halfV;
@@ -327,6 +328,7 @@ export function buildPad(): Pad {
       }
     }
     // under-deck spray ring and its nozzles (sound suppression)
+    B.part = 'sound-suppression';
     const ringR = MOUNT.holeR + 0.9;
     const ring = new THREE.TorusGeometry(ringR, 0.2, 10, 96);
     ring.rotateX(Math.PI / 2);
@@ -363,6 +365,7 @@ export function buildPad(): Pad {
     }
   }
 
+  B.part = 'launch-mount';
   // ───────────── hold-down clamps (at the vehicle fittings: +X, +Z, -X, -Z) ─────────────
   // static bases merge into the pad; the four jaws are one instanced mesh posed each frame
   const rPin = MOUNT.gripR + 0.1; // vehicle's pin radius
@@ -459,6 +462,7 @@ export function buildPad(): Pad {
     return im;
   });
 
+  B.part = undefined;
   B.build(group, 'pad');
 
   const _m = new THREE.Matrix4();

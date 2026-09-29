@@ -42,7 +42,7 @@ export function buildTower(detail: number): Tower {
   const plate = tube;
   const railRod = new Instances(new THREE.CylinderGeometry(1, 1, 1, 8, 1), SM('yellow'));
   const galvBar = new Instances(new THREE.BoxGeometry(1, 1, 1), SM('galv'));
-  const B = new Batch();
+  const B = new Batch({ cast: true, receive: true, part: 'service-tower' });
   const tag = { part: 'service-tower' };
 
   // corners: (x, z) in tower-local metres; the east face (+x) faces the vehicle
@@ -275,7 +275,7 @@ export function buildTower(detail: number): Tower {
     const zc = -sign * (width / 2 + 0.25); // arm centreline relative to the hinge
     const tI = new Instances(new THREE.BoxGeometry(1, 1, 1), SM('towerSteel'));
     const rails = new Instances(new THREE.CylinderGeometry(1, 1, 1, 8, 1), SM('yellow'));
-    const AB = new Batch();
+    const AB = new Batch({ cast: true, receive: true, part: 'service-tower' });
     const nPanels = Math.max(3, Math.round(len / 1.7));
     const chords = [
       [0, zc - width / 2],
@@ -349,7 +349,7 @@ export function buildTower(detail: number): Tower {
     pivot.name = 'arm-crew-access';
     pivot.position.set(face + 0.3, y, hingeZ);
     group.add(pivot);
-    const AB = new Batch();
+    const AB = new Batch({ cast: true, receive: true, part: 'service-tower' });
     const wr = 2.7; // white room depth
     const reach = vehicleX - (face + 0.3) - 1.75; // to 1.75 m from the axis
     const len = reach - wr;

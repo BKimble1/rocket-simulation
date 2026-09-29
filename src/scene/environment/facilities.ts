@@ -47,6 +47,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
     const { x, z, top, tankR } = WATER_TOWER;
     const cy = top - tankR;
     const tag = { part: 'sound-suppression' };
+    B.part = 'sound-suppression';
     const tank = new THREE.SphereGeometry(tankR, 64, 32);
     tank.translate(x, cy, z);
     B.add(tank, SM('white'), undefined, tag);
@@ -114,6 +115,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
     const rB = legRiser(MOUNT.legV);
     B.add(pipe([v3(-22, 0.7, -12), v3(-22, 0.7, -8), v3(rA.x - 3, 0.7, rA.z), v3(rA.x, 0.4, rA.z)], 0.3, 1.2, 12), SM('towerSteel'), undefined, tag);
     B.add(pipe([v3(-21, 0.7, -12), v3(-21, 0.7, 13), v3(rB.x - 4, 0.7, 13), v3(rB.x, 0.4, rB.z)], 0.3, 1.2, 12), SM('towerSteel'), undefined, tag);
+    B.part = undefined;
   }
 
   // ───────────── LOX storage sphere, RP-1 tanks, gas tubes and their lines ─────────────
@@ -335,7 +337,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
     const gy = groundY(maps, x, z);
     const zN = z - d / 2;
     // shell: walls (cladding) and a low-pitch roof with a graphite fascia and one violet pinstripe
-    B.at(box(w, h, d), SM('cladding'), x, gy + h / 2, z, 0, { part: 'launch-mount' });
+    B.at(box(w, h, d), SM('cladding'), x, gy + h / 2, z, 0);
     B.at(box(w + 0.6, 0.9, d + 0.6), SM('graphite'), x, gy + h + 0.45, z, 0);
     B.at(box(w + 0.64, 0.14, d + 0.64), SM('accent'), x, gy + h - 0.25, z, 0);
     const roof = new THREE.BufferGeometry();

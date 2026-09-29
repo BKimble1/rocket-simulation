@@ -722,7 +722,9 @@ function computeCom(config: VehicleConfig, sc: SpacecraftModel | null, root: THR
       [S2.rp1, rp12],
     ];
     com.upper = new THREE.Vector3(0, u.reduce((a, [m, y]) => a + m * y, 0) / u.reduce((a, [m]) => a + m, 0), 0);
-    // fairing halves: area centroid of each half-shell
+  }
+  if (full && (config.payload === 'leoSat' || config.payload === 'gtoSat' || config.payload === 'lunarProbe')) {
+    // fairing halves (satellite configurations): area centroid of each half-shell
     const prof = fairingProfile(40);
     let A = 0;
     let Ay = 0;
@@ -742,10 +744,23 @@ function computeCom(config: VehicleConfig, sc: SpacecraftModel | null, root: THR
     com.fairingB = new THREE.Vector3(0, Ay / A, -Az / A);
   }
   if (sc) {
+    // spacecraft bodies: bounds of the hardware shown at launch (stowed parachutes, folded arrays;
+    // hidden deployed states excluded), centroid a little below mid-height (heavy base)
     root.updateMatrixWorld(true);
+    const mb = new THREE.Box3();
+    const shown = (o: THREE.Object3D, top: THREE.Object3D) => {
+      for (let p: THREE.Object3D | null = o; p && p !== top; p = p.parent) if (!p.visible) return false;
+      return true;
+    };
     for (const [id, g] of Object.entries(sc.bodies) as [BodyId, THREE.Group][]) {
       if (!g) continue;
-      const box = new THREE.Box3().setFromObject(g);
+      const box = new THREE.Box3();
+      g.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh || !shown(m, g)) return;
+        if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+        box.union(mb.copy(m.geometry.boundingBox!).applyMatrix4(m.matrixWorld));
+      });
       if (box.isEmpty()) continue;
       com[id] = new THREE.Vector3((box.min.x + box.max.x) / 2, box.min.y + (box.max.y - box.min.y) * 0.42, (box.min.z + box.max.z) / 2);
     }

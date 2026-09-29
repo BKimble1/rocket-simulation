@@ -85,7 +85,10 @@ function simplify(t: number[], v: number[], tol: number): Channel {
   let a = 0;
   for (let i = 1; i < n - 1; i++) {
     // can we drop i (line from the last kept point a to i+1 reproduces every point between)?
-    let ok = i - a < 400;
+    // The first and last keys of an exactly constant run are always kept, so a level that
+    // stops changing (a tank after cutoff, a throttle at zero) is never smeared into it.
+    const corner = (v[i] === v[i - 1]) !== (v[i] === v[i + 1]);
+    let ok = !corner && i - a < 400;
     const t0 = t[a];
     const t1 = t[i + 1];
     for (let j = a + 1; ok && j <= i; j++) {

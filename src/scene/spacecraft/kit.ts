@@ -334,6 +334,8 @@ export function extrude(shape: THREE.Shape, depth: number, bevel = 0, curveSegme
 
 interface CutParts {
   wedge: THREE.Group;
+  /** The wedge's own section faces (shown only while cutting, so no seam shows when closed). */
+  wedgeCaps: THREE.Group;
   caps: THREE.Group;
   inner: THREE.Group;
 }
@@ -392,8 +394,13 @@ export class Kit {
       const inner = new THREE.Group();
       inner.name = 'cut-inner';
       inner.visible = false;
+      const wedgeCaps = new THREE.Group();
+      wedgeCaps.name = 'cut-wedge-caps';
+      wedgeCaps.visible = false;
+      wedge.add(wedgeCaps);
       parent.add(wedge, caps, inner);
-      c = { wedge, caps, inner };
+      c = { wedge, wedgeCaps, caps, inner };
+      this.capGroups.push(wedgeCaps);
       parent.userData.cut = c;
       this.wedges.push({ g: wedge, dir: dir.clone().normalize(), dist });
       this.capGroups.push(caps);
@@ -431,7 +438,7 @@ export class Kit {
     out.push(this.mesh(kept.skin, mat, part, material, parent));
     out.push(this.mesh(wedge.skin, mat, part, material, c.wedge));
     if (kept.caps) this.mesh(kept.caps, capMat, part, material, c.caps).castShadow = false;
-    if (wedge.caps) this.mesh(wedge.caps, capMat, part, material, c.wedge).castShadow = false;
+    if (wedge.caps) this.mesh(wedge.caps, capMat, part, material, c.wedgeCaps).castShadow = false;
     return out;
   }
 
@@ -463,15 +470,32 @@ export class Kit {
         let f = this.fadeClones.get(orig);
         if (!f) {
           f = orig.clone();
+          // clone() does not carry shader hooks (the ablator's char uniform lives in one)
+          f.onBeforeCompile = orig.onBeforeCompile;
+          f.customProgramCacheKey = orig.customProgramCacheKey;
           f.transparent = true;
-          f.opacity = 1;
           this.fadeClones.set(orig, f);
           this.ownMats.add(f);
         }
         m.material = f;
+        this.fadeMeshes.push({ m, shadow: m.castShadow });
       });
     for (const w of this.wedges) swap(w.g);
     for (const h of this.cutHide) swap(h);
+  }
+
+  private cutFade = 1;
+  /** Meshes on fading materials: they stop casting shadows once the section opens. */
+  private readonly fadeMeshes: { m: THREE.Mesh; shadow: boolean }[] = [];
+
+  /** Fading clones follow their originals' opacity and visibility (posed state) times the cut fade. */
+  syncFades(): void {
+    const fade = this.cutFade;
+    for (const [orig, m] of this.fadeClones) {
+      m.opacity = orig.opacity * fade;
+      m.visible = orig.visible;
+      m.depthWrite = orig.depthWrite && fade > 0.6;
+    }
   }
 
   /** Section view 0..1: wedges slide out along their direction and fade; caps and interiors show. */
@@ -483,11 +507,9 @@ export class Kit {
       w.g.visible = a < 0.995;
     }
     for (const h of this.cutHide) h.visible = a < 0.995;
-    for (const m of this.fadeClones.values()) {
-      const base = (m.userData.baseOpacity as number | undefined) ?? 1;
-      m.opacity = base * fade;
-      m.depthWrite = fade > 0.6;
-    }
+    this.cutFade = fade;
+    for (const f of this.fadeMeshes) f.m.castShadow = f.shadow && a < 0.002;
+    this.syncFades();
     const show = a > 0.002;
     for (const g of this.capGroups) g.visible = show;
     for (const g of this.innerGroups) g.visible = show;

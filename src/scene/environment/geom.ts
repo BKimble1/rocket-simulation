@@ -31,6 +31,37 @@ export interface MeshOpts {
   name?: string;
 }
 
+/**
+ * Content material ids (src/content/materials) of the site's surfaces, and the materials each
+ * ground part is taught with (src/content/materials/assignments.ts). A mesh tagged with a part
+ * gets userData.material from its site material when that material belongs to the part.
+ */
+const SITE_MATERIAL_IDS: Record<string, string> = {
+  'site.towerSteel': 'structural-steel',
+  'site.steelDark': 'structural-steel',
+  'site.galv': 'structural-steel',
+  'site.grating': 'structural-steel',
+  'site.yellow': 'structural-steel',
+  'site.stainless': 'stainless',
+  'site.deflector': 'stainless',
+  'site.hardstand': 'refractory-concrete',
+  'site.refractory': 'refractory-concrete',
+  'site.concreteDark': 'refractory-concrete',
+};
+const PART_MATERIALS: Record<string, string[]> = {
+  'launch-mount': ['stainless', 'structural-steel', 'refractory-concrete'],
+  'service-tower': ['structural-steel'],
+  'flame-deflector': ['stainless', 'refractory-concrete'],
+  'sound-suppression': ['structural-steel'],
+};
+
+/** The content material id for a mesh of `part` drawn with site material `m` (or undefined). */
+export function materialTag(part: string | undefined, m: THREE.Material): string | undefined {
+  if (!part) return undefined;
+  const id = SITE_MATERIAL_IDS[m.name];
+  return id && PART_MATERIALS[part]?.includes(id) ? id : undefined;
+}
+
 export interface BatchView {
   add(g: THREE.BufferGeometry, m: THREE.Material, matrix?: THREE.Matrix4, opts?: MeshOpts): void;
   at(g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rotY?: number, opts?: MeshOpts): void;
@@ -49,21 +80,40 @@ export function mergeParts(parts: { g: THREE.BufferGeometry; m?: THREE.Matrix4 }
   return merged;
 }
 
-/** Collects geometries per material and emits one merged mesh per material. */
+/**
+ * Collects geometries and emits one merged mesh per (material, part) pair: static sub-assemblies
+ * cost one draw call per material, and every mesh carries the part (userData.part) and content
+ * material (userData.material) the learning views pick and highlight. `part` is the default part
+ * for adds that do not name one (set it around a sub-assembly with `as(part, fn)`).
+ */
 export class Batch {
-  private lists = new Map<THREE.Material, THREE.BufferGeometry[]>();
-  private opts = new Map<THREE.Material, MeshOpts>();
-  constructor(private defaults: MeshOpts = { cast: true, receive: true }) {}
+  private groups = new Map<string, { m: THREE.Material; list: THREE.BufferGeometry[]; opts: MeshOpts; part?: string; tag?: string }>();
+  part: string | undefined;
+  constructor(private defaults: MeshOpts = { cast: true, receive: true }) {
+    this.part = defaults.part;
+  }
+  /** Run `fn` with `part` as the default part of every add. */
+  as(part: string | undefined, fn: () => void) {
+    const prev = this.part;
+    this.part = part;
+    fn();
+    this.part = prev;
+  }
   add(g: THREE.BufferGeometry, m: THREE.Material, matrix?: THREE.Matrix4, opts?: MeshOpts) {
     const geo = normalizeGeo(g);
     if (matrix) geo.applyMatrix4(matrix);
-    let l = this.lists.get(m);
-    if (!l) {
-      l = [];
-      this.lists.set(m, l);
+    const part = opts?.part ?? this.part;
+    const tag = opts?.material ?? materialTag(part, m);
+    const key = `${m.uuid}|${part ?? ''}|${tag ?? ''}`;
+    let e = this.groups.get(key);
+    if (!e) {
+      e = { m, list: [], opts: { ...(opts ?? {}) }, part, tag };
+      this.groups.set(key, e);
+    } else if (opts) {
+      // the first add that sets shadow flags or a name decides them for the merged mesh
+      for (const k of ['cast', 'receive', 'name'] as const) if (e.opts[k] === undefined && opts[k] !== undefined) (e.opts as Record<string, unknown>)[k] = opts[k];
     }
-    l.push(geo);
-    if (opts && !this.opts.has(m)) this.opts.set(m, opts);
+    e.list.push(geo);
   }
   /** Add at a position with an optional rotation about +Y. */
   at(g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rotY = 0, opts?: MeshOpts) {
@@ -88,22 +138,22 @@ export class Batch {
   }
   build(parent: THREE.Object3D, name = 'batch'): THREE.Mesh[] {
     const out: THREE.Mesh[] = [];
-    for (const [m, list] of this.lists) {
-      const merged = mergeGeometries(list, false);
-      for (const g of list) g.dispose();
+    for (const e of this.groups.values()) {
+      const merged = mergeGeometries(e.list, false);
+      for (const g of e.list) g.dispose();
       if (!merged) continue;
       merged.computeBoundingSphere();
-      const o = { ...this.defaults, ...(this.opts.get(m) ?? {}) };
-      const mesh = new THREE.Mesh(merged, m);
-      mesh.name = o.name ?? `${name}:${m.name}`;
+      const o = { ...this.defaults, ...e.opts };
+      const mesh = new THREE.Mesh(merged, e.m);
+      mesh.name = o.name ?? `${name}:${e.m.name}${e.part ? `:${e.part}` : ''}`;
       mesh.castShadow = !!o.cast;
       mesh.receiveShadow = !!o.receive;
-      if (o.part) mesh.userData.part = o.part;
-      if (o.material) mesh.userData.material = o.material;
+      if (e.part) mesh.userData.part = e.part;
+      if (e.tag) mesh.userData.material = e.tag;
       parent.add(mesh);
       out.push(mesh);
     }
-    this.lists.clear();
+    this.groups.clear();
     return out;
   }
 }
@@ -209,7 +259,8 @@ export class Instances {
     im.castShadow = opts.cast ?? true;
     im.receiveShadow = opts.receive ?? true;
     if (opts.part) im.userData.part = opts.part;
-    if (opts.material) im.userData.material = opts.material;
+    const tag = opts.material ?? materialTag(opts.part, this.mat);
+    if (tag) im.userData.material = tag;
     parent.add(im);
     return im;
   }

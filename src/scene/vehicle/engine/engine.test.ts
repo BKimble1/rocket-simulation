@@ -268,3 +268,26 @@ describe('thermal lens tags', () => {
     e.dispose();
   });
 });
+
+describe('mechanisms', () => {
+  test('shaft, valves, glow and flow overlay respond to the operating state', () => {
+    const e = buildEngineWith('E-1V', 'hangar', plainMaterialSet());
+    const rotor = e.root.getObjectByName('rotor')!;
+    const mov = e.root.getObjectByName('mov')!;
+    const mfv = e.root.getObjectByName('mfv')!;
+    const overlay = e.root.getObjectByName('flow-overlay')!;
+    const closedBall = mov.rotation.y;
+    e.setOperating({ shaftAngle: 1.25 });
+    expect(rotor.rotation.y).toBeCloseTo(1.25, 6);
+    e.setOperating({ flow: 1 });
+    expect(Math.abs(mov.rotation.y - closedBall)).toBeGreaterThan(1);
+    expect(mfv.rotation.z).toBeGreaterThan(1);
+    expect(overlay.visible).toBe(false);
+    e.setFlowOverlay(true);
+    expect(overlay.visible).toBe(true);
+    // the engine swings about the gimbal pivot
+    e.setOperating({ yaw: 3 });
+    expect(e.root.getObjectByName('gimbal')!.rotation.z).toBeCloseTo((3 * Math.PI) / 180, 6);
+    e.dispose();
+  });
+});

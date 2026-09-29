@@ -117,13 +117,22 @@ export interface PadTimes {
  * Countdown: the stack rides the rotating pad (direct samples), pad channels, engine start
  * with staggered ramps, hold-down release at T-0. Returns the propellant burned on the pad.
  */
-export function padSequence(ctx: Ctx, bodies: BodyId[], massAt: (t: number) => number, pt: PadTimes, opts: { crew: boolean }) {
+export function padSequence(ctx: Ctx, bodies: BodyId[], pt: PadTimes, opts: { crew: boolean; liftoffMass: number; s1AtLiftoff: number }) {
   const { ch } = ctx;
   const origins = [];
-  for (let t = pt.start; t <= 0 + 1e-9; t += 0.5) {
-    const tt = Math.min(t, 0);
+  const burned = padBurn(pt);
+  // mass and first-stage tank level follow the engines' start-up flow exactly (padBurnedBy)
+  const left = (t: number) => burned - padBurnedBy(pt, t);
+  const times: number[] = [];
+  for (let t = pt.start; t < pt.engineStart - 1e-9; t += 0.5) times.push(t);
+  for (let t = pt.engineStart; t < -1e-9; t += 0.1) times.push(Math.round(t * 10) / 10);
+  times.push(0);
+  for (const tt of times) {
     const pp = padPose(tt);
-    origins.push({ t: tt, p: pp.p, v: pp.v, q: pp.q, m: massAt(tt) });
+    origins.push({ t: tt, p: pp.p, v: pp.v, q: pp.q, m: opts.liftoffMass + left(tt) });
+    const frac = (opts.s1AtLiftoff + left(tt)) / S1.propellant;
+    ch.key('s1.lox', tt, frac);
+    ch.key('s1.rp1', tt, frac);
   }
   ctx.direct.push({ bodies: [...bodies], origins });
   // pad channels
@@ -157,7 +166,22 @@ export function padSequence(ctx: Ctx, bodies: BodyId[], massAt: (t: number) => n
 
 /** Propellant burned on the pad between engine start and T-0 (kg). */
 export function padBurn(pt: PadTimes): number {
-  const area = (r: [number, number]) => Math.max(0, 0 - r[1]) * pt.liftoffThrottle + (r[1] - r[0]) * pt.liftoffThrottle * 0.5;
+  return padBurnedBy(pt, 0);
+}
+
+/**
+ * Propellant burned on the pad from engine start until time t (kg, t clamped to T-0): the
+ * integral of the staggered throttle ramps (linear from the ramp start to the liftoff throttle,
+ * then held), so the mass and tank channels fall exactly while the throttle channels are up.
+ */
+export function padBurnedBy(pt: PadTimes, t: number): number {
+  const x = Math.min(t, 0);
+  const area = (r: [number, number]) => {
+    if (x <= r[0]) return 0;
+    const len = r[1] - r[0];
+    if (x <= r[1]) return (pt.liftoffThrottle * (x - r[0]) ** 2) / (2 * len);
+    return pt.liftoffThrottle * (len / 2 + (x - r[1]));
+  };
   return ENG_S1.mdot * (area(pt.centreRamp) + pt.outerN * area(pt.outerRamp));
 }
 
