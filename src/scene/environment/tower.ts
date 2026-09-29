@@ -267,7 +267,7 @@ export function buildTower(detail: number): Tower {
   const arms: Arm[] = [];
 
   /** Lattice truss arm from the hinge toward the vehicle; returns the arm's group (hinge at origin). */
-  const trussArm = (y: number, hingeZ: number, sign: number, len: number, width: number, depth: number, name: string, range: [number, number]) => {
+  const trussArm = (y: number, hingeZ: number, sign: number, len: number, width: number, depth: number, name: string) => {
     const pivot = new THREE.Group();
     pivot.name = name;
     pivot.position.set(face + 0.3, y, hingeZ);
@@ -318,7 +318,7 @@ export function buildTower(detail: number): Tower {
     const y = 54;
     const hingeZ = 1.4;
     const len = vehicleX - (face + 0.3) - 2.35;
-    const { pivot, AB, zc } = trussArm(y, hingeZ, 1, len, 2.0, 1.9, 'arm-upper-umbilical', [0.35, 1]);
+    const { pivot, AB, zc } = trussArm(y, hingeZ, 1, len, 2.0, 1.9, 'arm-upper-umbilical');
     // umbilical carrier plate at the vehicle skin and the lines along the arm
     const tip = len;
     AB.at(bevelBox(0.35, 1.5, 1.3, 0.04), SM('steelDark'), tip + 0.1, 1.55, zc, 0);
@@ -334,7 +334,7 @@ export function buildTower(detail: number): Tower {
     const y = 66;
     const hingeZ = -1.2;
     const len = vehicleX - (face + 0.3) - 3.4;
-    const { pivot, AB, zc } = trussArm(y, hingeZ, -1, len, 1.6, 1.5, 'arm-fairing', [0, 0.45]);
+    const { pivot, AB, zc } = trussArm(y, hingeZ, -1, len, 1.6, 1.5, 'arm-fairing');
     AB.add(pipe([v3(-0.2, 0.6, zc), v3(len - 0.5, 0.6, zc), v3(len + 0.5, 0.3, zc), v3(len + 1.15, 0.3, zc)], 0.34, 0.8, 16), SM('whiteMatte'));
     AB.at(bevelBox(0.25, 1.1, 1.1, 0.05), SM('steelDark'), len + 1.24, 0.3, zc, 0);
     AB.build(pivot, 'arm-fairing');

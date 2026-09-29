@@ -363,10 +363,9 @@ export function flyBoosterReturn(ctx: Ctx | null, c: Craft, o: RtlsOpts): RtlsRe
       const vz = -vdot(c.v, up);
       const m = c.mass;
       const lz = lzAt(t);
-      const dr = vperp(vsub(c.r, lz), up);
+      const dr = vperp(vsub(c.origin(), lz), up);
       const vh = vperp(c.v, up);
       const vhRel = vsub(vh, vperp(airVelocity(c.r), up));
-      const tgo = clamp((2 * h) / Math.max(0.5, vz), 0.5, 60);
       // vertical: above 150 m pick the throttle whose predicted stop (with the fading drag)
       // lands on the ground; below, constant deceleration to zero speed at the ground
       let aUp: number;
@@ -390,20 +389,28 @@ export function flyBoosterReturn(ctx: Ctx | null, c: Craft, o: RtlsOpts): RtlsRe
       } else {
         aUp = (vz * vz - TOUCHDOWN_SPEED * TOUCHDOWN_SPEED) / (2 * h) + 9.81 - dragNow;
       }
-      // horizontal: cascaded PD (a desired velocity proportional to the position error, an
-      // acceleration proportional to the velocity error): well behaved under the tilt limits
-      let vDes = vscale(dr, -1 / 5);
-      if (vlen(vDes) > 40) vDes = vscale(vnorm(vDes), 40);
-      const aH = vscale(vsub(vDes, vhRel), 1 / 2);
+      // horizontal: zero-effort-miss / zero-effort-velocity law (the energy-optimal polynomial
+      // guidance), a = -6 (r - r_LZ) / tgo^2 - 4 v / tgo, aimed at a gate 40 m above the LZ with
+      // no horizontal velocity; the time to go comes from the vertical profile. Below the gate a
+      // critically damped position/velocity hold keeps the booster over the pad centre.
+      const H_GATE = 40;
+      let aH: V3;
+      if (h > H_GATE + 5) {
+        const aV = Math.max(0.5, (vz * vz - TOUCHDOWN_SPEED * TOUCHDOWN_SPEED) / (2 * h));
+        const vGate = Math.sqrt(TOUCHDOWN_SPEED * TOUCHDOWN_SPEED + 2 * aV * H_GATE);
+        const tgoH = Math.max(2, (2 * (h - H_GATE)) / Math.max(1, vz + vGate));
+        aH = vsub(vscale(dr, -6 / (tgoH * tgoH)), vscale(vhRel, 4 / tgoH));
+      } else aH = vsub(vscale(dr, -0.5), vscale(vhRel, 1.4));
+      if (vlen(aH) > 6) aH = vscale(vnorm(aH), 6);
       let aT = vadd(vscale(up, Math.max(0, aUp)), aH);
-      // allowed tilt tapers early so the body (slewing at a few deg/s) keeps up; the gimbal adds 5 deg
-      const tiltMax = DEG * (h > 800 ? 15 : h > 200 ? 6 + (9 * (h - 200)) / 600 : h > 40 ? 3 + (3 * (h - 40)) / 160 : 1 + h / 20);
+      // allowed tilt tapers near the ground so the booster stands upright at contact; the body
+      // slews at up to 8 deg/s and the centre engine gimbals a further 5 deg
+      const tiltMax = DEG * (h > 300 ? 16 : h > 40 ? 8 + (8 * (h - 40)) / 260 : 1.5 + (6.5 * h) / 40);
       const tilt = Math.acos(clamp(vdot(vnorm(aT), up), -1, 1));
       if (tilt > tiltMax) {
         const hor = vnorm(aH);
         aT = vadd(vscale(up, Math.max(0, aUp)), vscale(hor, Math.max(0, aUp) * Math.tan(tiltMax)));
       }
-      void tgo;
       const Tmax = ENG_S1.thrustVac - c.pAmb * ENG_S1.area;
       const ramp = clamp((t + dt - phaseT) / 1.0, 0, 1);
       let th = (vlen(aT) * m + c.pAmb * ENG_S1.area) / ENG_S1.thrustVac;
@@ -597,7 +604,8 @@ function channels(ctx: Ctx, c: Craft) {
   const center = c.group('s1.center');
   const outer = c.group('s1.outer');
   ctx.ch.key('s1.center.throttle', t, center ? center.thr : 0);
-  ctx.ch.key('s1.outer.throttle', t, outer ? (outer.thr * outer.n) / 6 : 0);
+  // per-engine throttle of the lit outer engines (two opposite ones for the three-engine burns)
+  ctx.ch.key('s1.outer.throttle', t, outer && outer.n > 0 ? outer.thr : 0);
   const frac = Math.max(0, c.tanks.s1 ?? 0) / S1.propellant;
   ctx.ch.key('s1.lox', t, frac);
   ctx.ch.key('s1.rp1', t, frac);
@@ -612,6 +620,13 @@ function channels(ctx: Ctx, c: Craft) {
   }
   const rcs = c.rcsActuator && !burning ? clamp(vlen(c.alpha) / (2 * DEG), 0, 1) : 0;
   ctx.ch.key('s1.rcs', t, rcs);
+  // entry heating glow (illustrative): convective heating scales with sqrt(rho) v^3; only while
+  // falling back tail first through the upper atmosphere
+  const up = vnorm(c.r);
+  const va = vsub(c.v, airVelocity(c.r));
+  const falling = vdot(c.v, up) < 0 && c.alt < 90_000;
+  const heat = falling ? (Math.sqrt(densityAt(Math.max(0, c.alt))) * vlen(va) ** 3) / 4.5e7 : 0;
+  ctx.ch.key('s1.entryGlow', t, clamp(heat, 0, 1));
 }
 
 export { cdSlender, groundDistance };

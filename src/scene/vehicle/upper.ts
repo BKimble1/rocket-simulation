@@ -102,7 +102,7 @@ function aftSkirt(ctx: Ctx) {
 
 function engine(ctx: Ctx) {
   const s = sec(ctx, 's2engine', 'upper');
-  const m = mountEngine(ctx, s.group, 's2', 'E-1V', 'flight', V(0, S.s2Gimbal, 0), 0, true);
+  const m = mountEngine(ctx, s.group, 's2', 'E-1V', ctx.hangar ? 'flight' : 'cluster', V(0, S.s2Gimbal, 0), 0, true);
   ctx.movers.engines.push(m);
   return { s, m };
 }

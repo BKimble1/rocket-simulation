@@ -146,7 +146,7 @@ export function padSequence(ctx: Ctx, bodies: BodyId[], massAt: (t: number) => n
   ch.key('s1.center.throttle', pt.centreRamp[1], pt.liftoffThrottle);
   ch.key('s1.outer.throttle', pt.start, 0);
   ch.key('s1.outer.throttle', pt.outerRamp[0], 0);
-  ch.key('s1.outer.throttle', pt.outerRamp[1], (pt.liftoffThrottle * pt.outerN) / 6);
+  ch.key('s1.outer.throttle', pt.outerRamp[1], pt.liftoffThrottle);
   ctx.ev('arms-retract', pt.armsRetract, opts.crew ? 'Crew access arm and umbilicals retract' : 'Umbilical arms retract', 'countdown', ['ground'], 'valve');
   ctx.ev('engine-start', pt.engineStart, 'Engine start: centre engine first, then the outer ring', 'engine', ['booster'], 'ignition');
   ctx.ev('liftoff', 0, 'Thrust verified, hold-downs released: liftoff', 'milestone', ['booster'], 'release');
@@ -347,7 +347,7 @@ export function s1Channels(ctx: Ctx, c: Craft, outerN: number) {
   const outer = c.group('s1.outer');
   const t = c.t;
   if (center) ctx.ch.key('s1.center.throttle', t, center.thr);
-  if (outer) ctx.ch.key('s1.outer.throttle', t, (outer.thr * outerN) / 6);
+  if (outer) ctx.ch.key('s1.outer.throttle', t, outer.n > 0 && outerN > 0 ? outer.thr : 0);
   const frac = Math.max(0, c.tanks.s1 ?? 0) / S1.propellant;
   ctx.ch.key('s1.lox', t, frac);
   ctx.ch.key('s1.rp1', t, frac);

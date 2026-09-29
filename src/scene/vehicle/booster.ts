@@ -27,9 +27,13 @@ export function sec(ctx: Ctx, id: string, body: 'booster' | 'upper' = 'booster')
   return ctx.kit.section(id, body, ctx.content[body]!, new THREE.Vector3(...e));
 }
 
-/** Engine model detail for the booster cluster at this vehicle detail. */
+/**
+ * Engine model detail for the booster cluster: always the light 'cluster' version (seven engines
+ * share the base; the full engine is shown by the engine module's own close-up views).
+ */
 export function s1EngineDetail(hangar: boolean): EngineDetail {
-  return hangar ? 'flight' : 'cluster';
+  void hangar;
+  return 'cluster';
 }
 
 /** Mount an engine at a gimbal point; detects whether the model gimbals itself. */

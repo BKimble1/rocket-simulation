@@ -78,6 +78,8 @@ function StandInVehicle() {
 /** Shadows from the stub sky's Sun light (does nothing once the sky module casts its own). */
 function DevShadows() {
   const { scene } = useThree();
+  // expose the scene to the probe scripts (?hooks=1) for draw-call accounting
+  if (q.get('hooks') === '1') (window as unknown as { __devScene?: THREE.Scene }).__devScene = scene;
   const state = useMemo(() => ({ light: null as THREE.DirectionalLight | null, managed: false, checked: 0 }), []);
   useFrame(() => {
     if (!state.light && state.checked < 120) {

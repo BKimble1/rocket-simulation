@@ -52,6 +52,22 @@ export class Batch {
     const mat = new THREE.Matrix4().makeRotationY(rotY).setPosition(x, y, z);
     this.add(g, m, mat, opts);
   }
+  /**
+   * A view of this batch in a local frame: parts added through it are transformed by `base`
+   * and merged with everything else of the same material (static sub-assemblies cost no extra
+   * draw calls).
+   */
+  view(base: THREE.Matrix4): BatchView {
+    const self = this;
+    return {
+      add(g, m, matrix, opts) {
+        self.add(g, m, matrix ? base.clone().multiply(matrix) : base.clone(), opts);
+      },
+      at(g, m, x, y, z, rotY = 0, opts) {
+        self.add(g, m, base.clone().multiply(new THREE.Matrix4().makeRotationY(rotY).setPosition(x, y, z)), opts);
+      },
+    };
+  }
   build(parent: THREE.Object3D, name = 'batch'): THREE.Mesh[] {
     const out: THREE.Mesh[] = [];
     for (const [m, list] of this.lists) {
