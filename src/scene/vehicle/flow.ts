@@ -11,6 +11,7 @@ import { bentPath } from './geom';
 import { chevronTexture } from './textures';
 import type { FlowPath } from './ctx';
 import type { Kit } from './kit';
+import type { PartId } from '../../vehicle/parts';
 
 export const FLOW_COLORS = { lox: '#8fc6ff', rp1: '#e0a24a', he: '#b6f0c8', sig: '#c8bcff' } as const;
 
@@ -43,12 +44,15 @@ export class FlowOverlays {
       const m2 = new THREE.Mesh(geo, xray);
       m1.renderOrder = 20;
       m2.renderOrder = 21;
+      // tagged with the hardware the route belongs to (overlays never join the parts map)
+      const upper = p.section.body === 'upper';
+      const part: PartId = p.kind === 'he' ? 'pressurization' : p.kind === 'sig' ? (upper ? 'avionics' : 'booster-avionics') : upper ? 's2-tanks' : p.kind === 'lox' ? 'lox-downcomer' : 's1-fuel-tank';
       for (const m of [m1, m2]) {
         m.visible = false;
         m.name = `flow:${p.kind}`;
         m.raycast = () => {};
         p.section.group.add(m);
-        kit.register(m, { kind: 'overlay', part: null, mat: null });
+        kit.register(m, { kind: 'overlay', part, mat: null, thermal: { level: p.kind === 'lox' || p.kind === 'he' ? 0 : 1 } });
       }
       this.items.push({ demo: p.demo, meshes: [m1, m2], mats: [solid, xray], tex, len });
     }

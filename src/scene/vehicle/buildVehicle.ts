@@ -8,8 +8,9 @@
  *
  * Views: intact / cutaway (a wedge on the +Z/+X side opens from its bisector; shells are clipped
  * by two planes through the axis and capped with hatched section faces; liquids at their
- * levels) / exploded (assemblies separate along Y). Highlight, ghosting and the materials lens
- * swap per-mesh materials from cached variants.
+ * levels) / exploded (assemblies separate along Y). Highlight, ghosting, the materials lens and
+ * the thermal lens swap per-mesh materials from cached variants. Every mesh carries
+ * `userData.part`, `userData.material` and `userData.thermal` (0 cryogenic .. 4 very hot).
  */
 import * as THREE from 'three';
 import { S1, S2, E1, E1V, FAIRING, STATIONS as S, LEGS } from '../../vehicle/spec';
@@ -29,11 +30,13 @@ import { FlowOverlays } from './flow';
 import { SandwichCoupon } from './coupon';
 import { lockNoCast } from './instancing';
 import { Liquid } from './liquids';
-import { WEDGE, EXPLODE, DEG } from './layout';
+import { WEDGE, EXPLODE, DEG, s2StackedGimbalLimit } from './layout';
 import { TANKS, levelHeight, centroidAt } from './tanks';
+import { classifyThermal, sectionOf, THERMAL_COLORS } from './thermal';
 
 export { LENS_COLORS } from './mats';
 export { FLOW_COLORS } from './flow';
+export { THERMAL_LENS, THERMAL_COLORS, type ThermalClass, type ThermalLevel } from './thermal';
 
 const DEFAULT_STATE: VehicleVisualState = {
   legs: 0,
@@ -172,6 +175,17 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   // overlays, cut faces and liquids never cast shadows (integrations switch shadows on for every mesh)
   for (const e of kit.registry) if (e.kind === 'overlay' || e.kind === 'cap' || e.kind === 'liquid') lockNoCast(e.mesh);
 
+  // thermal class of every mesh (explicit pieces keep theirs; the rest follow the part rules)
+  for (const e of kit.registry) {
+    if (!e.thermal) {
+      const ud = e.mesh.userData;
+      const sub = (ud.subPart ?? e.part ?? null) as string | null;
+      const look = Array.isArray(e.base) ? e.base[0]?.name ?? '' : e.base.name;
+      e.thermal = classifyThermal(sub, e.mat, sectionOf(e.mesh), look, e.kind, ud.fluid as string | undefined);
+    }
+    e.mesh.userData.thermal = e.thermal.level;
+  }
+
   // ── parts map
   const parts = new Map<PartId, THREE.Object3D[]>();
   const push = (p: PartId, o: THREE.Object3D) => {
@@ -245,6 +259,7 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   // a helper, not hardware: tagged with the structure it serves (the cut shells)
   hook.userData.part = 's1-lox-tank';
   hook.userData.material = null;
+  hook.userData.thermal = 0;
   hook.userData.helper = true;
   lockNoCast(hook);
   const syncPlanes = () => {
@@ -265,10 +280,16 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   let demoT = 0;
   let cutA = -1;
   let exA = -1;
-  let lookKey = '';
+  // last applied look (highlight / ghosting / lens), compared field by field (no per-frame allocation)
+  const look: Pick<VehicleViewState, 'highlight' | 'dimOthers' | 'lens' | 'material'> = { highlight: null, dimOthers: false, lens: 'systems', material: null };
   let stackLift = 0;
   // last applied values (NaN = never applied)
-  const done = { legs: NaN, fins: NaN, defl: NaN, open: NaN, frost: NaN, scorch: NaN, gp: NaN, gy: NaN, gp2: NaN, collet: NaN, push: NaN, apart: NaN };
+  const done = { legs: NaN, fins: NaN, defl: NaN, open: NaN, frost: NaN, scorch: NaN, gp: NaN, gy: NaN, gp2: NaN, stk: NaN, collet: NaN, push: NaN, apart: NaN };
+  // E-1V gimbal limit while it sits in the interstage: the extension rim keeps at least 10 cm
+  // from the interstage inner face sheet (full range once the stages are apart)
+  const s2Engine0 = ctx.movers.engines.find((m) => m.kind === 'E-1V') ?? null;
+  const s2StackedLimit = s2Engine0 ? Math.min(E1V.gimbalRangeDeg, s2StackedGimbalLimit(s2Engine0.engine.exitRadius, -s2Engine0.engine.exitY)) : E1V.gimbalRangeDeg;
+  let stacked = false;
 
   // scratch objects (setState/animate run every frame: no allocations)
   const _q = new THREE.Quaternion();
@@ -282,7 +303,8 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   const gimbalQ = (pitchDeg: number, yawDeg: number, out: THREE.Quaternion) => out.setFromEuler(_e.set(pitchDeg * DEG, 0, yawDeg * DEG, 'XZY'));
   const engineAngles = (m: EngineMount) => {
     if (m.kind === 'E-1V') {
-      angP = clampDeg(eff.s2GimbalPitch, E1V.gimbalRangeDeg);
+      // inside the interstage the nozzle extension may only swing as far as its clearance allows
+      angP = clampDeg(eff.s2GimbalPitch, stacked ? s2StackedLimit : E1V.gimbalRangeDeg);
       angY = 0;
       return;
     }
@@ -355,10 +377,13 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
       done.scorch = eff.entryScorch;
       mats.uniforms.uScorch.value = clamp01(eff.entryScorch);
     }
-    if (eff.s1GimbalPitch !== done.gp || eff.s1GimbalYaw !== done.gy || eff.s2GimbalPitch !== done.gp2) {
+    stacked = stackLift < 0.3 && attached(bodies.booster, bodies.upper);
+    const stk = stacked ? 1 : 0;
+    if (eff.s1GimbalPitch !== done.gp || eff.s1GimbalYaw !== done.gy || eff.s2GimbalPitch !== done.gp2 || stk !== done.stk) {
       done.gp = eff.s1GimbalPitch;
       done.gy = eff.s1GimbalYaw;
       done.gp2 = eff.s2GimbalPitch;
+      done.stk = stk;
       applyGimbals();
     }
   };
@@ -411,7 +436,7 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
       for (const s of sections) s.caps[0].visible = s.caps[1].visible = false;
     }
     hook.visible = on;
-    root.updateMatrixWorld(true);
+    root.updateWorldMatrix(true, false);
     syncPlanes();
     setLiquidVisibility();
     sc?.setCut(hangar ? a : 0);
@@ -427,21 +452,29 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   let selectedSet = new Set<THREE.Object3D>();
   const isSelected = (e: Entry) => selectedSet.has(e.mesh);
   const variantOf = (m: THREE.Material, e: Entry, sel: boolean, anySel: boolean): THREE.Material => {
-    if (view.lens === 'materials' && e.kind !== 'liquid' && e.kind !== 'overlay') {
+    if (view.lens !== 'systems' && e.kind !== 'liquid' && e.kind !== 'overlay') {
       const clipped = !!m.userData.clipped;
-      return mats.lens(e.mat, clipped, sel ? 'hi' : view.dimOthers && anySel ? 'dim' : 'plain');
+      const mode = sel ? 'hi' : view.dimOthers && anySel ? 'dim' : 'plain';
+      return view.lens === 'materials' ? mats.lens(e.mat, clipped, mode) : mats.thermal(e.thermal, clipped, mode);
+    }
+    if (view.lens === 'thermal' && e.kind === 'liquid') {
+      // propellants in their class colour (LOX cryogenic blue, RP-1 ambient), still translucent
+      const t = mats.tint(m, THERMAL_COLORS[e.thermal?.level ?? 1]);
+      return sel ? mats.highlight(t) : view.dimOthers && anySel ? mats.dim(t) : t;
     }
     if (sel) return mats.highlight(m);
     if (view.dimOthers && anySel) return mats.dim(m);
     return m;
   };
   const applyLooks = () => {
-    const lensOn = view.lens === 'materials';
-    const anySel = lensOn ? view.material !== null : view.highlight !== null;
+    const lensOn = view.lens !== 'systems';
+    // the materials lens selects by material id; the systems and thermal views by part
+    const byMaterial = view.lens === 'materials';
+    const anySel = byMaterial ? view.material !== null : view.highlight !== null;
     selectedSet = new Set();
-    if (lensOn && view.material) {
+    if (byMaterial && view.material) {
       for (const e of kit.registry) if (e.mat === view.material) selectedSet.add(e.mesh);
-    } else if (!lensOn && view.highlight) {
+    } else if (!byMaterial && view.highlight) {
       for (const o of parts.get(view.highlight) ?? []) o.traverse((x) => selectedSet.add(x));
     }
     const neutral = !lensOn && !anySel;
@@ -479,9 +512,11 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
       exA = x;
       applyExplode(x);
     }
-    const key = `${view.highlight}|${view.dimOthers}|${view.lens}|${view.material}`;
-    if (key !== lookKey) {
-      lookKey = key;
+    if (look.highlight !== view.highlight || look.dimOthers !== view.dimOthers || look.lens !== view.lens || look.material !== view.material) {
+      look.highlight = view.highlight;
+      look.dimOthers = view.dimOthers;
+      look.lens = view.lens;
+      look.material = view.material;
       applyLooks();
     }
   };
@@ -633,7 +668,18 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   applyExplode(0);
   applyDemo();
   updateEnclosure();
-  lookKey = `${view.highlight}|${view.dimOthers}|${view.lens}|${view.material}`;
+  look.highlight = view.highlight;
+  look.dimOthers = view.dimOthers;
+  look.lens = view.lens;
+  look.material = view.material;
+  // anything built outside the kit (helpers) still carries the three tags
+  root.traverse((o) => {
+    const ud = o.userData;
+    if (!(o as THREE.Mesh).isMesh) return;
+    if (ud.part === undefined) ud.part = null;
+    if (ud.material === undefined) ud.material = null;
+    if (ud.thermal === undefined) ud.thermal = 1;
+  });
   return model;
 }
 

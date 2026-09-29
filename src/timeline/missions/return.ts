@@ -24,7 +24,7 @@ import { cdCapsule, cdTumbling } from '../physics/aero';
 import { comFrom } from '../physics/ascent';
 import { Craft, type Env } from '../physics/craft';
 import { Ctx } from '../physics/context';
-import { CAPSULE_AREA, flyCapsuleDescent, type DescentResult } from '../physics/entry';
+import { CAPSULE_AREA, DROGUE_CDA, MAIN_CDA, flyCapsuleDescent, type DescentResult } from '../physics/entry';
 import { elements } from '../physics/kepler';
 import { apsidesKm, coastKepler, orbitBurn, retrogradeAttitude } from '../physics/orbit';
 import { absState, angleIn, circularOrbit, cwPropagate, lvlh, lvlhAttitude, orbitState, type CircularOrbit, type Rel } from '../physics/rendezvous';
@@ -166,7 +166,7 @@ function fly(ctx: Ctx | null, env: Env, theta0: number, tU: number, start: numbe
   if (ctx) ctx.rec(sm, 0, true);
   const smEnd = sm.t;
   // capsule: entry, parachutes, splashdown, afloat until `end`
-  const d = flyCapsuleDescent(ctx, cap, { drogueCdA: 42, mainCdA: 2140, reefFrac: 0.12, drogueAlt: 7000, mainAlt: 2000, disreefDelay: 8, liftLD: 0.13, comAboveNadir: 1.45, side: vnorm(vcross(cap.r, cap.v)), eiAlt: 120e3, record: !!ctx, end, rcsChannel: 'cap.rcs' }, 90e3);
+  const d = flyCapsuleDescent(ctx, cap, { drogueCdA: DROGUE_CDA, mainCdA: MAIN_CDA, reefFrac: 0.12, drogueAlt: 7000, mainAlt: 2000, disreefDelay: 8, liftLD: 0.13, comAboveNadir: 1.45, side: vnorm(vcross(cap.r, cap.v)), eiAlt: 120e3, record: !!ctx, end, rcsChannel: 'cap.rcs' }, 90e3);
   if (ctx) for (let t = tHand; t <= end + 60; t += 60) setStation(t);
   const splashAngle = angleIn(orb, d.splashPos);
   return { undock: tU, depart: tU + DEPART, deorbit: { ...burn, dv, perigeeKm }, smSep, smEnd, d, splashAngle, cap, orb, dvDepart };

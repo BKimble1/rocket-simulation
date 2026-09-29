@@ -7,13 +7,18 @@ import type { BodyId, PartId } from '../../vehicle/parts';
 import type { Branch, MissionId, Phase, PresSegment, Shot, ShotKind } from '../types';
 import { OUTLINES, type PhaseOutline } from './outline';
 
-/** Parts doing the work in each phase (ids from src/vehicle/parts.ts). */
+/**
+ * Parts doing the work in each phase (ids from src/vehicle/parts.ts). Rules: the booster's own
+ * guidance computers ('booster-avionics') fly its return, not the upper stage's 'avionics' ring;
+ * at max-q the engines throttle through their gas generators while the main valves stay open;
+ * the suborbital stack has no upper stage and its research capsule no attitude thrusters.
+ */
 export const ACTIVE: Record<string, PartId[]> = {
   pad: ['service-tower', 'launch-mount', 's1-lox-tank', 's1-fuel-tank', 'pressurization', 'sound-suppression'],
   ignition: ['s1-engine-cluster', 'engine', 'turbopump', 'gas-generator', 'igniter', 'main-valves', 'launch-mount', 'flame-deflector', 'sound-suppression'],
   liftoff: ['s1-engine-cluster', 'thrust-structure', 'tvc-actuators', 'avionics', 'launch-mount'],
   pitchover: ['tvc-actuators', 'avionics', 's1-engine-cluster', 'nozzle'],
-  maxq: ['main-valves', 'avionics', 's1-intertank', 'interstage', 'thrust-structure'],
+  maxq: ['s1-intertank', 'interstage', 'thrust-structure', 'fairing', 'gas-generator', 'avionics'],
   meco: ['main-valves', 's1-engine-cluster', 's1-lox-tank', 'lox-downcomer', 'avionics'],
   staging: ['stage-separation', 'interstage', 'vacuum-engine'],
   ses1: ['vacuum-engine', 'nozzle-extension', 'igniter', 's2-tanks', 'avionics'],
@@ -24,16 +29,16 @@ export const ACTIVE: Record<string, PartId[]> = {
   deploy: ['payload-adapter', 'satellite-bus', 's2-rcs'],
   arrays: ['solar-arrays', 'antenna', 'attitude-thrusters', 'satellite-bus'],
   // booster recovery
-  flip: ['cold-gas-rcs', 'avionics'],
+  flip: ['cold-gas-rcs', 'booster-avionics'],
   boostback: ['s1-engine-cluster', 'engine', 'igniter', 'tvc-actuators'],
   'booster-coast': ['grid-fins', 'cold-gas-rcs'],
   'entry-burn': ['s1-engine-cluster', 'engine', 'base-heat-shield'],
-  'aero-guidance': ['grid-fins', 'avionics'],
-  'landing-burn': ['engine', 'landing-legs', 'tvc-actuators'],
+  'aero-guidance': ['grid-fins', 'booster-avionics'],
+  'landing-burn': ['engine', 'landing-legs', 'tvc-actuators', 'booster-avionics'],
   // suborbital
   'capsule-sep': ['capsule', 'stage-separation'],
-  apogee: ['capsule', 'attitude-thrusters'],
-  descent: ['capsule', 'attitude-thrusters'],
+  apogee: ['capsule'],
+  descent: ['capsule', 'heat-shield'],
   entry: ['heat-shield', 'backshell-tps', 'capsule'],
   parachutes: ['parachutes', 'capsule'],
   splashdown: ['capsule', 'parachutes'],
@@ -70,13 +75,13 @@ export const ACTIVE: Record<string, PartId[]> = {
 const OVERRIDE: Partial<Record<MissionId, Record<string, PartId[]>>> = {
   station: {
     'capsule-sep': ['capsule', 'service-module', 'solar-arrays'],
-    maxq: ['main-valves', 'avionics', 's1-intertank', 'interstage', 'launch-abort-system'],
+    maxq: ['s1-intertank', 'interstage', 'launch-abort-system', 'gas-generator', 'avionics'],
     liftoff: ['s1-engine-cluster', 'tvc-actuators', 'avionics', 'launch-abort-system'],
     pad: ['service-tower', 'launch-mount', 's1-lox-tank', 's1-fuel-tank', 'capsule', 'launch-abort-system'],
   },
   suborbital: {
-    liftoff: ['s1-engine-cluster', 'tvc-actuators', 'avionics', 'launch-mount'],
-    meco: ['main-valves', 's1-engine-cluster', 'avionics'],
+    liftoff: ['s1-engine-cluster', 'tvc-actuators', 'booster-avionics', 'launch-mount'],
+    meco: ['main-valves', 's1-engine-cluster', 'booster-avionics'],
     'booster-coast': ['cold-gas-rcs', 'grid-fins'],
   },
   return: {

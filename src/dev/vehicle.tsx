@@ -3,7 +3,7 @@
  * with shadows + a PMREM RoomEnvironment, a floor, and the vehicle driven by URL parameters:
  *   cfg=leoSat|gtoSat|lunarProbe|capsule|researchCapsule  stack=boosterOnly  recovery=0|1
  *   detail=flight|hangar  view=intact|cutaway|exploded  amt=0..1  part=<PartId>  dim=1
- *   lens=materials  mat=<MaterialId>  legs= fins= defl= open= frost= scorch= lox= rp1=
+ *   lens=materials|thermal  mat=<MaterialId>  legs= fins= defl= open= frost= scorch= lox= rp1=
  *   gp= gy= (booster gimbal pitch/yaw deg)  demo=<DemoId>  p=0..1 (omit to loop)  info=1
  * Camera: az, el, dist, tx, ty, tz, fov (see dev/index.tsx).
  */
@@ -87,7 +87,7 @@ export default function Dev() {
       amount: num('amt', view === 'intact' ? 0 : 1),
       highlight: isPartId(part) ? part : null,
       dimOthers: q.get('dim') === '1',
-      lens: q.get('lens') === 'materials' ? 'materials' : 'systems',
+      lens: q.get('lens') === 'materials' || q.get('lens') === 'thermal' ? (q.get('lens') as 'materials' | 'thermal') : 'systems',
       material: mat && (MATERIAL_IDS as readonly string[]).includes(mat) ? (mat as MaterialId) : null,
     });
     model.setState({

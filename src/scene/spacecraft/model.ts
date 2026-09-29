@@ -43,7 +43,12 @@ export interface Built {
 const STATE_KEYS = ['satArrays', 'satAntenna', 'smArrays', 'capDrogue', 'capMain', 'capNoseCone', 'capChar'] as const;
 
 export function assemble(kind: SpacecraftKind, kit: Kit, built: Built): SpacecraftModel {
-  for (const g of Object.values(built.bodies)) if (g) kit.finalize(g);
+  const animated = findAnimated(kit, built);
+  for (const g of Object.values(built.bodies))
+    if (g) {
+      kit.flatten(g, animated);
+      kit.finalize(g, animated);
+    }
   kit.prepareCut();
   const parts = new Map<PartId, THREE.Object3D[]>();
   for (const g of Object.values(built.bodies))
@@ -151,4 +156,57 @@ export function assemble(kind: SpacecraftKind, kit: Kit, built: Built): Spacecra
 
 export function emptyAnchors(topY: number): SpacecraftAnchors {
   return { satRcs: [], satApogee: null, capsuleRcs: [], smEngine: null, smRcs: [], lesNozzles: [], dockPort: null, chuteAttach: null, topY };
+}
+
+/** Pose samples that together move everything a builder can move (for the static-group flattening). */
+const PROBES: Partial<SCState>[] = [
+  ...[0.1, 0.3, 0.5, 0.7, 0.9, 1].map((v) => ({ satArrays: v, smArrays: v })),
+  ...[0.3, 0.7, 1].map((v) => ({ satAntenna: v })),
+  ...[0.1, 0.5, 1].map((v) => ({ capDrogue: v })),
+  ...[0.1, 0.3, 0.5, 0.6, 0.8, 1].map((v) => ({ capMain: v })),
+  { capNoseCone: 0.5 },
+  { capNoseCone: 1 },
+  { capChar: 1 },
+  { slewYaw: 0.5, slewPitch: 0.3, arrayDrive: 0.5, antennaSlew: 0.3 },
+  { satArrays: 1, satAntenna: 1, smArrays: 1, slewYaw: -0.4, slewPitch: -0.2, arrayDrive: -0.6, antennaSlew: -0.3 },
+  { layerSep: 0.5 },
+  { layerSep: 1 },
+  { capsuleOnly: true },
+];
+
+/**
+ * Every object whose transform, visibility, material or geometry changes with the pose, plus the
+ * section-view groups the kit moves. Poses the builder through the probe states and restores
+ * the neutral pose afterwards.
+ */
+function findAnimated(kit: Kit, built: Built): Set<THREE.Object3D> {
+  const roots = Object.values(built.bodies).filter((g): g is THREE.Group => !!g);
+  const sig = (o: THREE.Object3D) => {
+    const m = o as THREE.Mesh;
+    let s = [...o.position.toArray(), ...o.quaternion.toArray(), ...o.scale.toArray(), o.visible ? 1 : 0].map((x) => (typeof x === 'number' ? x.toFixed(7) : x)).join(',');
+    if (m.isMesh || (o as THREE.LineSegments).isLineSegments) {
+      const mat = m.material;
+      s += `|${Array.isArray(mat) ? mat.map((x) => x.uuid).join('+') : mat.uuid}|${m.geometry.uuid}`;
+      for (const a of Object.values(m.geometry.attributes)) s += `:${(a as THREE.BufferAttribute).version ?? 0}`;
+    }
+    return s;
+  };
+  const neutral: SCState = { satArrays: 0, satAntenna: 0, smArrays: 0, capDrogue: 0, capMain: 0, capNoseCone: 0, capChar: 0, slewYaw: 0, slewPitch: 0, arrayDrive: 0, antennaSlew: 0, layerSep: 0, capsuleOnly: false };
+  built.pose({ ...neutral });
+  const base = new Map<THREE.Object3D, string>();
+  for (const r of roots) r.traverse((o) => base.set(o, sig(o)));
+  const animated = new Set<THREE.Object3D>();
+  for (const probe of PROBES) {
+    built.pose({ ...neutral, ...probe });
+    for (const r of roots) r.traverse((o) => {
+      if (base.get(o) !== sig(o)) animated.add(o);
+    });
+  }
+  built.pose({ ...neutral });
+  for (const w of kit.wedges) animated.add(w.g);
+  for (const g of kit.capGroups) animated.add(g);
+  for (const g of kit.innerGroups) animated.add(g);
+  for (const h of kit.cutHide) animated.add(h);
+  for (const l of kit.labels) animated.add(l.anchor);
+  return animated;
 }

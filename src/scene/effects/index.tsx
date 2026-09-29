@@ -198,11 +198,9 @@ export class EffectsSystem {
 export function Effects() {
   const sys = useMemo(() => new EffectsSystem(), []);
   const camera = useThree((s) => s.camera);
-  useEffect(() => {
-    if (FLAGS.hooks) (window as unknown as Record<string, unknown>).__effects = sys;
-    return () => sys.dispose();
-  }, [sys]);
+  useEffect(() => () => sys.dispose(), [sys]);
   useFrame(() => {
+    if (FLAGS.hooks) (window as unknown as Record<string, unknown>).__effects = sys;
     if (frame.location !== 'flight') return;
     sys.update(camera);
   }, 0);

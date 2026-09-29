@@ -140,23 +140,25 @@ function tanks(ctx: Ctx) {
   const skinUpper = [...l2, ...[...l3].reverse()];
   kit.add(s.group, lathe(skinLower, { seg: kit.seg.mid, closed: true, smooth: 50 }), { ...cb, mat: 'al-2219', look: 'alu' });
   kit.add(s.group, lathe(core, { seg: kit.seg.mid, closed: true, smooth: 50 }), { ...cb, mat: 'honeycomb-core', look: 'honeycomb' });
-  kit.add(s.group, lathe(skinUpper, { seg: kit.seg.mid, closed: true, smooth: 50 }), { ...cb, mat: 'al-2219', look: 'alu' });
+  // the upper skin is wetted by the LOX (cryogenic in the thermal lens); the core insulates the RP-1 below
+  kit.add(s.group, lathe(skinUpper, { seg: kit.seg.mid, closed: true, smooth: 50 }), { ...cb, mat: 'al-2219', look: 'alu', thermal: 0 });
   kit.capLayer(s, lowerOuter, l1, 'common-bulkhead', 'al-2219', 'hatch');
   kit.capLayer(s, l1, l2, 'common-bulkhead', 'honeycomb-core', 'honeyCut');
-  kit.capLayer(s, l2, l3, 'common-bulkhead', 'al-2219', 'hatch');
+  kit.capLayer(s, l2, l3, 'common-bulkhead', 'al-2219', 'hatch', 0);
   if (kit.hangar) {
     // edge closeout ring of the bulkhead at the barrel Y-ring
     solidRing(kit, s, WALL.domeA - 0.08, WALL.domeA + 0.002, S.s2CommonBulkheadEquator - 0.03, S.s2CommonBulkheadEquator + 0.02, 'aluMilled', 'common-bulkhead', 'al-2219', { internal: true });
     // LOX feed tunnel through the RP-1 tank: from the bulkhead sump to the aft dome and on to the engine
     const tSpec = { part: 's2-tanks' as const, mat: 'al-2219' as const, look: 'alu', internal: true, cut: false };
     const yA = S.s2CommonBulkheadApex;
-    kit.add(s.group, lathe(rectPoly(WALL.s2Tunnel - 0.006, WALL.s2Tunnel, 45.15, yA + 0.02, 0.002), { seg: 32, closed: true, smooth: 50 }), tSpec);
-    kit.add(s.group, lathe(rectPoly(WALL.s2Tunnel - 0.006, WALL.s2Tunnel + 0.06, yA - 0.03, yA + 0.08, 0.004), { seg: 32, closed: true, smooth: 50 }), { ...tSpec, look: 'aluMilled' });
+    // (the tunnel and its sump carry LOX: cryogenic in the thermal lens although they sit in the RP-1)
+    kit.add(s.group, lathe(rectPoly(WALL.s2Tunnel - 0.006, WALL.s2Tunnel, 45.15, yA + 0.02, 0.002), { seg: 32, closed: true, smooth: 50 }), { ...tSpec, thermal: 0 });
+    kit.add(s.group, lathe(rectPoly(WALL.s2Tunnel - 0.006, WALL.s2Tunnel + 0.06, yA - 0.03, yA + 0.08, 0.004), { seg: 32, closed: true, smooth: 50 }), { ...tSpec, look: 'aluMilled', thermal: 0 });
     for (let k = 0; k < 2; k++) {
       const p = new THREE.BoxGeometry(0.34, 0.26, 0.008);
       p.rotateY(k * (Math.PI / 2) + Math.PI / 4);
       p.translate(0, yA + 0.2, 0);
-      kit.add(s.group, p, { ...tSpec, look: 'aluMilled' });
+      kit.add(s.group, p, { ...tSpec, look: 'aluMilled', thermal: 0 });
     }
     baffles(ctx, s, [51.2]);
     // RP-1 outlet at the aft dome

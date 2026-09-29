@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { Design } from './design';
 import { BACK, FRONT, FULL, bellowsLoop, hexBolt, merge, revolve, ringOf, roundPoly, type V2 } from './geo';
-import type { Kit, Tag } from './kit';
+import type { Kit, Tag, Thermal } from './kit';
 import { TP } from './layout';
 import { MATERIAL_OF, type MaterialSet } from './mats';
 import type { EngineDetail } from './types';
@@ -23,8 +23,9 @@ export interface Mechanisms {
   dispose(): void;
 }
 
-function tag(m: THREE.Mesh, part: Tag['part'], mat: Tag['mat']) {
+function tag(m: THREE.Mesh, part: Tag['part'], mat: Tag['mat'], thermal: Thermal = 1) {
   m.userData.part = part;
+  m.userData.thermal = thermal;
   const id = MATERIAL_OF[mat];
   if (id) m.userData.material = id;
   m.name = `${part}:${mat}:dynamic`;
@@ -250,14 +251,15 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
     owned.push(bellowsFull);
   }
   for (const b of bellowMeshes) {
-    tag(b.mesh, 'engine', 'steel');
+    // the LOX bellows (instance 0) is cryogenic; a mesh holding only the fuel bellows is ambient
+    tag(b.mesh, 'engine', 'steel', b.ids.includes(0) ? 0 : 1);
     b.mesh.frustumCulled = false;
     b.mesh.userData.front = b.slides;
     meshes.push(b.mesh);
   }
   // stage-side flange, spool and interface flange above each bellows (fixed)
   for (const [i, b] of bel.entries()) {
-    const t: Tag = { part: 'engine', mat: 'stainless', node: 'fixed', front: k.section && b.z > 0.01 };
+    const t: Tag = { part: 'engine', mat: 'stainless', node: 'fixed', front: k.section && b.z > 0.01, thermal: i === 0 ? 0 : 1 };
     const c = V(b.x, 0, b.z);
     const prof: V2[] = roundPoly(
       [
@@ -289,7 +291,7 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
       0.002,
       2,
     );
-    const tl: Tag = { part: 'engine', mat: 'stainless', front: k.section && b.z > 0.01 };
+    const tl: Tag = { part: 'engine', mat: 'stainless', front: k.section && b.z > 0.01, thermal: i === 0 ? 0 : 1 };
     if (k.section && i === 0) {
       k.sweep(revolve([{ pts: low }], BACK[0], BACK[1], s, { caps: true, centre: c }), tl);
       k.sweep(revolve([{ pts: low }], FRONT[0], FRONT[1], s, { caps: true, centre: c }), { ...tl, front: true });

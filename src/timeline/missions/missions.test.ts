@@ -12,11 +12,13 @@ import type { BodyTrack, ChannelId, MissionId, MissionTimeline } from '../types'
 import { OUTLINES, MISSION_ORDER } from './outline';
 import { BODY_SIZE } from '../../director/shots';
 import { PART_IDS, type BodyId } from '../../vehicle/parts';
-import { E1, E1V, S1 } from '../../vehicle/spec';
+import { ABORT_TOWER, CAPSULE, E1, E1V, S1, SERVICE_MODULE } from '../../vehicle/spec';
+import { buildStation } from './station';
 import { MU_EARTH, R_EARTH, R_MOON, latLonOf, moonPosition } from '../../world/frames';
 import { LANDING_ZONE } from '../../world/site';
 import { kepler } from '../physics/kepler';
 import { padLocal, lzMiss } from '../physics/landing';
+import { PAYLOAD_COM, fairingHalf } from '../physics/vehicle';
 import { telemetryAt } from '../physics/telemetry';
 
 const TL: Partial<Record<MissionId, MissionTimeline>> = {};
@@ -43,9 +45,23 @@ beforeAll(() => {
 const tl = (id: MissionId) => TL[id]!;
 const S = makeBodyState();
 const posAt = (tr: BodyTrack, t: number) => bodyAt(tr, t, S).pos.clone();
-const centreAt = (id: BodyId, tr: BodyTrack, t: number) => {
+/**
+ * A body's own centre in its model frame: the mass model's centre where the director's framing
+ * centre (BODY_SIZE) is not the body's centre of mass: a fairing half's centre lies off the axis,
+ * and the suborbital research capsule rides on the booster's adapter, 19 m below the orbital
+ * capsule's station.
+ */
+const localCentre = (m: MissionTimeline, id: BodyId): THREE.Vector3 => {
+  if (id === 'fairingA' || id === 'fairingB') {
+    const c = fairingHalf(id === 'fairingA' ? 'A' : 'B', 1).c;
+    return new THREE.Vector3(c.x, c.y, c.z);
+  }
+  if (id === 'capsule' && m.payload === 'researchCapsule') return new THREE.Vector3(0, PAYLOAD_COM.researchCapsule.y, 0);
+  return new THREE.Vector3(0, BODY_SIZE[id].centreY, 0);
+};
+const centreAt = (m: MissionTimeline, id: BodyId, tr: BodyTrack, t: number) => {
   bodyAt(tr, t, S);
-  return new THREE.Vector3(0, BODY_SIZE[id].centreY, 0).applyQuaternion(S.quat).add(S.pos);
+  return localCentre(m, id).applyQuaternion(S.quat).add(S.pos);
 };
 const ev = (m: MissionTimeline, id: string) => {
   const e = m.events.find((x) => x.id === id);
@@ -320,12 +336,22 @@ describe.each(MISSION_ORDER)('%s timeline', (id) => {
         const vel = bodyAt(tr, at.until, S).vel.clone();
         const jump = pb.sub(pa).addScaledVector(vel, -2 * eps).length();
         expect(jump, `${k} teleports at separation`).toBeLessThan(0.05);
-        // relative speed of the two bodies' centres a few seconds later
+        // relative speed of the two bodies' centres a few seconds later. When the host is under
+        // thrust (the fairing leaves while the upper stage burns) its own acceleration along its
+        // axis would dominate, so the check measures the sideways separation from the host's axis.
         const u = at.until;
-        const d0 = centreAt(k, tr, u + 1).distanceTo(centreAt(at.to, host!, u + 1));
-        const d1 = centreAt(k, tr, u + 3).distanceTo(centreAt(at.to, host!, u + 3));
-        const vRel = (d1 - d0) / 2;
-        const band: [number, number] = k === 'les' ? [5, 200] : k === 'fairingA' || k === 'fairingB' ? [0.8, 6] : [0.15, 3];
+        const thrusting = at.to === 'upper' && channelAt(m.channels['s2.throttle']!, u + 2) > 0.05;
+        const apart = (t: number) => {
+          const off = centreAt(m, k, tr, t).sub(centreAt(m, at.to, host!, t));
+          if (!thrusting) return off.length();
+          bodyAt(host!, t, S);
+          const ax = new THREE.Vector3(0, 1, 0).applyQuaternion(S.quat);
+          return off.addScaledVector(ax, -off.dot(ax)).length();
+        };
+        const vRel = (apart(u + 3) - apart(u + 1)) / 2;
+        // abort tower: its own motor; fairing halves: pushed outward ~1.4 m/s and tumbling;
+        // undocking springs: about 0.1 m/s (like the docking closing speed); others 0.15-3 m/s
+        const band: [number, number] = k === 'les' ? [5, 200] : k === 'fairingA' || k === 'fairingB' ? [0.8, 6] : at.to === 'station' ? [0.05, 0.5] : [0.15, 3];
         expect(vRel, `${k} separates from ${at.to} at ${vRel.toFixed(2)} m/s`).toBeGreaterThan(band[0]);
         expect(vRel).toBeLessThan(band[1]);
       }
@@ -445,6 +471,21 @@ describe('mission targets', () => {
     expect(m.facts['insertion.incDeg']).toBeCloseTo(28.5, 1);
   });
 
+  it('station with an expendable booster: flies the dataset crew stack and docks', () => {
+    // the dataset's 17.8 t crew stack does not fit with the RTLS reserve (see station.ts); the
+    // builder flies it whenever the outline expends the booster
+    const m = buildStation(false);
+    expect(m.facts['crew.dataset']).toBe(1);
+    expect(m.facts['crew.capsuleKg']).toBe(CAPSULE.mass);
+    expect(m.facts['crew.serviceModuleKg']).toBe(SERVICE_MODULE.mass);
+    expect(m.facts['crew.abortTowerKg']).toBe(ABORT_TOWER.mass);
+    expect(m.facts['seco.s2PropLeftKg']).toBeGreaterThan(300);
+    expect(m.facts['insertion.incDeg']).toBeCloseTo(28.5, 1);
+    expect(m.facts['docking.closingSpeed']).toBeLessThanOrEqual(0.12);
+    expect(m.branches).toHaveLength(0);
+    expect(m.bodies.booster!.exists[1]).toBeLessThan(ev(m, 'stage-sep') + 400); // expended: its track ends at sea
+  }, 60_000);
+
   it('lunar: far-side closest approach within 1,000 to 3,000 km, not captured', () => {
     const m = tl('lunar');
     const tc = ev(m, 'closest-approach');
@@ -460,8 +501,12 @@ describe('mission targets', () => {
     expect(m.facts['closestApproach.speedRelMoon']).toBeGreaterThan(Math.sqrt((2 * 4.9048695e12) / rel.length()));
     expect(ev(m, 'soi-exit')).toBeGreaterThan(tc);
     expect(ev(m, 'soi-enter')).toBeLessThan(tc);
-    // about three days from injection to the sphere of influence
-    expect(Math.round((ev(m, 'soi-enter') - ev(m, 'seco2')) / 86400)).toBe(3);
+    // about three days from injection to the Moon (Apollo 11: 3.05 days from TLI to closest
+    // approach), entering the 66,000 km sphere of influence some 0.3 to 1 day before it
+    expect(Math.round((tc - ev(m, 'seco2')) / 86400)).toBe(3);
+    const soiLead = (tc - ev(m, 'soi-enter')) / 86400;
+    expect(soiLead).toBeGreaterThan(0.3);
+    expect(soiLead).toBeLessThan(1);
   });
 
   it('interpolates LEO coasts to within 5 m', () => {

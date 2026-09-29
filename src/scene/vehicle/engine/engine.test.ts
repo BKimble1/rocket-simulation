@@ -221,3 +221,50 @@ describe('engine models', () => {
     e.dispose();
   });
 });
+
+describe('thermal lens tags', () => {
+  test('every surface mesh carries a thermal class; key parts have the expected class', () => {
+    for (const k of kinds)
+      for (const det of details) {
+        const e = buildEngineWith(k, det, plainMaterialSet());
+        const seen = new Map<string, Set<number>>();
+        e.root.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh || m.userData.lensExempt) return;
+          const th = m.userData.thermal as number;
+          expect(Number.isInteger(th) && th >= 0 && th <= 4).toBe(true);
+          const p = (m.userData.subPart ?? m.userData.part) as string;
+          if (!seen.has(p)) seen.set(p, new Set());
+          seen.get(p)!.add(th);
+        });
+        if (det === 'hangar') {
+          expect(seen.get('combustion-chamber')).toEqual(new Set([4]));
+          expect(seen.get('turbopump')!.has(0)).toBe(true); // LOX pump
+          expect(seen.get('turbopump')!.has(3)).toBe(true); // turbine side
+          expect(seen.get('gas-generator')!.has(4)).toBe(true);
+          expect(seen.get('nozzle')!.has(3)).toBe(true);
+          expect(seen.get('engine')!.has(0)).toBe(true); // LOX lines and bellows
+          expect(seen.get('engine')!.has(1)).toBe(true); // fuel lines
+          expect(seen.get('main-valves')).toEqual(new Set([1]));
+          if (k === 'E-1V') expect(seen.get('nozzle-extension')).toEqual(new Set([4]));
+        }
+        e.dispose();
+      }
+  });
+  test('effect meshes keep their materials when a lens swaps materials', () => {
+    const e = buildEngineWith('E-1', 'hangar', plainMaterialSet());
+    const swap = new THREE.MeshBasicMaterial();
+    let exempt = 0;
+    e.root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.userData.lensExempt) return;
+      exempt++;
+      const before = m.material;
+      m.material = swap;
+      expect(m.material).toBe(before);
+    });
+    expect(exempt).toBeGreaterThan(4);
+    swap.dispose();
+    e.dispose();
+  });
+});

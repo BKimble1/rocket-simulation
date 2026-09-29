@@ -211,7 +211,6 @@ export function buildLeo(): MissionTimeline {
   ctx.fact('orbit.s2PropLeftKg', up.tanks.s2 ?? 0);
   ctx.fact('payloadSep.t', tSep);
   ctx.fact('orbit.periodMin', elements(sat.r, sat.v, MU_EARTH).period / 60);
-  ctx.fact('fairingSep.t', T.fairingSep);
 
   return {
     id: 'leo',

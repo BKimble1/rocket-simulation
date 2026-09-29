@@ -161,10 +161,12 @@ function domeAndInjector(k: Kit, d: Design, segs: number, detail: EngineDetail) 
     inner.push([(a - td) * Math.sin(ang), yb + (b - td) * Math.cos(ang)]);
   }
   const domeLoop: V2[] = [[0.0005, bossTop], [bossR, bossTop], ...outer, [a + 0.022, yb + 0.018], [a + 0.022, yb], [a - td, yb], ...inner.slice(1, inner.length - 1), [0.0005, yb + b - td]];
+  // the LOX dome is full of liquid oxygen: cryogenic in the thermal lens
+  const domeT: Tag = { ...inj, thermal: 0 };
   if (detail === 'cluster') {
-    lathe(k, [{ pts: [[0.0005, bossTop], [bossR, bossTop], ...outer, [a + 0.012, yb], [0.0005, yb]] }], { part: 'injector', mat: 'jacket' }, segs);
-  } else if (detail === 'flight') lathe(k, [{ pts: domeLoop }], inj, segs);
-  else lathe(k, [{ pts: roundPoly(domeLoop, (i) => (i === 1 || (i >= outer.length + 2 && i <= outer.length + 4) ? 0.003 : 0), 2) }], inj, segs);
+    lathe(k, [{ pts: [[0.0005, bossTop], [bossR, bossTop], ...outer, [a + 0.012, yb], [0.0005, yb]] }], { part: 'injector', mat: 'jacket', thermal: 0 }, segs);
+  } else if (detail === 'flight') lathe(k, [{ pts: domeLoop }], domeT, segs);
+  else lathe(k, [{ pts: roundPoly(domeLoop, (i) => (i === 1 || (i >= outer.length + 2 && i <= outer.length + 4) ? 0.003 : 0), 2) }], domeT, segs);
 
   // injector body: top flange, fuel manifold bulge, bottom flange; internal fuel manifold cavity
   const yF = d.injY;
@@ -529,7 +531,8 @@ function nozzle(k: Kit, d: Design, segs: number, detail: EngineDetail) {
   const mr = 0.03;
   const centre = new THREE.Vector3(0, ym, 0);
   const R = d.manifoldR;
-  const man: Tag = { part: 'nozzle', mat: 'inconelHot' };
+  // full of RP-1 entering the cooling tubes: ambient in the thermal lens (the tubes are hot)
+  const man: Tag = { part: 'nozzle', mat: 'inconelHot', thermal: 1 };
   const frames = circleFrames(centre, R, 0, TAU, detail === 'hangar' ? 96 : segs);
   if (detail === 'cluster') {
     k.add(clippedTube(frames, { ro: mr, segs: 8 }).back.surf, man);

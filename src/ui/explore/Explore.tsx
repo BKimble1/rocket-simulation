@@ -15,12 +15,14 @@ import { presToMission } from '../../timeline/sample';
 import { playback } from '../../state/playback';
 import { startDemo } from '../../scene/demos';
 import { Icon } from '../icons';
+import { THERMAL_CLASSES } from '../../scene/hangar/thermal';
 
 export function Explore() {
   const part = useApp((s) => s.part);
   const lens = useApp((s) => s.lens);
   const cfg = useApp((s) => s.hangarConfig);
   const inspect = useApp((s) => s.inspect);
+  const thermal = useApp((s) => s.overlays.thermal);
   const set = useApp((s) => s.set);
   const [finder, setFinder] = useState(false);
   useEffect(() => () => startDemo(null), []);
@@ -47,6 +49,19 @@ export function Explore() {
       )}
       {lens === 'materials' ? <MaterialPanel onClose={() => set({ lens: 'systems', material: null })} /> : part && <LessonPanel id={part} onClose={() => set({ part: null })} />}
       {part && lens !== 'materials' && <ContextIndicator part={part} capsule={cfg === 'capsule'} />}
+      {thermal && (
+        <aside className="legend panel" aria-label="Thermal load legend">
+          <div className="eyebrow">Thermal load (qualitative)</div>
+          <ul>
+            {THERMAL_CLASSES.map((c) => (
+              <li key={c.label}>
+                <span className="legend__swatch" style={{ background: c.color }} />
+                {c.label}
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
       <div className="bottom-dock">
         <DemoBar />
         <ExploreToolbar onParts={() => setFinder((f) => !f)} />

@@ -20,6 +20,7 @@ import { ENGINE_STANDS, hangar, hangarPartBox, ENGINE_DISPLAY_PARTS, VACUUM_DISP
 import { DEMOS, demoClock, demoProgress } from '../demos';
 import { E1, E1V } from '../../vehicle/spec';
 import { HangarOverlays } from './HangarOverlays';
+import { applyThermal } from './thermal';
 
 function configFor(c: 'satellite' | 'capsule'): VehicleConfig {
   return c === 'capsule' ? { payload: 'capsule', recovery: true, stack: 'full', detail: 'hangar' } : { payload: 'leoSat', recovery: true, stack: 'full', detail: 'hangar' };
@@ -127,8 +128,11 @@ export function Hangar() {
   }, [part, vehicle, view]);
 
   useEffect(() => {
-    vehicle.setView({ lens, material: lens === 'materials' ? (material as never) : null });
-  }, [lens, material, vehicle]);
+    const l = overlays.thermal ? 'thermal' : lens;
+    vehicle.setView({ lens: l, material: l === 'materials' ? (material as never) : null });
+    applyThermal(engines.e.root, overlays.thermal);
+    applyThermal(engines.v.root, overlays.thermal);
+  }, [lens, material, vehicle, overlays.thermal, engines]);
 
   useEffect(() => {
     engines.e.setFlowOverlay(overlays.flow);

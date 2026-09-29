@@ -398,7 +398,8 @@ export function baseMaterial(k: EMat): THREE.Material {
     case 'anodized':
       return M('blackAnodized');
     case 'niobium':
-      return once(k, () => std({ color: '#615b53', roughness: 0.62, metalness: 0.78, roughnessMap: roughnessNoise(43, 0.2) }));
+      // silicide-coated niobium alloy: matte dark grey with a slight bronze tint
+      return once(k, () => std({ color: '#4a443e', roughness: 0.72, metalness: 0.5, roughnessMap: roughnessNoise(43, 0.2) }));
     case 'faceplate':
       return once(k, () => {
         const f = faceplate();
@@ -471,8 +472,13 @@ function patchGlow(m: THREE.MeshStandardMaterial, uniform: { value: number }) {
           // red-orange), dimming toward the exit (dull red, then nothing visible)
           float t = clamp(vGlowT, 0.0, 1.0);
           float hot = exp(-4.6 * t);
-          vec3 c = mix(vec3(0.42, 0.035, 0.008), vec3(0.95, 0.24, 0.04), hot);
-          totalEmissiveRadiance += c * hot * 1.25 * uGlow;
+          vec3 c = mix(vec3(0.46, 0.03, 0.006), vec3(1.0, 0.25, 0.035), hot);
+          totalEmissiveRadiance += c * hot * 1.5 * uGlow;
+          // where it glows, emission dominates the look (a lit, reflective surface would wash the
+          // dark red-orange out to a pale peach in a bright hangar)
+          float lit = 1.0 - 0.75 * smoothstep(0.0, 0.6, hot * uGlow);
+          diffuseColor.rgb *= lit;
+          roughnessFactor = mix(roughnessFactor, 0.85, 1.0 - lit);
         }`,
       );
   };

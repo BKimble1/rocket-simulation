@@ -11,13 +11,15 @@
  * They read the per-vertex model-frame position `aVeh.xyz` (baked at build time, so moving
  * parts keep their stowed-pose pattern) and a soot weight `aVeh.w`.
  *
- * Variants (cached): clip (wedge cutaway planes), highlight (emissive tint + rim), dim (ghosted)
- * and the materials lens (colour per MaterialId).
+ * Variants (cached): clip (wedge cutaway planes), highlight (emissive tint + rim), dim (ghosted),
+ * the materials lens (colour per MaterialId) and the thermal lens (colour per thermal class, split
+ * along the axis for meshes that span two classes).
  */
 import * as THREE from 'three';
 import { M, ACCENT, GRAPHITE, WHITE, roughnessNoise, brushedNormal, weaveNormal } from '../materials';
 import type { MaterialId } from '../../content/materials/ids';
 import { hatchTexture, honeycombSectionTexture, honeycombFaceTexture, woundTexture, fabricTexture } from './textures';
+import { THERMAL_COLORS, type ThermalTag } from './thermal';
 
 /** Materials-lens colours (legend for the Materials view). */
 export const LENS_COLORS: Record<MaterialId, string> = {
@@ -531,6 +533,51 @@ export class VehicleMats {
         base.clippingPlanes = this.planes;
         base.clipIntersection = true;
         base.clipShadows = true;
+      }
+      v = mode === 'hi' ? this.highlight(base) : mode === 'dim' ? this.dim(base) : base;
+      this.variants.set(k, v);
+    }
+    return v;
+  }
+
+  /** A copy of a material with another base colour (the liquids in the thermal lens). */
+  tint(m: THREE.Material, color: string): THREE.Material {
+    const k = `tint|${m.uuid}|${color}`;
+    let v = this.variants.get(k);
+    if (!v) {
+      v = this.own(cloneMat(m));
+      const sm = v as THREE.MeshStandardMaterial;
+      if (sm.color) sm.color.set(color);
+      if (sm.emissive) sm.emissive.set(color).multiplyScalar(0.15);
+      this.variants.set(k, v);
+    }
+    return v;
+  }
+
+  /** Thermal lens: flat class colour (split at a model height when the tag says so). */
+  thermal(tag: ThermalTag | null, clipped: boolean, mode: 'plain' | 'hi' | 'dim'): THREE.Material {
+    const t = tag ?? { level: 1 };
+    const k = `thermal|${t.level}|${t.split ? `${t.split.y}:${t.split.below}` : '-'}|${clipped}|${mode}`;
+    let v = this.variants.get(k);
+    if (!v) {
+      const base = this.own(new THREE.MeshStandardMaterial({ color: THERMAL_COLORS[t.level], roughness: 0.62, metalness: 0.05 }));
+      if (clipped) {
+        base.clippingPlanes = this.planes;
+        base.clipIntersection = true;
+        base.clipShadows = true;
+      }
+      if (t.split) {
+        // model-frame height from the skin attribute (baked at build time on every kit mesh)
+        const u = { uTSplit: { value: t.split.y }, uTBelow: { value: new THREE.Color(THERMAL_COLORS[t.split.below]) } };
+        withHook(base, 'thermal-split', (s) => {
+          Object.assign(s.uniforms, u);
+          s.vertexShader = s.vertexShader
+            .replace('#include <common>', '#include <common>\nattribute vec4 aVeh;\nvarying float vTY;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTY = aVeh.y;');
+          s.fragmentShader = s.fragmentShader
+            .replace('#include <common>', '#include <common>\nuniform float uTSplit;\nuniform vec3 uTBelow;\nvarying float vTY;')
+            .replace('#include <color_fragment>', '#include <color_fragment>\nif (vTY < uTSplit) diffuseColor.rgb = uTBelow;');
+        });
       }
       v = mode === 'hi' ? this.highlight(base) : mode === 'dim' ? this.dim(base) : base;
       this.variants.set(k, v);

@@ -3,7 +3,7 @@
  * the cutaway wedge, exploded-view offsets. Azimuth phi is measured from +Z (south on the pad,
  * the livery side) toward +X (east); -X faces the service tower.
  */
-import { S1_ENGINE_LAYOUT } from '../../vehicle/spec';
+import { S1_ENGINE_LAYOUT, BODY_RADIUS } from '../../vehicle/spec';
 
 export const DEG = Math.PI / 180;
 
@@ -28,6 +28,21 @@ export const AZ = {
   copvs: [200, 250, 300].map((d) => d * DEG),
   s2Copvs: [165, 225, 285].map((d) => d * DEG),
 };
+
+/** Interstage wall (m): carbon face sheets over an aluminium honeycomb core. */
+export const INTERSTAGE_WALL = { face: 0.0015, core: 0.025 };
+/** Inner radius of the interstage shell (inner face sheet). */
+export const INTERSTAGE_INNER_R = BODY_RADIUS - (2 * INTERSTAGE_WALL.face + INTERSTAGE_WALL.core);
+
+/**
+ * Largest E-1V gimbal angle (deg) while the engine sits in the interstage: the nozzle-extension
+ * rim (exit radius plus its stiffener lip) keeps `margin` from the interstage inner face sheet.
+ * `depth` is the exit plane's distance below the gimbal point.
+ */
+export function s2StackedGimbalLimit(exitRadius: number, depth: number, lip = 0.015, margin = 0.1): number {
+  const room = INTERSTAGE_INNER_R - margin - (exitRadius + lip);
+  return Math.asin(Math.max(0, Math.min(1, room / Math.max(0.5, depth)))) / DEG;
+}
 
 /** Cutaway wedge: removed between these azimuths at full opening (on the +Z/+X side, 100 deg). */
 export const WEDGE = { from: 20 * DEG, to: 120 * DEG };

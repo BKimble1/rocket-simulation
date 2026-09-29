@@ -12,6 +12,7 @@ import type { MaterialId } from '../../content/materials/ids';
 import { mergeAll, normalize, capFromPoly, capStrip, type P2 } from './geom';
 import type { Look, VehicleMats } from './mats';
 import { lockNoCast } from './instancing';
+import type { ThermalLevel, ThermalTag } from './thermal';
 
 export type Detail = 'hangar' | 'flight';
 
@@ -28,6 +29,8 @@ export interface PieceSpec {
   shadow?: boolean;
   /** Receives but does not cast shadows. */
   noCast?: boolean;
+  /** Thermal-lens class when the part's default does not fit (e.g. the LOX side of a bulkhead). */
+  thermal?: ThermalLevel;
 }
 
 export type MeshKind = 'solid' | 'cap' | 'liquid' | 'overlay' | 'decal' | 'foreign';
@@ -43,6 +46,8 @@ export interface Entry {
   base: THREE.Material | THREE.Material[];
   /** Body this belongs to (for cutaway fading of payloads etc.). */
   body: BodyId | null;
+  /** Thermal-lens class: set at build time for explicit pieces, otherwise resolved by the model. */
+  thermal: ThermalTag | null;
 }
 
 export interface Section {
@@ -71,6 +76,7 @@ interface CapBucket {
   part: PartId;
   mat: MaterialId | null;
   look: string;
+  thermal?: ThermalLevel;
   geoms: THREE.BufferGeometry[];
 }
 
@@ -132,7 +138,7 @@ export class Kit {
       geom.dispose();
       return;
     }
-    const key = `${target.uuid}|${spec.part}|${spec.mat}|${spec.look}|${spec.cut ? 1 : 0}|${spec.internal ? 1 : 0}|${spec.soot ?? '-'}|${spec.shadow === false ? 0 : 1}|${spec.noCast ? 1 : 0}`;
+    const key = `${target.uuid}|${spec.part}|${spec.mat}|${spec.look}|${spec.cut ? 1 : 0}|${spec.internal ? 1 : 0}|${spec.soot ?? '-'}|${spec.shadow === false ? 0 : 1}|${spec.noCast ? 1 : 0}|${spec.thermal ?? '-'}`;
     let b = this.buckets.get(key);
     if (!b) {
       b = { target, spec, pieces: [], body: this.findBody(target) };
@@ -148,16 +154,16 @@ export class Kit {
   }
 
   /** A layered cut face strip between two polylines (sandwich cores and skins). */
-  capLayer(section: Section, outer: P2[], inner: P2[], part: PartId, mat: MaterialId | null, look: string) {
+  capLayer(section: Section, outer: P2[], inner: P2[], part: PartId, mat: MaterialId | null, look: string, thermal?: ThermalLevel) {
     if (!this.hangar) return;
-    this.capGeom(section, capStrip(outer, inner), part, mat, look);
+    this.capGeom(section, capStrip(outer, inner), part, mat, look, thermal);
   }
 
-  capGeom(section: Section, g: THREE.BufferGeometry, part: PartId, mat: MaterialId | null, look: string) {
-    const key = `${section.id}|${part}|${mat}|${look}`;
+  capGeom(section: Section, g: THREE.BufferGeometry, part: PartId, mat: MaterialId | null, look: string, thermal?: ThermalLevel) {
+    const key = `${section.id}|${part}|${mat}|${look}|${thermal ?? '-'}`;
     let b = this.capBuckets.get(key);
     if (!b) {
-      b = { section, part, mat, look, geoms: [] };
+      b = { section, part, mat, look, thermal, geoms: [] };
       this.capBuckets.set(key, b);
     }
     b.geoms.push(g);
@@ -174,6 +180,7 @@ export class Kit {
       internal: e.internal ?? false,
       base: e.base ?? mesh.material,
       body: e.body ?? null,
+      thermal: e.thermal ?? null,
     };
     mesh.userData.part = entry.part;
     mesh.userData.material = entry.mat;
@@ -220,14 +227,20 @@ export class Kit {
       if (!mesh.castShadow) lockNoCast(mesh);
       mesh.visible = !b.spec.internal;
       b.target.add(mesh);
-      this.register(mesh, { part: b.spec.part, mat: b.spec.mat, kind: 'solid', cut: !!b.spec.cut && this.hangar, internal: !!b.spec.internal, base: material, body: b.body });
+      this.register(mesh, { part: b.spec.part, mat: b.spec.mat, kind: 'solid', cut: !!b.spec.cut && this.hangar, internal: !!b.spec.internal, base: material, body: b.body, thermal: b.spec.thermal !== undefined ? { level: b.spec.thermal } : null });
     }
     this.buckets.clear();
     // caps: one merged geometry per (section, part, look), shown on both cut planes
     for (const c of this.capBuckets.values()) {
       const geom = mergeAll(c.geoms);
       const pa = geom.getAttribute('position') as THREE.BufferAttribute;
-      geom.setAttribute('aVeh', new THREE.BufferAttribute(new Float32Array(pa.count * 4), 4));
+      // cap faces lie in their section's frame: (r, y) of the cut, so y is the model height
+      const veh = new Float32Array(pa.count * 4);
+      for (let i = 0; i < pa.count; i++) {
+        veh[i * 4] = pa.getX(i);
+        veh[i * 4 + 1] = pa.getY(i);
+      }
+      geom.setAttribute('aVeh', new THREE.BufferAttribute(veh, 4));
       geom.computeBoundingSphere();
       const material = this.mats.get(c.look);
       for (let k = 0; k < 2; k++) {
@@ -237,7 +250,7 @@ export class Kit {
         lockNoCast(mesh);
         mesh.receiveShadow = true;
         c.section.caps[k].add(mesh);
-        this.register(mesh, { part: c.part, mat: c.mat, kind: 'cap', cut: false, internal: false, base: material, body: c.section.body });
+        this.register(mesh, { part: c.part, mat: c.mat, kind: 'cap', cut: false, internal: false, base: material, body: c.section.body, thermal: c.thermal !== undefined ? { level: c.thermal } : null });
       }
     }
     this.capBuckets.clear();

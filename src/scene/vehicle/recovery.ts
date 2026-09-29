@@ -1,14 +1,15 @@
 /**
  * Booster recovery hardware: four carbon-fibre landing legs with telescoping deploy struts and
- * pivoting foot pads, four titanium grid fins (fold hinge + steering shaft), and the nitrogen
- * cold-gas thruster pods on the forward skirt.
+ * pivoting foot pads, four titanium grid fins (fold hinge + steering shaft), the nitrogen
+ * cold-gas thruster pods on the forward skirt, and the booster's own avionics (flight computers,
+ * IMU, GNSS receiver and antennas) that guide it home.
  */
 import * as THREE from 'three';
 import { BODY_RADIUS as R, LEGS, GRID_FINS } from '../../vehicle/spec';
 import type { Ctx } from './ctx';
 import type { Section } from './kit';
 import { AZ } from './layout';
-import { radialFrame, loft, bevelBox, rod, mergeAll, lathe, polar, type P2 } from './geom';
+import { radialFrame, loft, bevelBox, rod, mergeAll, lathe, polar, pipe, type P2 } from './geom';
 import { RigInstances, azimuthCopies } from './instancing';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -313,10 +314,125 @@ function rcsPods(ctx: Ctx, s: Section) {
   }
 }
 
+// ───────────────────────────── booster avionics ─────────────────────────────
+
+/**
+ * The booster's own guidance hardware (it flies home alone after separation): two redundant
+ * flight computers and an inertial measurement unit on a cold plate on the -Z side of the forward
+ * skirt, the GNSS receiver and a battery between the grid fin and the RCS pod on the tower side,
+ * a harness ring, and two GNSS antennas outside (one on each side, so one always sees the sky
+ * during the flip).
+ */
+function avionicsBay(ctx: Ctx, s: Section) {
+  const { kit } = ctx;
+  const spec = { part: 'booster-avionics' as const, mat: 'al-2219' as const, cut: true };
+  const yA = 37.66;
+  const DEG = Math.PI / 180;
+  const antennas = [0, 180].map((d) => d * DEG);
+  // GNSS patch antennas under small radomes, on doubler plates
+  const radome = lathe(
+    [
+      [0, 0.03],
+      [0.045, 0.026],
+      [0.066, 0.011],
+      [0.072, 0],
+    ],
+    { seg: kit.hangar ? 24 : 12, smooth: 40 },
+  );
+  radome.rotateX(Math.PI / 2);
+  for (const phi of antennas) {
+    kit.add(s.group, radome.clone(), { ...spec, look: 'radome' }, radialFrame(R + 0.004, phi, yA));
+    if (kit.hangar) {
+      const plate = new THREE.CylinderGeometry(0.095, 0.098, 0.005, 28);
+      plate.rotateX(Math.PI / 2);
+      kit.add(s.group, plate, { ...spec, look: 'paint', noCast: true }, radialFrame(R + 0.0015, phi, yA));
+      kit.add(s.group, boltRingFlat(0.084, 8), { ...spec, look: 'stainless', noCast: true }, radialFrame(R + 0.004, phi, yA));
+    }
+  }
+  radome.dispose();
+  if (!kit.hangar) return;
+  const inner = { ...spec, internal: true };
+  // boxes: azimuth (deg), width, height, radial depth, look
+  const boxes: { phi: number; w: number; h: number; d: number; look: string }[] = [
+    { phi: 162, w: 0.32, h: 0.26, d: 0.2, look: 'aluDark' }, // flight computer A
+    { phi: 180, w: 0.2, h: 0.18, d: 0.18, look: 'blackAnod' }, // inertial measurement unit
+    { phi: 198, w: 0.32, h: 0.26, d: 0.2, look: 'aluDark' }, // flight computer B
+    { phi: 240, w: 0.22, h: 0.16, d: 0.16, look: 'aluMilled' }, // GNSS receiver
+    { phi: 254, w: 0.26, h: 0.22, d: 0.18, look: 'blackAnod' }, // battery
+  ].map((b) => ({ ...b, phi: b.phi * DEG }));
+  const yB = 37.12; // box centres: clear of the LOX dome below and the ring frame above
+  const rPlate = R - 0.045; // cold plates bolted to the stringers
+  for (const [a, b] of [
+    [150, 210],
+    [232, 262],
+  ]) {
+    const phiC = ((a + b) / 2) * DEG;
+    const w = ((b - a) * DEG) * rPlate;
+    kit.add(s.group, bevelBox(w, 0.36, 0.012, 0.004), { ...inner, look: 'aluMilled' }, radialFrame(rPlate, phiC, yB));
+    // standoffs to the skin stringers at the plate corners
+    for (const dx of [-w / 2 + 0.05, w / 2 - 0.05])
+      for (const dy of [-0.15, 0.15]) {
+        const so = new THREE.CylinderGeometry(0.012, 0.012, 0.03, 8);
+        so.rotateX(Math.PI / 2);
+        so.translate(dx, dy, 0.02);
+        kit.add(s.group, so, { ...inner, look: 'stainless' }, radialFrame(rPlate, phiC, yB));
+      }
+  }
+  const ports: THREE.Vector3[] = [];
+  for (const b of boxes) {
+    const rc = rPlate - 0.006 - b.d / 2;
+    kit.add(s.group, bevelBox(b.w, b.h, b.d, 0.012), { ...inner, look: b.look }, radialFrame(rc, b.phi, yB));
+    // cooling fins on top of the computers, connector strip on the inboard face
+    if (b.look === 'aluDark')
+      for (let k = 0; k < 7; k++) {
+        const fin = new THREE.BoxGeometry(0.006, 0.028, b.d * 0.8);
+        fin.translate(-b.w * 0.42 + (k / 6) * b.w * 0.84, b.h / 2 + 0.013, 0);
+        kit.add(s.group, fin, { ...inner, look: 'aluDark' }, radialFrame(rc, b.phi, yB));
+      }
+    kit.add(s.group, new THREE.BoxGeometry(b.w * 0.62, 0.05, 0.02), { ...inner, look: 'stainless' }, radialFrame(rc - b.d / 2 - 0.008, b.phi, yB + b.h * 0.2));
+    ports.push(polar(rc - b.d / 2 - 0.03, b.phi, yB + b.h * 0.2));
+  }
+  // harness: box connectors -> a ring bundle above the boxes -> down to the raceway pass-through
+  const yH = 37.3;
+  const rH = R - 0.14;
+  const ring: THREE.Vector3[] = [];
+  for (let d = 158; d <= 262; d += 4) ring.push(polar(rH, d * DEG, yH));
+  // (the pass-through sits above the LOX dome, under the RCS pod, where the raceway ends)
+  ring.push(polar(R - 0.09, 270 * DEG, 36.86), polar(R - 0.035, 274 * DEG, 36.68));
+  kit.add(s.group, pipe(ring, 0.02, 0.1, 8, 10), { ...inner, look: 'rubber' });
+  for (const p of ports) kit.add(s.group, pipe([p, p.clone().setY(yH - 0.02), polar(rH, Math.atan2(p.x, p.z), yH)], 0.009, 0.04, 6), { ...inner, look: 'rubber' });
+  kit.add(s.group, bevelBox(0.12, 0.1, 0.02, 0.004), { ...inner, look: 'aluMilled' }, radialFrame(R - 0.015, 274 * DEG, 36.68));
+  // antenna coax: from each antenna along the skirt to the receiver
+  const rx = boxes[3];
+  const coax = (from: number, to: number) => {
+    const pts: THREE.Vector3[] = [polar(R - 0.02, from, yA)];
+    const n = Math.max(2, Math.ceil(Math.abs(to - from) / (6 * DEG)));
+    for (let i = 0; i <= n; i++) pts.push(polar(R - 0.065, from + ((to - from) * i) / n, 37.56));
+    pts.push(polar(rPlate - 0.02, to, yB + rx.h / 2 + 0.03));
+    kit.add(s.group, pipe(pts, 0.006, 0.05, 6, 8), { ...inner, look: 'blackAnod' });
+  };
+  coax(antennas[1], rx.phi);
+  coax(Math.PI * 2, rx.phi);
+}
+
+/** A small ring of screw heads (facing +Z) for antenna doubler plates. */
+function boltRingFlat(r: number, n: number): THREE.BufferGeometry {
+  const list: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const h = new THREE.CylinderGeometry(0.006, 0.006, 0.003, 6);
+    h.rotateX(Math.PI / 2);
+    h.translate(r * Math.cos(a), r * Math.sin(a), 0);
+    list.push(h);
+  }
+  return mergeAll(list);
+}
+
 export function buildRecovery(ctx: Ctx, thrust: Section, fwd: Section) {
   legs(ctx, thrust);
   fins(ctx, fwd);
   rcsPods(ctx, fwd);
+  avionicsBay(ctx, fwd);
   poseLegs(ctx, 0);
   poseFins(ctx, 0, 0);
 }

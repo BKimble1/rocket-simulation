@@ -18,17 +18,47 @@ import type { EngineDetail } from './types';
 export type Role = 'keep' | 'front' | 'cap' | 'fcap' | 'capx';
 export type NodeId = 'fixed' | 'cross' | 'gimbal' | 'rotor' | 'mov' | 'mfv';
 
+/**
+ * Qualitative temperature class for the thermal lens (userData.thermal): 0 cryogenic (touches
+ * LOX), 1 ambient (RP-1, valves, structure), 2 warm, 3 hot (turbine side, regen nozzle, turbine
+ * exhaust), 4 very hot (holds combustion gas: chamber, throat, gas generator, extension).
+ */
+export type Thermal = 0 | 1 | 2 | 3 | 4;
+
 export interface Tag {
   part: PartId;
   mat: EMat;
   node?: NodeId;
   /** Belongs to the removable front half. */
   front?: boolean;
+  /** Thermal class; when omitted it follows from the part and material (see thermalOf). */
+  thermal?: Thermal;
+}
+
+/** Default thermal class of engine geometry by part and material (explicit tags override it). */
+export function thermalOf(part: PartId, mat: EMat): Thermal {
+  switch (part) {
+    case 'combustion-chamber':
+    case 'gas-generator':
+    case 'nozzle-extension':
+      return 4;
+    case 'nozzle':
+      return 3;
+    case 'injector':
+      // the faceplate, baffles and drilled face see the combustion gas; the body carries propellant
+      return mat === 'faceplate' || mat === 'soot' || mat === 'inconel' ? 4 : 1;
+    case 'turbopump':
+      return mat === 'inconel' || mat === 'inconelHot' ? 3 : 1;
+    default:
+      return 1;
+  }
 }
 
 interface Bucket {
   /** Triangles per part (the mesh is tagged with the dominant one when parts are merged). */
   parts: Map<PartId, number>;
+  /** Triangles per thermal class (merged meshes take the dominant class). */
+  therm: Map<Thermal, number>;
   mat: EMat;
   node: NodeId;
   role: Role;
@@ -108,29 +138,32 @@ export class Kit {
     return this.detail === 'hangar' ? (2.2 * Math.PI) / 180 : this.detail === 'flight' ? (5 * Math.PI) / 180 : (9 * Math.PI) / 180;
   }
 
-  private push(g: THREE.BufferGeometry | null | undefined, part: PartId, mat0: EMat, node0: NodeId, role: Role) {
+  private push(g: THREE.BufferGeometry | null | undefined, part: PartId, mat0: EMat, node0: NodeId, role: Role, thermal?: Thermal) {
     if (!g || !g.attributes.position || g.attributes.position.count === 0) return;
     const mat = this.matMap[mat0] ?? mat0;
+    const th = thermal ?? thermalOf(part, mat0);
     // the cluster engine hides its gimbal cross under the thrust structure: it rides on the mount
     const node = this.detail === 'cluster' && node0 === 'cross' ? 'fixed' : node0;
     if (role === 'cap' || role === 'fcap') hatchUV(g);
     const pv = this.pivots[node];
     if (pv.lengthSq() > 0) g.translate(-pv.x, -pv.y, -pv.z);
     // section faces of the removable half are never picked: one mesh per hatch style will do
-    const key = role === 'fcap' ? `${node}|fcap|${HATCH_OF[mat]}` : this.mergeParts ? `${node}|${role}|${mat}` : `${node}|${role}|${part}|${mat}`;
+    // hangar meshes are split by thermal class too (LOX and RP-1 lines share part and material)
+    const key = role === 'fcap' ? `${node}|fcap|${HATCH_OF[mat]}` : this.mergeParts ? `${node}|${role}|${mat}` : `${node}|${role}|${part}|${mat}|${th}`;
     let b = this.buckets.get(key);
     if (!b) {
-      b = { parts: new Map(), mat, node, role, geos: [] };
+      b = { parts: new Map(), therm: new Map(), mat, node, role, geos: [] };
       this.buckets.set(key, b);
     }
     const tris = g.index ? g.index.count / 3 : g.attributes.position.count / 3;
     b.parts.set(part, (b.parts.get(part) ?? 0) + tris);
+    b.therm.set(th, (b.therm.get(th) ?? 0) + tris);
     b.geos.push(g);
   }
 
   /** Surface geometry given in the engine frame. */
   add(g: THREE.BufferGeometry | null | undefined, t: Tag) {
-    this.push(g, t.part, t.mat, t.node ?? 'gimbal', t.front ? 'front' : 'keep');
+    this.push(g, t.part, t.mat, t.node ?? 'gimbal', t.front ? 'front' : 'keep', t.thermal);
   }
 
   /** Hatched section face geometry. */
@@ -139,7 +172,7 @@ export class Kit {
       g?.dispose();
       return;
     }
-    this.push(g, t.part, t.mat, t.node ?? 'gimbal', t.front ? 'fcap' : 'cap');
+    this.push(g, t.part, t.mat, t.node ?? 'gimbal', t.front ? 'fcap' : 'cap', t.thermal);
   }
 
   /** Section detail in its own (non-hatched) material, shown only in the section view. */
@@ -148,7 +181,7 @@ export class Kit {
       g?.dispose();
       return;
     }
-    this.push(g, t.part, t.mat, t.node ?? 'gimbal', 'capx');
+    this.push(g, t.part, t.mat, t.node ?? 'gimbal', 'capx', t.thermal);
   }
 
   sweep(r: SweepResult, t: Tag) {
@@ -177,6 +210,14 @@ export class Kit {
           best = n;
           part = p;
         }
+      let thermal: Thermal = 1;
+      best = -1;
+      for (const [th, n] of b.therm)
+        if (n > best) {
+          best = n;
+          thermal = th;
+        }
+      mesh.userData.thermal = thermal;
       const shown = alias ? alias(part) : part;
       mesh.userData.part = shown;
       if (shown !== part) mesh.userData.subPart = part;

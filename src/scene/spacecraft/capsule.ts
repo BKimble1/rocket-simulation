@@ -584,8 +584,11 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
   }
 
   // ── forward bay: parachute packs and drogue mortars around the tunnel
-  const bags: THREE.Mesh[] = [];
-  const mortars: THREE.Object3D[] = [];
+  // packs and mortar lids each in one group (merged; hidden as the chutes leave)
+  const bags = new THREE.Group();
+  cap.add(bags);
+  const lids = new THREE.Group();
+  cap.add(lids);
   {
     const y0 = yFwd + 0.02;
     const y1 = 2.78;
@@ -609,9 +612,8 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
       const a0 = (k * 120 + 8) * DEG;
       const a1b = a0 + 84 * DEG;
       const { skin, caps } = sweep(bagPoly(), true, { phi0: a0, phi1: a1b, segs: kit.seg(24, 8), caps: true, crease: 0.6 });
-      const bm = kit.mesh(skin, tex, 'parachutes', 'textiles', cap);
-      bags.push(bm);
-      if (caps) bags.push(kit.mesh(caps, tex, 'parachutes', 'textiles', cap));
+      kit.mesh(skin, tex, 'parachutes', 'textiles', bags);
+      if (caps) kit.mesh(caps, tex, 'parachutes', 'textiles', bags);
     }
     for (const deg of [100, 340]) {
       const phi = deg * DEG;
@@ -621,8 +623,7 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
       cap.add(mg);
       kit.mesh(cyl(0.11, 0.11, 0.42, 24, true), P.aluMilled(), 'parachutes', 'textiles', mg, 0, 0.21, 0);
       kit.mesh(cyl(0.11, 0.11, 0.02, 24), P.graphite(), 'parachutes', 'textiles', mg, 0, 0.01, 0);
-      const lid = kit.mesh(cyl(0.115, 0.115, 0.02, 24), P.graphite(), 'parachutes', 'textiles', mg, 0, 0.43, 0);
-      mortars.push(lid);
+      kit.mesh(cyl(0.115, 0.115, 0.02, 24), P.graphite(), 'parachutes', 'textiles', lids, mg.position.x, y0 + 0.43, mg.position.z);
     }
   }
 
@@ -717,8 +718,8 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
       const chutesOut = s.capDrogue > 0.001 || s.capMain > 0.001;
       cover.visible = !chutesOut;
       nose.rotation.z = 125 * DEG * s.capNoseCone;
-      for (const b of bags) b.visible = s.capMain < 0.02;
-      for (const m of mortars) m.visible = s.capDrogue < 0.01;
+      bags.visible = s.capMain < 0.02;
+      lids.visible = s.capDrogue < 0.01;
       chutes.set(s.capDrogue, s.capMain);
     },
     dispose() {},

@@ -51,8 +51,8 @@ describe('engines', () => {
   it('sea-level thrust and Isp come out of T = mdot Isp_vac g0 - p A_exit consistent with the spec', () => {
     const tSL = thrustOf(ENG_S1, 1, 1, P0);
     expect(Math.abs(tSL - E1.thrustSL!) / E1.thrustSL!).toBeLessThan(1e-9);
-    // the spec's sea-level pair implies a mass flow 0.36 % different from the vacuum pair's
-    // (760/835 vs 285/312): with the vacuum mass flow, sea-level Isp comes out 284.0 s
+    // the spec's pairs are consistent (744/835 kN, 278/312 s): with the vacuum mass flow the
+    // sea-level Isp comes out 278.0 s
     const ispSL = tSL / (ENG_S1.mdot * G0);
     expect(Math.abs(ispSL - E1.ispSL!) / E1.ispSL!).toBeLessThan(0.005);
     expect(thrustOf(ENG_S1, 1, 1, 0)).toBeCloseTo(E1.thrustVac, 3);
@@ -66,13 +66,14 @@ describe('engines', () => {
     const mf = m0 - S1.propellant;
     const dvVac = E1.ispVac * G0 * Math.log(m0 / mf);
     const dvSL = E1.ispSL! * G0 * Math.log(m0 / mf);
-    // m0 = 445.2 t, mf = 115.2 t: ln(3.865) = 1.352, so 4.14 km/s with the vacuum Isp and
-    // 3.78 km/s with the sea-level Isp (the real flight gets less: gravity and drag losses)
+    // m0 = 445.2 t, mf = 115.2 t: ln(3.865) = 1.352, so 4.14 km/s with the vacuum Isp (312 s)
+    // and 3.69 km/s with the sea-level Isp (278 s); the real flight gets less: gravity and drag
+    // losses, and a recovered booster keeps a large reserve
     expect(m0).toBe(445_200);
     expect(dvVac).toBeGreaterThan(4120);
     expect(dvVac).toBeLessThan(4150);
-    expect(dvSL).toBeGreaterThan(3765);
-    expect(dvSL).toBeLessThan(3790);
+    expect(dvSL).toBeGreaterThan(3675);
+    expect(dvSL).toBeLessThan(3695);
   });
 });
 

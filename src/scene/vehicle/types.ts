@@ -57,7 +57,12 @@ export interface VehicleViewState {
   highlight: PartId | null;
   /** Parts to fade (e.g. everything except the selected system). */
   dimOthers: boolean;
-  lens: 'systems' | 'materials';
+  /**
+   * systems: normal look; materials: coloured by material family; thermal: coloured by the
+   * qualitative temperature a part sees in operation (cryogenic blue, ambient, warm, hot,
+   * very hot), with a legend in the interface.
+   */
+  lens: 'systems' | 'materials' | 'thermal';
   material: MaterialId | null;
 }
 

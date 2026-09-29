@@ -124,22 +124,33 @@ export default function Dev() {
     return list.map((l) => ({ ...l, sprite: labelSprite(l.text) }));
   }, [model, demo]);
 
+  // the framing (URL or per-kind default) is held until the viewer orbits or zooms, so a later
+  // hangar reset elsewhere in the app does not move the dev camera away
   const first = useRef(true);
+  const userMoved = useRef(false);
   const tmp = useMemo(() => new THREE.Vector3(), []);
+  const shot = useMemo(() => {
+    const c = bounds.getCenter(new THREE.Vector3());
+    const size = bounds.getSize(new THREE.Vector3());
+    return {
+      dist: q.has('dist') ? num('dist', 10) : Math.max(4, Math.max(size.y, size.x, size.z) * (kind === 'station' ? 1.35 : 2.1)),
+      target: new THREE.Vector3(num('tx', 0), q.has('ty') ? num('ty', 0) : c.y, num('tz', 0)),
+      az: num('az', 35),
+      el: num('el', kind === 'station' ? -18 : 10),
+      fov: num('fov', 32),
+    };
+  }, [bounds, kind]);
   useFrame(() => {
-    if (first.current) {
-      first.current = false;
-      // default framing per kind unless the URL sets it
+    const inp = director.input;
+    if (inp.dx || inp.dy || inp.zoom) userMoved.current = true;
+    if (!userMoved.current) {
       const g = director.hangarGoal;
-      const c = bounds.getCenter(new THREE.Vector3());
-      const size = bounds.getSize(new THREE.Vector3());
-      if (!q.has('dist')) g.dist = Math.max(4, Math.max(size.y, size.x, size.z) * (kind === 'station' ? 1.35 : 2.1));
-      if (!q.has('ty')) g.target.set(q.has('tx') ? num('tx', 0) : 0, c.y, q.has('tz') ? num('tz', 0) : 0);
-      if (!q.has('el')) g.el = kind === 'station' ? -18 : 10;
-      if (!q.has('fov')) g.fov = 32;
-      Object.assign(director.hangarShown, { ...g, target: g.target.clone() });
+      Object.assign(g, { dist: shot.dist, az: shot.az, el: shot.el, fov: shot.fov });
+      g.target.copy(shot.target);
       director.hangarMinDist = 0.5;
+      if (first.current) Object.assign(director.hangarShown, { ...g, target: g.target.clone() });
     }
+    first.current = false;
     if (demo) {
       const p = q.has('p') ? num('p', 0) : (frame.decor % 12) / 12;
       model.animate(frame.decor, demo, p);

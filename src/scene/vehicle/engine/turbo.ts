@@ -202,6 +202,7 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, _se
   const s = detail === 'hangar' ? 48 : detail === 'flight' ? 20 : 14;
   const tp = (mat: Tag['mat']): Tag => ({ part: 'turbopump', mat });
   const gg = (mat: Tag['mat']): Tag => ({ part: 'gas-generator', mat });
+  const loxT: Tag = { part: 'turbopump', mat: 'aluminum', thermal: 0 };
   const L = (pts: V2[], t: Tag, r = 0.0025, holes: V2[][] = []) => lathe(k, [{ pts: detail === 'hangar' ? roundPoly(pts, r, 1) : pts }, ...holes.map((h) => ({ pts: h, hole: true }))], t, s, { centre: c });
 
   if (detail === 'cluster') {
@@ -237,6 +238,7 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, _se
     return;
   }
 
+  // LOX-wetted casing and volute: cryogenic in the thermal lens
   // ── LOX pump casing: inlet flange, shroud (A) and back wall with bearing flange (B) ──
   L(
     [
@@ -254,7 +256,7 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, _se
       [0.076, -0.036],
       [0.076, 0],
     ],
-    tp('aluminum'),
+    loxT,
   );
   L(
     [
@@ -270,7 +272,7 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, _se
       [0.03, -0.15],
       [0.088, -0.146],
     ],
-    tp('aluminum'),
+    loxT,
   );
   // ── bearing and seal housing between the pumps ──
   L(
@@ -411,13 +413,13 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, _se
   );
 
   // ── volutes (scrolls) and the fuel side inlet ──
-  const vol = (y: number, mat: Tag['mat']) => {
+  const vol = (y: number, t: Tag) => {
     const { frames, rho } = voluteFrames(c, y, s);
     const res = clippedTube(frames, { ro: rho, ri: detail === 'hangar' ? (t) => rho(t) - 0.005 : undefined, segs: detail === 'hangar' ? 20 : 10, clipZ: k.section ? 0 : undefined, endCaps: true });
-    k.tube(res, tp(mat));
+    k.tube(res, t);
   };
-  vol(TP.loxVoluteY, 'aluminum');
-  vol(TP.fuelVoluteY, 'aluminum');
+  vol(TP.loxVoluteY, loxT);
+  vol(TP.fuelVoluteY, tp('aluminum'));
   {
     // side inlet stub of the fuel plenum (front, faces the feed duct)
     const f = [V(c.x, TP.fuelInletY, 0.07), V(c.x, TP.fuelInletY, 0.12)].map((p, i) => ({ p, n: V(1, 0, 0), b: V(0, 1, 0), u: i * 0.05 }));
@@ -523,14 +525,16 @@ export function buildTurbomachinery(k: Kit, d: Design, detail: EngineDetail, _se
     [0.0845, -0.146],
     [0.02, -0.15],
   ];
-  full(loxHub, R, 0.002);
+  // the LOX inducer and impeller run in liquid oxygen (cryogenic in the thermal lens)
+  const R0: Tag = { ...R, thermal: 0 };
+  full(loxHub, R0, 0.002);
   const hubY = (pts: V2[]) => (r: number) => {
     for (let i = 1; i < 5; i++) if (r <= pts[i][0]) return pts[i - 1][1] + ((pts[i][1] - pts[i - 1][1]) * (r - pts[i - 1][0])) / (pts[i][0] - pts[i - 1][0]);
     return pts[4][1];
   };
-  k.add(inducer(c, 0.024, 0.066, -0.05, -0.1, 4.3, 3, 0.0022), R);
-  k.add(vanes(c, 0.03, 0.084, hubY(loxHub), (r) => (r < 0.066 ? -0.104 : -0.104 - ((r - 0.066) / 0.018) * 0.01), 6, 1.1, 0.0026), R);
-  k.add(vanes(c, 0.055, 0.084, hubY(loxHub), (r) => -0.104 - Math.max(0, (r - 0.066) / 0.018) * 0.01, 6, 0.75, 0.0024, TAU / 12), R);
+  k.add(inducer(c, 0.024, 0.066, -0.05, -0.1, 4.3, 3, 0.0022), R0);
+  k.add(vanes(c, 0.03, 0.084, hubY(loxHub), (r) => (r < 0.066 ? -0.104 : -0.104 - ((r - 0.066) / 0.018) * 0.01), 6, 1.1, 0.0026), R0);
+  k.add(vanes(c, 0.055, 0.084, hubY(loxHub), (r) => -0.104 - Math.max(0, (r - 0.066) / 0.018) * 0.01, 6, 0.75, 0.0024, TAU / 12), R0);
   // fuel inducer and impeller (titanium)
   const RT: Tag = { part: 'turbopump', mat: 'titanium', node: 'rotor' };
   full(

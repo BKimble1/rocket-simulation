@@ -95,22 +95,24 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   };
 
   // ── feed ducts below the gimbal bellows (engine side) ──
+  // thermal classes: LOX-wetted hardware is cryogenic (0), RP-1 lines and valves ambient (1)
   const eng = (mat: Tag['mat']): Tag => ({ part: 'engine', mat });
+  const lox: Tag = { part: 'engine', mat: 'stainless', thermal: 0 };
   const x = d.tpX;
-  pipe([V(x, TP.bellowsY[0] + 0.001, 0), V(x, TP.loxInletTop + 0.012, 0)], TP.loxDuctR, eng('stainless'), { ri: TP.loxDuctR - 0.004, segs: hangar ? 32 : 14 });
-  flange(V(x, TP.loxInletTop + 0.012, 0), V(0, 1, 0), TP.loxDuctR + 0.004, eng('stainless'), 12);
+  pipe([V(x, TP.bellowsY[0] + 0.001, 0), V(x, TP.loxInletTop + 0.012, 0)], TP.loxDuctR, lox, { ri: TP.loxDuctR - 0.004, segs: hangar ? 32 : 14 });
+  flange(V(x, TP.loxInletTop + 0.012, 0), V(0, 1, 0), TP.loxDuctR + 0.004, lox, 12);
   const fz = TP.fuelDuctZ;
   pipe([V(x, TP.bellowsY[0] + 0.001, fz), ...R.fuelInlet.slice(1)], TP.fuelDuctR, eng('stainless'), { ri: TP.fuelDuctR - 0.004, bend: 0.07, segs: hangar ? 28 : 12 });
   flange(V(x, TP.fuelInletY, 0.125), V(0, 0, 1), TP.fuelDuctR, eng('stainless'), 10);
 
   // ── LOX discharge (diffuser from the volute), MOV, into the dome ──
   const mvTag: Tag = { part: 'main-valves', mat: 'steel' };
-  pipe(R.loxDischarge, (_p, s) => TP.loxLineR - 0.01 * Math.max(0, 1 - s * 12), eng('stainless'), { ri: (_p, s) => TP.loxLineR - 0.005 - 0.01 * Math.max(0, 1 - s * 12), bend: 0.1, segs: hangar ? 28 : 12, step: 0.025 });
+  pipe(R.loxDischarge, (_p, s) => TP.loxLineR - 0.01 * Math.max(0, 1 - s * 12), lox, { ri: (_p, s) => TP.loxLineR - 0.005 - 0.01 * Math.max(0, 1 - s * 12), bend: 0.1, segs: hangar ? 28 : 12, step: 0.025 });
   const mov = V(d.mov.x, d.mov.y, d.mov.z);
-  pipe(R.movToDome, TP.loxLineR, { part: 'injector', mat: 'stainless' }, { ri: TP.loxLineR - 0.005, segs: hangar ? 28 : 12 });
+  pipe(R.movToDome, TP.loxLineR, { part: 'injector', mat: 'stainless', thermal: 0 }, { ri: TP.loxLineR - 0.005, segs: hangar ? 28 : 12 });
   flange(R.pts.movIn.clone().add(V(0.004, 0, 0)), V(1, 0, 0), TP.loxLineR, mvTag, 10);
   flange(R.pts.movOut.clone().add(V(-0.004, 0, 0)), V(1, 0, 0), TP.loxLineR, mvTag, 10);
-  flange(R.pts.domePort.clone().add(V(-0.03, 0, 0)), V(1, 0, 0), TP.loxLineR, { part: 'injector', mat: 'stainless' }, 10);
+  flange(R.pts.domePort.clone().add(V(-0.03, 0, 0)), V(1, 0, 0), TP.loxLineR, { part: 'injector', mat: 'stainless', thermal: 0 }, 10);
   // valve body: ball cavity with seats, sectioned about the flow axis (X)
   const movBody: V2[] = roundPoly(
     [
@@ -212,7 +214,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   // ── fuel discharge, MFV (butterfly), down the bell to the coolant inlet manifold ──
   pipe(R.fuelDischarge, (_p, s) => TP.fuelLineR - 0.008 * Math.max(0, 1 - s * 14), eng('stainless'), { ri: (_p, s) => TP.fuelLineR - 0.004 - 0.008 * Math.max(0, 1 - s * 14), bend: 0.09, segs: hangar ? 24 : 12, step: 0.025 });
   const mfv = V(d.mfv.x, d.mfv.y, d.mfv.z);
-  pipe(R.fuelDown, TP.fuelLineR, { part: 'nozzle', mat: 'stainless' }, { ri: TP.fuelLineR - 0.004, bend: 0.2, segs: hangar ? 24 : 12 });
+  pipe(R.fuelDown, TP.fuelLineR, { part: 'nozzle', mat: 'stainless', thermal: 1 }, { ri: TP.fuelLineR - 0.004, bend: 0.2, segs: hangar ? 24 : 12 });
   flange(R.pts.mfvIn.clone().add(V(0, -0.004, 0)), V(0, 1, 0), TP.fuelLineR, mvTag, 10);
   flange(R.pts.mfvOut.clone().add(V(0, 0.004, 0)), V(0, 1, 0), TP.fuelLineR, mvTag, 10);
   const mfvBody: V2[] = roundPoly(
@@ -270,15 +272,15 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   // ── gas generator taps and valves ──
   const tapT = { part: 'gas-generator', mat: 'stainless' } as Tag;
   if (detail !== 'cluster') {
-    pipe(R.loxTap, TP.tapR, tapT, { ri: TP.tapR - 0.002, bend: 0.05, segs: hangar ? 12 : 8 });
-    pipe(R.fuelTap, TP.tapR, tapT, { ri: TP.tapR - 0.002, bend: 0.05, segs: hangar ? 12 : 8 });
+    pipe(R.loxTap, TP.tapR, { ...tapT, thermal: 0 }, { ri: TP.tapR - 0.002, bend: 0.05, segs: hangar ? 12 : 8 });
+    pipe(R.fuelTap, TP.tapR, { ...tapT, thermal: 1 }, { ri: TP.tapR - 0.002, bend: 0.05, segs: hangar ? 12 : 8 });
     for (const p of [V(0.5, -0.6, -0.14), V(0.3, -0.62, -0.1525)]) {
       const body = new THREE.CylinderGeometry(0.02, 0.02, 0.06, 20);
       body.translate(p.x, p.y, p.z);
-      k.add(body, { part: 'gas-generator', mat: 'steel' });
+      k.add(body, { part: 'gas-generator', mat: 'steel', thermal: 1 });
       const box = new RoundedBoxGeometry(0.045, 0.04, 0.035, 2, 0.005);
       box.translate(p.x, p.y + 0.01, p.z - 0.035);
-      k.add(box, { part: 'gas-generator', mat: 'aluminum' });
+      k.add(box, { part: 'gas-generator', mat: 'aluminum', thermal: 1 });
     }
   }
 
@@ -294,7 +296,8 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     };
     return TP.exhaustR + 0.016 * bulge(p.y);
   };
-  const exT: Tag = { part: 'gas-generator', mat: 'inconelHot' };
+  // turbine exhaust (after expansion through the turbine): hot rather than very hot
+  const exT: Tag = { part: 'gas-generator', mat: 'inconelHot', thermal: 3 };
   if (detail === 'cluster') pipe(ex, TP.exhaustR, exT, { bend: 0.1 });
   else {
     // upper duct (whole: it lies behind the section plane), HX section cut on its own axis
@@ -319,7 +322,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
       0.002,
       2,
     );
-    axisLathe(k, lip.map(([r, s]) => [r, s] as V2), { part: 'gas-generator', mat: 'soot' }, V(run.x, run.y, run.z), V(0, 1, 0), hangar ? 32 : 14);
+    axisLathe(k, lip.map(([r, s]) => [r, s] as V2), { part: 'gas-generator', mat: 'soot', thermal: 3 }, V(run.x, run.y, run.z), V(0, 1, 0), hangar ? 32 : 14);
     flange(V(run.x, hxT + 0.07, run.z), V(0, 1, 0), TP.exhaustR, exT, 12);
     flange(V(run.x, hxB - 0.07, run.z), V(0, 1, 0), TP.exhaustR, exT, 12);
     flange(R.pts.exhaustStart.clone().add(V(0, 0, -0.012)), V(0, 0, 1), TP.exhaustR - 0.006, exT, 10);
@@ -333,7 +336,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
         coil.push(V(run.x + 0.052 * Math.sin(a), hxT - 0.005 - (hxT - hxB - 0.01) * t, run.z + 0.052 * Math.cos(a)));
       }
       const cf = transportFrames({ p: coil, t: coil.map((_p, i) => coil[Math.min(coil.length - 1, i + 1)].clone().sub(coil[Math.max(0, i - 1)]).normalize()), len: coil.map((_, i) => i * 0.01) });
-      k.add(clippedTube(cf, { ro: 0.0065, segs: 8 }).back.surf, { part: 'gas-generator', mat: 'bronze' });
+      k.add(clippedTube(cf, { ro: 0.0065, segs: 8 }).back.surf, { part: 'gas-generator', mat: 'bronze', thermal: 3 });
     }
     // brackets from the duct to the bell hatbands
     for (const y of [-1.3, -1.52]) {
@@ -347,7 +350,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
       const br = new RoundedBoxGeometry(0.03, 0.012, len + 0.01, 2, 0.003);
       br.lookAt(b.clone().sub(a));
       br.translate((a.x + b.x) / 2, y, (a.z + b.z) / 2);
-      k.add(br, { part: 'engine', mat: 'inconel' });
+      k.add(br, { part: 'engine', mat: 'inconel', thermal: 3 });
     }
   }
 
@@ -377,7 +380,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
     const b = V(d.rOut(-0.76) - 0.004, -0.76, -0.02);
     const st = new RoundedBoxGeometry(a.x - b.x, 0.018, 0.03, 2, 0.004);
     st.translate((a.x + b.x) / 2, -0.76, -0.035);
-    k.add(st, { part: 'gas-generator', mat: 'inconel' });
+    k.add(st, { part: 'gas-generator', mat: 'inconel', thermal: 3 });
   }
 
   // ── igniter: TEA-TEB cartridge, valve block, lines to the injector and to the gas generator ──
@@ -419,7 +422,7 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   pipe(R.igniterToGG, 0.0055, { part: 'igniter', mat: 'stainless' }, { bend: 0.05, segs: 10 });
 
   // ── helium lines from the heat exchanger up to the stage interface ──
-  for (const h of R.helium) pipe(h, 0.0062, { part: 'gas-generator', mat: 'stainless' }, { bend: 0.06, segs: 10 });
+  for (const h of R.helium) pipe(h, 0.0062, { part: 'gas-generator', mat: 'stainless', thermal: 1 }, { bend: 0.06, segs: 10 });
 
   // ── wire harnesses from the junction box to sensors and valve actuators ──
   const J = R.pts.junction;

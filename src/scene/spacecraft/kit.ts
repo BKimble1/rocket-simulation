@@ -372,6 +372,7 @@ export class Kit {
     const m = new THREE.Mesh(geo, mat);
     m.userData.part = part;
     m.userData.material = material;
+    m.userData.thermal = thermalClass(part, material);
     m.castShadow = true;
     m.receiveShadow = true;
     m.position.set(x, y, z);
@@ -496,8 +497,8 @@ export class Kit {
    * Merge the static meshes under every group per (part, material, look) into single meshes,
    * keeping animated hierarchies (groups) intact. Then drop geometries no longer referenced.
    */
-  finalize(root: THREE.Object3D): void {
-    mergeTree(root);
+  finalize(root: THREE.Object3D, animated: Set<THREE.Object3D> = new Set()): void {
+    mergeTree(root, animated);
     const used = new Set<THREE.BufferGeometry>();
     root.traverse((o) => {
       const m = o as THREE.Mesh;
@@ -508,12 +509,48 @@ export class Kit {
     for (const g of used) this.geos.add(g);
   }
 
+  /**
+   * Move the meshes of static groups (transform and visibility never change) up into their
+   * parents, baking the group transform, until they reach an animated group or the body root, so
+   * the merge sees them as siblings. `animated` holds every object the pose or the cut can change.
+   */
+  flatten(root: THREE.Object3D, animated: Set<THREE.Object3D>): void {
+    const visit = (g: THREE.Object3D) => {
+      for (const c of [...g.children]) visit(c);
+      const p = g.parent;
+      if (g === root || !p || (g as THREE.Mesh).isMesh || animated.has(g) || !g.visible) return;
+      const s = g.scale;
+      if (Math.abs(s.x - s.y) > 1e-9 || Math.abs(s.x - s.z) > 1e-9) return;
+      g.updateMatrix();
+      for (const c of [...g.children]) {
+        const m = c as THREE.Mesh;
+        if (!m.isMesh || m.children.length || m.userData.keep || animated.has(m)) continue;
+        m.updateMatrix();
+        m.applyMatrix4(g.matrix);
+        p.add(m);
+      }
+    };
+    visit(root);
+  }
+
   dispose(): void {
     for (const g of this.geos) g.dispose();
     for (const m of this.ownMats) m.dispose();
     this.geos.clear();
     this.ownMats.clear();
   }
+}
+
+/**
+ * Thermal-lens class of a mesh (see scene/hangar/thermal.ts): the heat shield sees the entry
+ * peak, the backshell tiles and the engine bells are hot, everything else (MLI included) is
+ * treated as ambient.
+ */
+export function thermalClass(part: PartId, material: MaterialId): number {
+  if (part === 'heat-shield') return 4;
+  if (part === 'backshell-tps' || part === 'apogee-engine' || material === 'niobium-c103') return 3;
+  if (part === 'launch-abort-system' && material === 'nickel-superalloy') return 3;
+  return 1;
 }
 
 export function smooth(a: number, b: number, x: number): number {
@@ -525,15 +562,15 @@ export function clamp01(x: number): number {
   return Math.max(0, Math.min(1, x));
 }
 
-function mergeTree(g: THREE.Object3D): void {
-  for (const c of [...g.children]) if (!(c as THREE.Mesh).isMesh || c.children.length) mergeTree(c);
+function mergeTree(g: THREE.Object3D, animated: Set<THREE.Object3D>): void {
+  for (const c of [...g.children]) if (!(c as THREE.Mesh).isMesh || c.children.length) mergeTree(c, animated);
   const buckets = new Map<string, THREE.Mesh[]>();
   for (const c of g.children) {
     const m = c as THREE.Mesh;
-    if (!m.isMesh || m.children.length || m.userData.keep || Array.isArray(m.material)) continue;
+    if (!m.isMesh || m.children.length || m.userData.keep || animated.has(m) || Array.isArray(m.material)) continue;
     const geo = m.geometry;
     const sig = Object.keys(geo.attributes).sort().join(',');
-    const key = [m.userData.part, m.userData.material, (m.material as THREE.Material).uuid, sig, m.castShadow, m.receiveShadow, m.renderOrder, m.visible].join('|');
+    const key = [m.userData.part, m.userData.material, m.userData.thermal, (m.material as THREE.Material).uuid, sig, m.castShadow, m.receiveShadow, m.renderOrder, m.visible].join('|');
     let list = buckets.get(key);
     if (!list) buckets.set(key, (list = []));
     list.push(m);

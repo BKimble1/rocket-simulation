@@ -133,10 +133,9 @@ export function buildGlow(d: Design, segs: number) {
       const ig = Math.max(0, Math.min(1, o.ignite));
       const a = Math.max(burn, ig) * open;
       const g = ig / (ig + burn + 1e-6);
-      for (const m of [wallMat, coreMat]) {
-        m.color.copy(white).lerp(green, g);
-        m.opacity = a;
-      }
+      wallMat.color.copy(white).lerp(green, g);
+      coreMat.color.copy(wallMat.color);
+      wallMat.opacity = coreMat.opacity = a;
       wall.visible = core.visible = a > 0.005;
       ggMat.opacity = o.gg ? open : 0;
       ggGlow.visible = ggMat.opacity > 0.005;

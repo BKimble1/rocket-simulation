@@ -159,7 +159,7 @@ export function buildStation(kit: Kit): Built {
   kit.mesh(cyl(1.0, 1.0, 0.06, kit.seg(64, 24)), P.aluMilled(), ...T_MOD, al, 0, 5.0, 0);
   kit.mesh(new THREE.TorusGeometry(0.55, 0.04, 8, 40), P.aluMilled(), ...T_MOD, al, 0, 5.04, 0).rotation.x = Math.PI / 2;
 
-  // nadir docking port: conical adapter and an androgynous docking ring
+  // nadir docking port: conical adapter and a passive docking ring (capture plane at y = -3.24)
   const port = new THREE.Group();
   body.add(port);
   const pr = kit.seg(72, 24);
@@ -195,14 +195,16 @@ export function buildStation(kit: Kit): Built {
       ...T_MOD,
     ),
   );
+  // passive face ring: the capture plane at y = -3.24 (the capsule's active ring with its guide
+  // petals mates to it; nothing of the station protrudes below this plane)
   port.add(
     kit.mesh(
       sweep(
         [
-          [0.42, -3.2],
-          [0.5, -3.2],
-          [0.5, -3.24],
-          [0.42, -3.24],
+          [0.4, -3.24],
+          [0.62, -3.24],
+          [0.62, -3.2],
+          [0.4, -3.2],
         ],
         true,
         { segs: pr, crease: 0.3 },
@@ -211,15 +213,20 @@ export function buildStation(kit: Kit): Built {
       ...T_MOD,
     ),
   );
-  for (let k = 0; k < 3; k++) {
-    const a = (k / 3) * Math.PI * 2;
-    const petal = kit.mesh(rbox(0.26, 0.14, 0.012, 0.004, 1), P.aluMilled(), ...T_MOD, port, Math.sin(a) * 0.46, -3.3, Math.cos(a) * 0.46);
-    petal.rotation.set(0, a, 0, 'YXZ');
-    petal.rotateX(24 * DEG);
-  }
   for (let k = 0; k < 6; k++) {
     const a = (k / 6) * Math.PI * 2;
-    port.add(kit.mesh(strut(new THREE.Vector3(Math.sin(a) * 0.47, -3.16, Math.cos(a) * 0.47), new THREE.Vector3(Math.sin(a + 0.25) * 0.46, -3.2, Math.cos(a + 0.25) * 0.46), 0.012, 6), P.steel(), ...T_MOD));
+    port.add(kit.mesh(strut(new THREE.Vector3(Math.sin(a) * 0.5, -3.16, Math.cos(a) * 0.5), new THREE.Vector3(Math.sin(a + 0.25) * 0.5, -3.2, Math.cos(a + 0.25) * 0.5), 0.012, 6), P.steel(), ...T_MOD));
+  }
+  // capture strikers for the capsule's latches and guide-petal receptacles on the face ring
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    const st = kit.mesh(rbox(0.07, 0.03, 0.04, 0.006, 1), P.steel(), ...T_MOD, port, Math.sin(a) * 0.58, -3.225, Math.cos(a) * 0.58);
+    st.rotation.y = a;
+  }
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * Math.PI * 2 + Math.PI / 3;
+    const rc = kit.mesh(rbox(0.2, 0.012, 0.07, 0.004, 1), P.graphite(), ...T_MOD, port, Math.sin(a) * 0.46, -3.237, Math.cos(a) * 0.46);
+    rc.rotation.y = a;
   }
   // docking target on a stand-off beside the port and approach lights
   kit.mesh(box(0.5, 0.02, 0.5), P.white(), ...T_MOD, body, 1.3, -nodeR - 0.2, 0.9);

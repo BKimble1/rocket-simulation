@@ -5,8 +5,8 @@
  *
  * URL: kind=E-1|E-1V|both, detail=hangar|flight|cluster, cut=0..1 (anim=1 loops the cut),
  * flow=0|1 (flow overlay), run=0..1 (propellant flow: valves, glow), spin=<rpm shown>,
- * pitch=, yaw= (deg; tvc=1 sweeps them), gg=1, ignite=0..1. Camera: see dev/index.tsx; without
- * az / dist the harness frames the engines itself (the shared default frames a whole vehicle).
+ * pitch=, yaw= (deg; tvc=1 sweeps them), gg=1, ignite=0..1, thermal=1 (thermal lens). Camera: the
+ * parameters of dev/index.tsx, each overriding its part of the harness's own engine framing.
  */
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
@@ -20,13 +20,11 @@ import { frame } from '../scene/frame';
 import { M } from '../scene/materials';
 import { director } from '../director/director';
 import { engineDesign } from '../scene/vehicle/engine/design';
+import { applyThermal } from '../scene/hangar/thermal';
 
 const q = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
 const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d);
 const str = (k: string, d: string) => q.get(k) ?? d;
-
-/** Camera distance DevStage uses when the URL gives none (see DevStage.tsx). */
-const SHARED_DEFAULT_DIST = 110;
 
 /** Height of the nozzle exit above the floor on the display stands (m). */
 const CLEAR = 0.32;
@@ -83,22 +81,24 @@ export default function Dev() {
     };
   }, [gl, scene]);
 
-  // default framing for this harness (URL camera parameters still win). DevStage writes the
-  // shared defaults (dist 110, a whole vehicle) from its own effect, which can land after this
-  // component mounts (the canvas renders on its own schedule), so replace them whenever seen.
+  // Camera: the harness frames the engines itself; each URL camera parameter (az, el, dist, tx,
+  // ty, tz, fov) overrides its own component. DevStage (a whole vehicle: dist 110, ty 32) and the
+  // hangar scene (hangarHome when nothing is selected) write their defaults from effects that can
+  // land after this component mounts, so the harness re-applies its framing whenever the goal
+  // drifts from it, until the viewer takes the camera.
   const framing = useMemo(() => {
-    if (q.has('az') || q.has('dist')) return null;
-    return detail === 'cluster' ? [30, 16, 8.5, 0, 1.9] : kind === 'both' ? [24, 7, 13.5, 0.4, 3.1] : kind === 'E-1V' ? [24, 6, 10, 0, 3.4] : [26, 8, 5.4, 0, 1.55];
+    const [az, el, dist, tx, ty] = detail === 'cluster' ? [30, 16, 8.5, 0, 1.9] : kind === 'both' ? [22, 7, 12.5, 0.1, 3.3] : kind === 'E-1V' ? [24, 6, 12, 0, 3.4] : [26, 8, 5.4, 0, 1.55];
+    return { az: num('az', az), el: num('el', el), dist: num('dist', dist), tx: num('tx', tx), ty: num('ty', ty), tz: num('tz', 0), fov: num('fov', 36) };
   }, [kind, detail]);
+  const touched = useMemo(() => ({ v: false }), []);
   const applyFraming = () => {
-    if (!framing) return;
     const g = director.hangarGoal;
-    const [az, el, dist, tx, ty] = framing;
-    g.az = az;
-    g.el = el;
-    g.dist = dist;
-    g.target.set(tx, ty, 0);
-    g.fov = num('fov', 36);
+    const f = framing;
+    g.az = f.az;
+    g.el = f.el;
+    g.dist = f.dist;
+    g.target.set(f.tx, f.ty, f.tz);
+    g.fov = f.fov;
     Object.assign(director.hangarShown, { ...g, target: g.target.clone() });
   };
   useEffect(applyFraming, [framing]);
@@ -142,9 +142,12 @@ export default function Dev() {
       skirt.castShadow = skirt.receiveShadow = true;
       group.add(skirt);
     } else if (kind === 'both') {
-      add('E-1', -1.25, 0, true);
-      add('E-1V', 1.75, 0, true);
+      // side by side, stands clear of each other (the E-1V exit is 2.8 m across)
+      add('E-1', -1.95, 0, true);
+      add('E-1V', 1.05, 0, true);
     } else add(kind === 'E-1V' ? 'E-1V' : 'E-1', 0, 0, true);
+    // thermal=1: the hangar's thermal view (flat colour per userData.thermal class)
+    if (q.get('thermal') === '1') for (const e of engines) applyThermal(e.root, true);
     (window as unknown as Record<string, unknown>).__engineDev = { group, engines };
     return { group, engines };
   }, [detail, kind]);
@@ -158,7 +161,12 @@ export default function Dev() {
   }, [setup]);
 
   useFrame(() => {
-    if (framing && director.hangarGoal.dist === SHARED_DEFAULT_DIST) applyFraming();
+    if (director.input.active) touched.v = true;
+    if (!touched.v) {
+      const g = director.hangarGoal;
+      const f = framing;
+      if (g.dist !== f.dist || g.az !== f.az || g.el !== f.el || g.target.x !== f.tx || g.target.y !== f.ty || g.target.z !== f.tz) applyFraming();
+    }
     const t = frame.decor;
     const anim = q.get('anim') === '1';
     const cut = anim ? 0.5 - 0.5 * Math.cos(Math.min(1, t / 6) * Math.PI) : num('cut', 0);

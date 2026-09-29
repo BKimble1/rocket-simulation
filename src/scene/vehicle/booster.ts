@@ -10,7 +10,7 @@ import { buildEngine } from './engine/buildEngine';
 import type { EngineDetail } from './engine/types';
 import type { Ctx, EngineMount } from './ctx';
 import type { Section } from './kit';
-import { AZ, ENGINES, EXPLODE, DEG } from './layout';
+import { AZ, ENGINES, EXPLODE, DEG, INTERSTAGE_WALL, INTERSTAGE_INNER_R } from './layout';
 import { WALL } from './tanks';
 import { wall, dome, jointBand, solidRing, sandwich } from './structures';
 import { lathe, pipe, rod, radialFrame, bevelBox, platePlan, boltRing, rectPoly, mergeAll, loft, polar, type P2 } from './geom';
@@ -710,16 +710,17 @@ function forwardSkirt(ctx: Ctx) {
   if (kit.hangar) {
     // vent duct from the LOX forward dome to the port
     const yD = S.s1LoxFwdEquator + H * Math.sqrt(1 - (0.9 / WALL.domeA) ** 2);
-    kit.add(s.group, pipe([polar(0.9, AZ.vent, yD - 0.05), polar(0.9, AZ.vent, yD + 0.22), polar(1.45, AZ.vent, vy + 0.1), polar(R - 0.03, AZ.vent, vy)], 0.07, 0.18, 14), { part: 's1-lox-tank', mat: 'al-2219', look: 'alu', internal: true, cut: false });
+    kit.add(s.group, pipe([polar(0.9, AZ.vent, yD - 0.05), polar(0.9, AZ.vent, yD + 0.22), polar(1.45, AZ.vent, vy + 0.1), polar(R - 0.03, AZ.vent, vy)], 0.07, 0.18, 14), { part: 's1-lox-tank', mat: 'al-2219', look: 'alu', internal: true, cut: false, thermal: 0 });
     // RP-1 pressurant line from the dome takeoff to the raceway top
     const yDomeR = S.s1LoxFwdEquator + H * Math.sqrt(1 - (1.25 / WALL.domeA) ** 2);
-    kit.add(s.group, pipe([polar(1.25, AZ.raceway, yDomeR + 0.05), polar(1.25, AZ.raceway, yDomeR + 0.2), polar(1.7, AZ.raceway, 36.45), polar(R + 0.03, AZ.raceway, 36.0)], 0.02, 0.12, 8), { part: 'pressurization', mat: 'titanium', look: 'titanium', internal: true, cut: false });
+    // (it follows the dome up to the skin and leaves through it under the RCS pod, into the raceway)
+    kit.add(s.group, pipe([polar(1.25, AZ.raceway, yDomeR + 0.05), polar(1.25, AZ.raceway, yDomeR + 0.2), polar(1.62, AZ.raceway, 37.02), polar(1.79, AZ.raceway, 36.72), polar(R + 0.03, AZ.raceway, 36.64)], 0.02, 0.12, 8), { part: 'pressurization', mat: 'titanium', look: 'titanium', internal: true, cut: false });
   }
   return s;
 }
 
 /** The external raceway (cable and pressurant conduit) on the -X side, in three segments. */
-function raceway(ctx: Ctx, sections: [Section, number, number][]) {
+function raceway(ctx: Ctx, sections: [Section, number, number, ('bottom' | 'top')?][]) {
   const { kit } = ctx;
   const phi = AZ.raceway;
   const W = 0.15;
@@ -746,9 +747,10 @@ function raceway(ctx: Ctx, sections: [Section, number, number][]) {
   const ax = V(1, 0, 0).transformDirection(m);
   const az = V(0, 0, 1).transformDirection(m);
   const origin = V(0, 0, 0).applyMatrix4(m);
-  for (const [s, y0, y1] of sections) {
-    const ys = [y0, y0 + 0.08, y0 + 0.35, y1 - 0.35, y1 - 0.08, y1];
-    const hs = [0.01, 0.04, 1, 1, 0.04, 0.01];
+  for (const [s, y0, y1, joined] of sections) {
+    // tapered ends, except where the next section's segment continues the conduit (flat joint)
+    const ys = [...(joined === 'bottom' ? [y0] : [y0, y0 + 0.08, y0 + 0.35]), ...(joined === 'top' ? [y1] : [y1 - 0.35, y1 - 0.08, y1])];
+    const hs = [...(joined === 'bottom' ? [1] : [0.01, 0.04, 1]), ...(joined === 'top' ? [1] : [1, 0.04, 0.01])];
     const secs = ys.map((_, i) => cross(Hc * hs[i]));
     const frames = ys.map((y) => ({ o: origin.clone().setY(y), ax, az }));
     kit.add(s.group, loft(secs, frames), { part: 'raceway', mat: 'al-2219', look: 'paint', cut: true });
@@ -773,10 +775,9 @@ function interstage(ctx: Ctx) {
     [R, y0],
     [R, y1],
   ];
-  const lay = sandwich(kit, s, outer, { face: 0.0015, core: 0.025, part: 'interstage', mat: 'cfrp-sandwich', coreMat: 'honeycomb-core', outerLook: 'interstage', innerLook: 'fairingInner' });
-  void lay;
+  sandwich(kit, s, outer, { ...INTERSTAGE_WALL, part: 'interstage', mat: 'cfrp-sandwich', coreMat: 'honeycomb-core', outerLook: 'interstage', innerLook: 'fairingInner' });
   // metal end rings inside the shell
-  const ri = R - 0.028;
+  const ri = INTERSTAGE_INNER_R;
   solidRing(kit, s, ri - 0.05, ri, y0, y0 + 0.1, 'aluMilled', 'interstage', 'al-2219');
   solidRing(kit, s, ri - 0.075, ri, y1 - 0.16, y1, 'aluMilled', 'stage-separation', 'al-2219');
   // top closeout band (the separation plane edge), and the violet pinstripe
@@ -952,7 +953,10 @@ export function buildBooster(ctx: Ctx) {
   raceway(ctx, [
     [rp1, S.s1ThrustSectionTop + 0.2, S.s1FuelFwdEquator - 0.06],
     [it, S.s1FuelFwdEquator + 0.06, S.s1LoxAftEquator - 0.06],
-    [lox, S.s1LoxAftEquator + 0.06, S.s1LoxFwdEquator - 0.2],
+    // continued up the forward skirt to the RCS pod (the pressurant line and the avionics harness
+    // enter there): two segments with a flat joint at the tank/skirt seam
+    [lox, S.s1LoxAftEquator + 0.06, S.s1LoxFwdEquator, 'top'],
+    [fs, S.s1LoxFwdEquator, ctx.config.recovery ? 36.6 : S.s1LoxFwdEquator + 0.5, 'bottom'],
   ]);
   feedLines(ctx, thrust);
   // guidance loop (gnc-loop demonstration, schematic): actuator commands down the raceway to the

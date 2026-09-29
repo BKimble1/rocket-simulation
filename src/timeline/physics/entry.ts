@@ -28,6 +28,18 @@ export const PLASMA_REF = 1.0e6;
 /** Heat load that maps to cap.char = 1 (about a LEO return, J/m^2). */
 export const CHAR_REF = 1.2e8;
 
+/**
+ * Parachute drag areas Cd*S (m^2) from the spec's canopies (CAPSULE: 2 drogues of 7 m, 3 mains
+ * of 35 m nominal diameter). Drag coefficients on the nominal area: about 0.55 for a conical
+ * ribbon drogue, about 0.8 for a ringsail main (typical published values; the cluster loss is
+ * folded into 0.8). Mains: 3 x 0.8 x 962 m^2 = 2,309 m^2, so the 8,300 kg crew capsule descends
+ * near 7.6 m/s at sea level and the 4,200 kg research capsule (same canopies) near 5.4 m/s.
+ */
+export const DROGUE_CD = 0.55;
+export const MAIN_CD = 0.8;
+export const DROGUE_CDA = CAPSULE.drogues * DROGUE_CD * areaOf(CAPSULE.drogueDiameter);
+export const MAIN_CDA = CAPSULE.mains * MAIN_CD * areaOf(CAPSULE.mainDiameter);
+
 export const RATE_CAPSULE = { wMax: 5 * DEG, aMax: 2 * DEG };
 /** A capsule moving apex (nose) first: about half the heat-shield-first drag. */
 const cdApexFirst = (m: number): number => 0.55 * cdCapsule(m);

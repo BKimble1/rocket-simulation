@@ -6,6 +6,8 @@
  *   moon=d,az,el           put the camera d metres from the Moon's centre (az/el in degrees,
  *                          around the Earth-Moon line) looking at the Moon
  *   earth=1                look at the Earth's centre from the camera position, north up
+ *   ll=lat,lon,alt         put the camera above a geographic point (deg, deg, m) at time t,
+ *                          looking at the Earth's centre, north up (seam and orientation checks)
  *   subj=<m>               put the focus subject this far along the view (default 100 m)
  *   rocket=1               a 3.7 m x 60 m white stand-in cylinder, upright at the subject (to judge
  *                          cloud occlusion as it climbs through the layer)
@@ -24,7 +26,7 @@ import { skyState } from '../scene/space/skyState';
 import { frame } from '../scene/frame';
 import { director } from '../director/director';
 import { stageHooks } from '../scene/Stage';
-import { EARTH_AXIS, moonPosition, R_MOON } from '../world/frames';
+import { EARTH_AXIS, moonPosition, R_MOON, surfacePoint } from '../world/frames';
 import { perf } from '../scene/quality';
 import { spaceAssets } from '../scene/space/assets';
 
@@ -33,7 +35,8 @@ const q = new URLSearchParams(typeof window !== 'undefined' ? window.location.se
 function CameraOverrides() {
   useEffect(() => {
     const moonArg = q.get('moon');
-    const lookEarth = q.get('earth') === '1';
+    const llArg = q.get('ll');
+    const lookEarth = q.get('earth') === '1' || !!llArg;
     const subj = q.has('subj') ? Number(q.get('subj')) : 0;
     if (!moonArg && !lookEarth && !subj) return;
     const base = stageHooks.tick;
@@ -58,9 +61,14 @@ function CameraOverrides() {
         p.target.copy(m);
         p.up.copy(up);
       } else if (lookEarth) {
-        // north up: the Earth's axis
+        if (llArg) {
+          const [lat, lon, alt] = llArg.split(',').map(Number);
+          surfacePoint(lat || 0, lon || 0, alt || 2e7, frame.missionTime, p.pos);
+        }
+        // north up: the Earth's axis (or the pad's north when looking straight along the axis)
         p.target.set(0, 0, 0);
         p.up.copy(EARTH_AXIS);
+        if (Math.abs(p.pos.clone().normalize().dot(EARTH_AXIS)) > 0.999) p.up.set(0, 0, -1);
       }
     };
     return () => {

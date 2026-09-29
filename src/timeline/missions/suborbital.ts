@@ -19,7 +19,7 @@ import { cdSlender } from '../physics/aero';
 import { comFrom, flyFirstStage, padBurn, padSequence, stackAtLiftoff, stackItems, type PadTimes, type S1Params, type StackSpec } from '../physics/ascent';
 import { Craft } from '../physics/craft';
 import { Ctx } from '../physics/context';
-import { flyCapsuleDescent } from '../physics/entry';
+import { DROGUE_CDA, MAIN_CDA, flyCapsuleDescent } from '../physics/entry';
 import { flyBoosterReturn, padLocal, type RtlsResult } from '../physics/landing';
 import { RESEARCH_CAPSULE_ITEM, areaOf, boosterDry, sumMass } from '../physics/vehicle';
 import { DEG, qaxisY, v3, vadd, vcross, vnorm, vscale, type V3 } from '../physics/vec';
@@ -31,14 +31,21 @@ const START = -60;
 const SPEC: StackSpec = { payload: 'researchCapsule', recovery: true, crew: false, boosterOnly: true };
 const PT: PadTimes = { start: START, armsRetract: -45, engineStart: -3.0, centreRamp: [-3.0, -2.0], outerRamp: [-2.6, -1.4], outerN: 2, liftoffThrottle: 0.9 };
 /**
- * First-stage cutoff when the predicted vacuum apogee reaches this (m): the capsule, blunter
- * than the booster, loses about 5 km of it to drag on the way up and peaks near 115 km.
+ * First-stage cutoff when the predicted vacuum apogee reaches this (m): the stack coasts on
+ * together to about 75 km before the capsule is released, so the capsule loses only a little of
+ * it to drag and peaks near 116 km.
  */
-const APOGEE = 120_500;
+const APOGEE = 116_500;
 /** Propellant the booster keeps after touchdown (kg). */
 const MARGIN = 600;
-/** Seconds from the end of the cutoff transient to capsule release. */
+/** Earliest capsule release after the end of the cutoff transient (s). */
 const SEP_DELAY = 2.2;
+/**
+ * Capsule release waits until the dynamic pressure has fallen below this (Pa), about 75 km up:
+ * the light, blunt capsule decelerates in the air far more than the booster, so released in
+ * denser air (MECO is near 37 km, a few kPa) it would fall straight back onto the booster.
+ */
+const SEP_Q = 20;
 /**
  * Where the booster's unsteered descent should come down relative to the landing zone (pad-
  * local metres east/north): offset seaward so that the capsule, which falls a little shorter
@@ -88,11 +95,13 @@ function hop(ctx: Ctx | null, env: Craft['env'], load: number, az: number, kick:
   const s1 = flyFirstStage(ctx, stack, { ...params(az, kick), record: !!ctx });
   // coast to release with the attitude held
   const hold = { q: stack.q, wMax: 5 * DEG, aMax: 1.5 * DEG, tau: 2 };
-  const sep = Math.round((stack.t + SEP_DELAY) * 10) / 10;
-  while (stack.t < sep - 1e-9) {
-    stack.step(Math.min(0.2, sep - stack.t), hold);
-    if (ctx) ctx.rec(stack, 0.2);
+  const earliest = Math.round((stack.t + SEP_DELAY) * 10) / 10;
+  while (stack.t < earliest - 1e-9 || stack.q_dyn > SEP_Q) {
+    stack.step(stack.t < earliest - 1e-9 ? Math.min(0.2, earliest - stack.t) : 0.2, hold);
+    if (ctx) ctx.rec(stack, stack.t < earliest ? 0.2 : 0.5);
+    if (stack.t > earliest + 120) break;
   }
+  const sep = stack.t;
   const bItems = boosterDry(true);
   const capsule = stack.split({
     bodies: ['capsule'],
@@ -179,7 +188,7 @@ export function buildSuborbital(): MissionTimeline {
   const d = flyCapsuleDescent(
     ctx,
     capsule,
-    { drogueCdA: 42, mainCdA: 1150, reefFrac: 0.12, drogueAlt: 6500, mainAlt: 2000, disreefDelay: 7, liftLD: 0, comAboveNadir: 1.5, side: SIDE, eiAlt: 100_000, record: true, end: provisionalEnd, rcsChannel: 'cap.rcs' },
+    { drogueCdA: DROGUE_CDA, mainCdA: MAIN_CDA, reefFrac: 0.12, drogueAlt: 6500, mainAlt: 2000, disreefDelay: 7, liftLD: 0, comAboveNadir: 1.5, side: SIDE, eiAlt: 100_000, record: true, end: provisionalEnd, rcsChannel: 'cap.rcs' },
     55_000,
   );
   const end = Math.max(d.splash + 45, r.touchdown + 20);

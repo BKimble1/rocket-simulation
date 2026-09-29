@@ -8,7 +8,7 @@
  * propellant reserve and boostback aim bias, steering constants) run at build time, warm-started
  * from stored guesses so they converge in a few passes.
  */
-import { ABORT_TOWER, E1V, FAIRING, PAYLOADS, S1, S2 } from '../../vehicle/spec';
+import { ABORT_TOWER, E1, E1V, FAIRING, G0, PAYLOADS, S1, S2 } from '../../vehicle/spec';
 import type { BodyId } from '../../vehicle/parts';
 import { R_EARTH, EARTH_AXIS, OMEGA_EARTH } from '../../world/frames';
 import { LANDING_ZONE } from '../../world/site';
@@ -408,7 +408,7 @@ export function rtlsEvents(ctx: Ctx, r: RtlsResult) {
 export function ascentFacts(ctx: Ctx, a: AscentResult, prefix = '') {
   const f = (k: string, v: number) => ctx.fact(prefix + k, v);
   f('liftoffMass', a.liftoffMass);
-  f('liftoffTW', (7 * 760e3) / (a.liftoffMass * 9.80665));
+  f('liftoffTW', (S1.engineCount * E1.thrustSL!) / (a.liftoffMass * G0));
   f('kickDeg', a.kick);
   f('towerClear', a.s1.towerClear);
   f('maxQ.t', a.s1.maxQ.t);
@@ -424,6 +424,7 @@ export function ascentFacts(ctx: Ctx, a: AscentResult, prefix = '') {
   f('meco.s1PropLeft', a.s1.mecoState.prop);
   f('stageSep.t', a.times.stageSep);
   f('ses1.t', a.times.ses1);
+  if (!a.items.some((it) => it.tag === 'les')) f('fairingSep.t', a.times.fairingSep);
   if (a.rtls) {
     const r = a.rtls;
     f('rtls.reserveKg', a.reserve);

@@ -51,6 +51,19 @@ function pinShadow(o: THREE.Object3D, cast: boolean, receive?: boolean) {
   if (receive !== undefined) Object.defineProperty(o, 'receiveShadow', { get: () => receive, set: () => {}, configurable: true });
 }
 
+/**
+ * Keep a mesh's own material: shadow-only shells, glow and flow-overlay meshes are not surfaces,
+ * so a lens that swaps every mesh's material (e.g. the hangar's thermal view) must not turn
+ * them into solid shells. Marked `userData.lensExempt` as well for callers that check.
+ */
+function pinMaterial(o: THREE.Object3D) {
+  const m = o as THREE.Mesh | THREE.Sprite;
+  if (!(m as THREE.Mesh).isMesh && !(m as THREE.Sprite).isSprite) return;
+  const mat = m.material;
+  Object.defineProperty(m, 'material', { get: () => mat, set: () => {}, configurable: true, enumerable: true });
+  m.userData.lensExempt = true;
+}
+
 /** Same as buildEngine with an explicit material set (tests use a plain one). */
 export function buildEngineWith(kind: EngineKind, detail: EngineDetail, mats: MaterialSet): EngineModel {
   const d = engineDesign(kind);
@@ -131,6 +144,7 @@ export function buildEngineWith(kind: EngineKind, detail: EngineDetail, mats: Ma
       m.userData.shadowShell = true;
       m.raycast = () => {};
       pinShadow(m, true, false);
+      pinMaterial(m);
       g.add(m);
     }
     for (const m of meshes) pinShadow(m, false);
@@ -143,7 +157,11 @@ export function buildEngineWith(kind: EngineKind, detail: EngineDetail, mats: Ma
   const overlay = hangar ? buildFlowOverlay(d, mats) : null;
   if (overlay) gimbal.add(overlay.group);
   // effects never cast shadows (the caller switches shadows on for every mesh it finds)
-  for (const g of [glow?.group, overlay?.group]) g?.traverse((o) => pinShadow(o, false, false));
+  for (const g of [glow?.group, overlay?.group])
+    g?.traverse((o) => {
+      pinShadow(o, false, false);
+      pinMaterial(o);
+    });
 
   // part index
   const parts = new Map<PartId, THREE.Object3D[]>();
