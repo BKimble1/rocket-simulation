@@ -33,3 +33,9 @@ export async function bodies(page: Page) {
 }
 
 export const withHooks = (u: string) => u + (u.includes('?') ? '&' : '?') + 'hooks=1';
+
+/** Wait until the stage has rendered k more frames (state sampled per frame is then current). */
+export async function frames(page: Page, k = 2, timeout = 120_000) {
+  const n0 = await page.evaluate(() => (window as unknown as { __rocketFrame: { n: number } }).__rocketFrame.n);
+  await page.waitForFunction((n) => (window as unknown as { __rocketFrame: { n: number } }).__rocketFrame.n >= n, n0 + k, { timeout });
+}

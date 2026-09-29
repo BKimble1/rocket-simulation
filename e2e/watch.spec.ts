@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { missionTime, waitForLocation, watchErrors, withHooks } from './helpers';
+import { frames, missionTime, waitForLocation, watchErrors, withHooks } from './helpers';
 
 test('watch: captions follow the film, pause holds, chapters seek @phone', async ({ page }) => {
   const errors = watchErrors(page);
@@ -13,7 +13,7 @@ test('watch: captions follow the film, pause holds, chapters seek @phone', async
   expect(await missionTime(page)).toBeCloseTo(t, 3);
   await page.getByRole('button', { name: 'Chapters' }).click();
   await page.getByRole('button', { name: /Stage separation/ }).first().click();
-  await page.waitForTimeout(500);
-  expect(await missionTime(page)).toBeGreaterThan(t);
+  await frames(page);
+  await expect.poll(() => missionTime(page), { timeout: 60_000 }).toBeGreaterThan(t);
   expect(errors).toEqual([]);
 });

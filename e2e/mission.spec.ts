@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { bodies, missionTime, waitForLocation, watchErrors, withHooks } from './helpers';
+import { bodies, frames, missionTime, waitForLocation, watchErrors, withHooks } from './helpers';
 
 test('satellite walkthrough: start, inspect the engine, return to the same point, switch cameras, finish, replay', async ({ page }) => {
   const errors = watchErrors(page);
@@ -7,8 +7,8 @@ test('satellite walkthrough: start, inspect the engine, return to the same point
   await page.getByRole('button', { name: /Explore a mission/ }).click();
   await waitForLocation(page, 'flight');
   const t0 = await missionTime(page);
-  await page.waitForTimeout(3000);
-  expect(await missionTime(page)).toBeGreaterThan(t0);
+  // playback advances (poll: on a software renderer a frame can take seconds)
+  await expect.poll(() => missionTime(page), { timeout: 120_000 }).toBeGreaterThan(t0);
   // jump to staging through the chapters
   await page.getByRole('button', { name: 'Chapters' }).click();
   await page.getByRole('button', { name: /Stage separation/ }).first().click();
@@ -40,15 +40,15 @@ test('seeking reconstructs state exactly and never duplicates bodies', async ({ 
       w.__rocketSeekMission(mt);
     }, t);
   await seek(200);
-  await page.waitForTimeout(400);
+  await frames(page);
   const a = await bodies(page);
   const children = await page.evaluate(() => (window as unknown as { __rocketSceneCount: () => number }).__rocketSceneCount());
   await seek(20);
-  await page.waitForTimeout(300);
+  await frames(page);
   await seek(600);
-  await page.waitForTimeout(300);
+  await frames(page);
   await seek(200);
-  await page.waitForTimeout(400);
+  await frames(page);
   const b = await bodies(page);
   for (const k of Object.keys(a)) {
     expect(b[k].present).toBe(a[k].present);
@@ -60,17 +60,17 @@ test('seeking reconstructs state exactly and never duplicates bodies', async ({ 
 test('booster storyline: switching focus keeps the shared mission time', async ({ page }) => {
   await page.goto(withHooks('?v=mission&m=leo&ch=staging'));
   await waitForLocation(page, 'flight');
-  await page.waitForTimeout(500);
+  await frames(page);
   const t = await missionTime(page);
   await page.getByRole('radio', { name: 'Booster' }).click();
-  await page.waitForTimeout(300);
+  await frames(page);
   expect(Math.abs((await missionTime(page)) - t)).toBeLessThan(0.5);
   await page.getByRole('radio', { name: 'Upper stage' }).click();
 });
 
 for (const [m, last] of [
   ['suborbital', 'Splashdown and recovery'],
-  ['gto', 'Circularization by the satellite (explanatory)'],
+  ['gto', 'Apogee burns to geostationary orbit'],
   ['station', 'Soft capture and hard capture'],
   ['return', 'Splashdown and recovery'],
   ['lunar', 'Outbound trajectory'],
@@ -82,8 +82,8 @@ for (const [m, last] of [
     await page.getByRole('button', { name: 'Chapters' }).click();
     await page.getByRole('button', { name: new RegExp(last.replace(/[()]/g, '\\$&')) }).first().click();
     await page.getByRole('button', { name: 'Play mission' }).click();
-    await page.waitForTimeout(4000);
-    await expect(page.locator('.mission-title__phase')).toHaveText(last);
+    await frames(page, 3);
+    await expect(page.locator('.mission-title__phase')).toHaveText(last, { timeout: 90_000 });
     expect(errors).toEqual([]);
   });
 }

@@ -134,7 +134,7 @@ export const OUTLINES: Record<MissionId, MissionOutline> = {
       { id: 'gto-injection', title: 'Transfer-orbit injection', focus: 'upper' },
       { id: 'deploy', title: 'Satellite separation', focus: 'satellite' },
       { id: 'transfer-coast', title: 'Climbing to apogee', focus: 'satellite' },
-      { id: 'circularize', title: 'Circularization by the satellite (explanatory)', focus: 'satellite' },
+      { id: 'circularize', title: 'Apogee burns to geostationary orbit', focus: 'satellite' },
     ],
     events: [...ASCENT_EVENTS, 'fairing-sep', 'seco1', 'settling', 'ses2', 'seco2', 'payload-sep', 'apogee', 'apogee-burn-start', 'apogee-burn-end'],
     outcome: 'A transfer orbit is not the final orbit: the launch vehicle raises the far point, the satellite finishes the job.',
