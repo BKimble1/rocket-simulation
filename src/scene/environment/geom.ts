@@ -31,6 +31,24 @@ export interface MeshOpts {
   name?: string;
 }
 
+export interface BatchView {
+  add(g: THREE.BufferGeometry, m: THREE.Material, matrix?: THREE.Matrix4, opts?: MeshOpts): void;
+  at(g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rotY?: number, opts?: MeshOpts): void;
+}
+
+/** Merge geometries (normalized) into one, applying optional matrices. */
+export function mergeParts(parts: { g: THREE.BufferGeometry; m?: THREE.Matrix4 }[]): THREE.BufferGeometry {
+  const list = parts.map(({ g, m }) => {
+    const n = normalizeGeo(g);
+    if (m) n.applyMatrix4(m);
+    return n;
+  });
+  const merged = mergeGeometries(list, false)!;
+  list.forEach((g) => g.dispose());
+  merged.computeBoundingSphere();
+  return merged;
+}
+
 /** Collects geometries per material and emits one merged mesh per material. */
 export class Batch {
   private lists = new Map<THREE.Material, THREE.BufferGeometry[]>();
