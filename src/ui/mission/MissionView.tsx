@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useStageInset } from '../hooks/useStageInset';
+import { useDockHeight } from '../hooks/useDockHeight';
 import { useApp, type CamMode } from '../../state/store';
 import { usePlayback, playback, seekPres } from '../../state/playback';
 import { PHASE_CARDS } from '../../content/phaseCards';
@@ -224,6 +225,8 @@ export function MissionView() {
   const [chapters, setChapters] = useState(false);
   const [card, setCard] = useState(true);
   const pb = usePlayback();
+  const dock = useRef<HTMLDivElement>(null);
+  useDockHeight(dock);
   return (
     <>
       <div className="mission-top">
@@ -255,7 +258,7 @@ export function MissionView() {
           </section>
         </div>
       )}
-      <div className="bottom-dock">
+      <div className="bottom-dock" ref={dock}>
         <CameraBar />
         <PlaybackBar onChapters={() => setChapters((c) => !c)} />
       </div>

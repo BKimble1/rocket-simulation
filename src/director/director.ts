@@ -181,8 +181,14 @@ export function updateHangar(dt: number, out: CamPose) {
   daz = ((((daz + 180) % 360) + 360) % 360) - 180;
   s.az += daz * k;
   s.el += (g.el - s.el) * k;
-  // distance eased in log space (big zoom changes feel even)
-  s.dist = Math.exp(Math.log(s.dist) + (Math.log(g.dist) - Math.log(s.dist)) * k);
+  // distance eased in log space (big zoom changes feel even). While the target travels, the
+  // camera stays far enough back to keep the destination in view (a move from the whole vehicle
+  // to a small part on the engine stand pulls back, travels, then closes in, instead of passing
+  // close to empty floor on the way).
+  const sep = s.target.distanceTo(g.target);
+  const keep = sep > 0.05 ? (sep * 1.15) / Math.tan(((s.fov / 2) * Math.PI) / 180) : 0;
+  const goalDist = Math.max(g.dist, Math.min(190, keep));
+  s.dist = Math.exp(Math.log(s.dist) + (Math.log(goalDist) - Math.log(s.dist)) * k);
   s.target.lerp(g.target, k);
   s.fov += (g.fov - s.fov) * k;
   orbitPose(s, out);

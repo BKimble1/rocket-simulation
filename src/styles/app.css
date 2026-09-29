@@ -1428,14 +1428,14 @@ code {
     right: calc(8px + var(--safe-right));
     top: auto;
     width: auto;
-    bottom: calc(118px + var(--safe-bottom));
+    bottom: calc(var(--dock-h, 110px) + 16px + var(--safe-bottom));
     max-height: 42vh;
   }
   .left-dock {
     left: 8px;
     right: 8px;
     width: auto;
-    bottom: calc(118px + var(--safe-bottom));
+    bottom: calc(var(--dock-h, 110px) + 16px + var(--safe-bottom));
     top: calc(var(--header-h) + var(--safe-top) + 6px);
     z-index: 6;
   }
@@ -1465,8 +1465,33 @@ code {
     width: calc(100% - 16px);
     bottom: calc(8px + var(--safe-bottom));
   }
+  /* one scrollable row of tools; its menus open above the whole dock */
   .toolbar {
     border-radius: 16px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    max-width: 100%;
+    scrollbar-width: none;
+    backdrop-filter: none;
+    background: var(--surface-solid, #fbfbfa);
+  }
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  .toolbar > * {
+    flex: none;
+  }
+  .toolbar .menu {
+    position: static;
+  }
+  .toolbar .menu__body {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 8px);
+    width: auto;
+    transform: none;
   }
   .telemetry {
     display: none;
@@ -1548,7 +1573,7 @@ code {
   .lesson,
   .phasecard {
     top: calc(var(--header-h) + var(--safe-top) + 4px);
-    bottom: calc(96px + var(--safe-bottom));
+    bottom: calc(var(--dock-h, 80px) + 16px + var(--safe-bottom));
     left: auto;
     width: 44vw;
     max-height: none;

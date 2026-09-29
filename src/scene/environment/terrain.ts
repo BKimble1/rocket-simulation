@@ -12,11 +12,11 @@
  * light through the standard GGX lobe), then the site haze.
  */
 import * as THREE from 'three';
-import { asset } from '../../config';
 import { LOCAL_TERRAIN, LANDING_ZONE, GROUND_CAMS } from '../../world/site';
 import { SITE, deg } from '../../world/frames';
 import { skyState } from '../space/skyState';
 import { tierSpec } from '../quality';
+import { spaceTextures } from '../space/assets';
 import { frame } from '../frame';
 import { SITE_MAP } from './generated/regionalMap';
 import { groundH, sphereY, type SiteMaps } from './map';
@@ -96,7 +96,11 @@ uniform vec2 uFadeR;
 uniform vec3 uSkyHorizon;
 uniform vec3 uSkyZenith;
 uniform vec3 uLz;           // x, z, apron radius
+uniform sampler2D uGlobeWater;
+uniform vec2 uGlobeBlend;   // distances (m) over which the shading becomes the globe's
 float siteWater;
+vec3 siteImg;
+float siteGW;
 float siteFoam;
 vec3 siteWaterN;
 ${NOISE_GLSL}
@@ -260,11 +264,40 @@ vec3 globeAlbedo( vec3 day, float water ) {
   return mix( day * 0.72, ocean, water );
 }
 
-vec3 dayImagery( vec2 p ) {
+vec2 globeUv( vec2 p ) {
   float lat = uLatLon0.x - p.y / 6371000.0;
   float lon = uLatLon0.y + p.x / ( 6371000.0 * cos( uLatLon0.x ) );
-  vec2 uv = vec2( ( lon + 3.14159265 ) / 6.2831853, ( lat + 1.5707963 ) / 3.14159265 );
-  return texture2D( uDay, uv ).rgb;
+  return vec2( ( lon + 3.14159265 ) / 6.2831853, ( lat + 1.5707963 ) / 3.14159265 );
+}
+vec3 dayImagery( vec2 p ) {
+  return texture2D( uDay, globeUv( p ) ).rgb;
+}
+
+// the globe's surface shading (sky module, skyPass earthSurface) for albedo and water mask:
+// sunlight through the atmosphere, sky irradiance, sun glint and sky reflection on water
+vec3 globeShade( vec3 day, float water, vec3 n, vec3 v ) {
+  vec3 albedo = globeAlbedo( day, water );
+  float muS = dot( n, uSunW );
+  vec3 Ts = transmittanceSun( A_RB + 2.0, muS );
+  vec3 col = albedo / PI * ( SUN_E * Ts * max( muS, 0.0 ) + SUN_E * skyIrradiance( muS ) );
+  if ( water > 0.01 ) {
+    vec3 h = normalize( v + uSunW );
+    float NdotL = max( muS, 0.0 );
+    float NdotV = max( dot( n, v ), 1e-3 );
+    float NdotH = max( dot( n, h ), 0.0 );
+    float VdotH = max( dot( v, h ), 0.0 );
+    float a = 0.22;
+    float a2 = a * a;
+    float dd = NdotH * NdotH * ( a2 - 1.0 ) + 1.0;
+    float D = a2 / ( PI * dd * dd );
+    float F = 0.02 + 0.98 * pow( 1.0 - VdotH, 5.0 );
+    float k = a * 0.5;
+    float G = NdotL / ( NdotL * ( 1.0 - k ) + k ) * NdotV / ( NdotV * ( 1.0 - k ) + k );
+    vec3 spec = SUN_E * Ts * D * F * G / ( 4.0 * NdotV );
+    float Fv = 0.02 + 0.98 * pow( 1.0 - NdotV, 5.0 );
+    col += water * ( spec + Fv * SUN_E * skyIrradiance( muS ) / PI * 1.4 );
+  }
+  return col;
 }
 `;
 
@@ -311,8 +344,10 @@ const CLASSIFY = /* glsl */ `
   }
 
   // the Earth imagery toward the edge, so the disk meets the globe
-  float edgeW = smoothstep( 22000.0, uFadeR.x + 1500.0, dist );
+  float edgeW = smoothstep( 22000.0, uGlobeBlend.y, dist );
   vec3 img = edgeW > 0.0 ? dayImagery( sp ) : vec3( 0.0 );
+  siteImg = img;
+  siteGW = edgeW > 0.0 ? texture2D( uGlobeWater, globeUv( sp ) ).r : 0.0;
   albedo = mix( albedo, globeAlbedo( img, 0.0 ), edgeW );
 
   float ocean = smoothstep( 0.3, 0.7, cov.r );
@@ -354,6 +389,14 @@ const AFTER_OPAQUE = /* glsl */ `
   vec3 sky = mix( uSkyHorizon, uSkyZenith, smoothstep( 0.02, 0.7, el ) );
   sky = mix( uSkyHorizon * 0.85, sky, smoothstep( -0.2, 0.02, el ) );
   gl_FragColor.rgb += siteWater * ( 1.0 - siteFoam ) * F * sky;
+  // toward the disk's edge the shading becomes the globe's own (same imagery, water mask,
+  // lighting), so where the ring fades out the globe underneath shows the same colours
+  float wG = smoothstep( uGlobeBlend.x, uGlobeBlend.y, length( vSite ) );
+  if ( wG > 0.0 ) {
+    vec3 nW = normalize( uHazeCam + vHazePos );
+    vec3 vW = -normalize( vHazePos );
+    gl_FragColor.rgb = mix( gl_FragColor.rgb, globeShade( siteImg, siteGW, nW, vW ), wG );
+  }
 }
 #ifdef SITE_RING
   gl_FragColor.a = 1.0 - smoothstep( uFadeR.x, uFadeR.y, length( vSite ) );
@@ -363,18 +406,11 @@ ${HAZE_FRAGMENT}
 
 export interface TerrainUniforms {
   uTime: { value: number };
+  /** The globe's day imagery and water mask (the sky module's textures, swapped in when loaded). */
+  uDay: { value: THREE.Texture };
+  uGlobeWater: { value: THREE.Texture };
   uSkyHorizon: { value: THREE.Color };
   uSkyZenith: { value: THREE.Color };
-}
-
-let dayTex: THREE.Texture | null = null;
-function dayTexture(): THREE.Texture {
-  if (dayTex) return dayTex;
-  const big = tierSpec().maxTexture >= 4096;
-  dayTex = new THREE.TextureLoader().load(asset(big ? 'textures/earth/day_4096.jpg' : 'textures/earth/day_2048.jpg'));
-  dayTex.colorSpace = THREE.SRGBColorSpace;
-  dayTex.anisotropy = 4;
-  return dayTex;
 }
 
 export function makeTerrainMaterial(maps: SiteMaps, overlay: Overlay, ring: boolean, shared: TerrainUniforms): THREE.MeshStandardMaterial {
@@ -384,7 +420,9 @@ export function makeTerrainMaterial(maps: SiteMaps, overlay: Overlay, ring: bool
     ...shared,
     uSdf: { value: maps.sdfTex },
     uCover: { value: maps.coverTex },
-    uDay: { value: dayTexture() },
+    uDay: shared.uDay,
+    uGlobeWater: shared.uGlobeWater,
+    uGlobeBlend: { value: new THREE.Vector2(30000, LOCAL_TERRAIN.innerKm * 1000 - 500) },
     uOverlay: { value: overlay.tex },
     uMap: { value: new THREE.Vector4(SITE_MAP.ext, SITE_MAP.sdfSize, SITE_MAP.sdfRange, SITE_MAP.sdfStep) },
     uOverExt: { value: OVERLAY.ext },
@@ -425,6 +463,8 @@ export function buildTerrain(maps: SiteMaps, overlay: Overlay): Terrain {
   const rOut = LOCAL_TERRAIN.outerKm * 1000;
   const uniforms: TerrainUniforms = {
     uTime: { value: 0 },
+    uDay: { value: spaceTextures.day },
+    uGlobeWater: { value: spaceTextures.water },
     uSkyHorizon: { value: new THREE.Color() },
     uSkyZenith: { value: new THREE.Color() },
   };
@@ -448,6 +488,8 @@ export function buildTerrain(maps: SiteMaps, overlay: Overlay): Terrain {
     uniforms,
     update() {
       uniforms.uTime.value = frame.decor;
+      uniforms.uDay.value = spaceTextures.day;
+      uniforms.uGlobeWater.value = spaceTextures.water;
       const k = Math.max(0.05, skyState.sunIntensity / 3);
       uniforms.uSkyHorizon.value.copy(skyState.hazeColor).multiplyScalar(0.95);
       uniforms.uSkyZenith.value.copy(skyState.hazeColor).multiply(SKY_ZENITH_TINT).multiplyScalar(0.8 * k);

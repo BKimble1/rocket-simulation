@@ -527,8 +527,11 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
     const rC = OML.p2r - hatchS * SIN;
     const pa = hatchPhi - hw / 2 / rC;
     const pb = hatchPhi + hw / 2 / rC;
-    const door = conePatch(pa, pb, hatchS - hh / 2, hatchS + hh / 2, 0.006, hangar ? 16 : 4, hangar ? 12 : 3, (phi, s) => [(((phi / (Math.PI * 2)) % 1) + 1) % 1, s / OML.L]);
-    place(kit.mesh(door, tileMat, 'capsule', 'al-li', cap), hatchPhi);
+    // the door skin (tiles like the cone around it) and its handle plate only read up close
+    if (hangar) {
+      const door = conePatch(pa, pb, hatchS - hh / 2, hatchS + hh / 2, 0.006, 16, 12, (phi, s) => [(((phi / (Math.PI * 2)) % 1) + 1) % 1, s / OML.L]);
+      place(kit.mesh(door, tileMat, 'capsule', 'al-li', cap), hatchPhi);
+    }
     frame(0.96, 1.06, 0.1, 0.07, 0.016, hatchPhi, hatchS, P.ti(), 'capsule', 'titanium');
     // round hatch window and the handle plate
     const ww = hatchS + 0.22;
@@ -536,8 +539,10 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
     place(kit.mesh(wg, P.ti(), 'capsule', 'titanium', cap), hatchPhi);
     const wp = onCone(new THREE.CircleGeometry(0.08, 32).translate(0, 0, 0.012), hatchPhi, ww);
     place(kit.mesh(wp, P.pane(), 'capsule', 'titanium', cap), hatchPhi);
-    const hp = onCone(rbox(0.22, 0.1, 0.02, 0.01, 2).translate(0, 0, 0.012), hatchPhi, hatchS - 0.18);
-    place(kit.mesh(hp, P.graphite(), 'capsule', 'titanium', cap), hatchPhi);
+    if (hangar) {
+      const hp = onCone(rbox(0.22, 0.1, 0.02, 0.01, 2).translate(0, 0, 0.012), hatchPhi, hatchS - 0.18);
+      place(kit.mesh(hp, P.graphite(), 'capsule', 'titanium', cap), hatchPhi);
+    }
   }
   // reaction control thrusters: four clusters of three (pitch/yaw, roll)
   const rcs: THREE.Vector3[] = [];
@@ -615,7 +620,8 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
       kit.mesh(skin, tex, 'parachutes', 'textiles', bags);
       if (caps) kit.mesh(caps, tex, 'parachutes', 'textiles', bags);
     }
-    for (const deg of [100, 340]) {
+    // drogue mortars (hangar detail: at flight distances they never show)
+    for (const deg of hangar ? [100, 340] : []) {
       const phi = deg * DEG;
       const rr = (rIn + rOut((y0 + y1) / 2)) / 2;
       const mg = new THREE.Group();

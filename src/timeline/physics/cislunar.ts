@@ -57,6 +57,7 @@ export function coastCislunar(c: Craft, until: number, onStep: ((c: Craft) => vo
   let prevD = vlen(vsub(c.r, moonAt(c.t, ph)));
   for (let guard = 0; guard < 100_000 && c.t < until - 1e-9; guard++) {
     const dt = Math.min(cislunarDt(c, ph), until - c.t);
+    const tPrev = c.t;
     c.step(dt, null);
     const m = moonAt(c.t, ph);
     const rel = vsub(c.r, m);
@@ -72,8 +73,10 @@ export function coastCislunar(c: Craft, until: number, onStep: ((c: Craft) => vo
       res.angleFromEarthDeg = (Math.acos(clamp(-vdot(rel, m) / (d * vlen(m)), -1, 1)) * 180) / Math.PI;
       res.signed = res.trailing ? d : -d;
     }
-    if (Number.isNaN(res.soiEnter) && prevD > SOI_MOON && d <= SOI_MOON) res.soiEnter = c.t;
-    if (!Number.isNaN(res.soiEnter) && Number.isNaN(res.soiExit) && prevD <= SOI_MOON && d > SOI_MOON) res.soiExit = c.t;
+    // sphere-of-influence crossings, interpolated inside the step (steps reach several minutes)
+    const cross = () => tPrev + ((c.t - tPrev) * (prevD - SOI_MOON)) / (prevD - d);
+    if (Number.isNaN(res.soiEnter) && prevD > SOI_MOON && d <= SOI_MOON) res.soiEnter = cross();
+    if (!Number.isNaN(res.soiEnter) && Number.isNaN(res.soiExit) && prevD <= SOI_MOON && d > SOI_MOON) res.soiExit = cross();
     prevD = d;
     onStep?.(c);
     if (d < R_MOON) break; // impact: stop (only trial runs get here)

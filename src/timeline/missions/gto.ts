@@ -32,6 +32,34 @@ const GEO_ALT = 35_786e3;
 const SAT_PROP = 1700;
 
 const AXIS: V3 = { x: EARTH_AXIS.x, y: EARTH_AXIS.y, z: EARTH_AXIS.z };
+/** Upper-stage acceleration ceiling for the injection burn (m/s^2). */
+const G_LIMIT = 4.5 * 9.80665;
+
+/**
+ * Duration (s) of a burn of `dv` from mass m0 with thrust F and full-throttle flow mdot when the
+ * throttle is held to the acceleration limit gLim (never below minThr): full throttle while the
+ * stage is heavy, then constant acceleration, then the minimum throttle.
+ */
+export function limitedBurnTime(m0: number, dv: number, F: number, mdot: number, gLim: number, minThr: number): number {
+  const ve = F / mdot;
+  const mf = m0 * Math.exp(-dv / ve);
+  const m1 = F / gLim;
+  const m2 = (minThr * F) / gLim;
+  let t = 0;
+  let m = m0;
+  if (m > m1) {
+    const mA = Math.max(mf, m1);
+    t += (m - mA) / mdot;
+    m = mA;
+  }
+  if (m > mf && m > m2) {
+    const mB = Math.max(mf, m2);
+    t += (ve * Math.log(m / mB)) / gLim;
+    m = mB;
+  }
+  if (m > mf) t += (m - mf) / (minThr * mdot);
+  return t;
+}
 
 /** Time of the next descending equator crossing (r . axis from + to -) on the Kepler orbit. */
 function nextDescendingNode(r: V3, v: V3, t: number): number {
@@ -86,17 +114,21 @@ export function buildGto(): MissionTimeline {
 
   // ── coast to the descending node, settle, restart: injection centred on the node
   const tNode = nextDescendingNode(up.r, up.v, up.t);
-  // burn length estimate from the rocket equation (Isp 342 s) for the injection delta-v
+  // burn length estimate from the rocket equation (Isp 342 s) for the injection delta-v, with
+  // the throttle held down to the acceleration limit (full, then constant 4.5 g, then the minimum)
   const el0 = elements(up.r, up.v, MU_EARTH);
   const rp = el0.a;
   const vPer = Math.sqrt(MU_EARTH * (2 / rp - 2 / (rp + R_EARTH + GEO_ALT)));
   const dv = vPer - Math.sqrt(MU_EARTH / rp);
-  const mdot = up.group('s2')!.eng.mdot;
-  const burnEst = (up.mass * (1 - Math.exp(-dv / (342 * 9.80665)))) / mdot;
+  const eng = up.group('s2')!.eng;
+  const burnEst = limitedBurnTime(up.mass, dv, eng.thrustVac, eng.mdot, G_LIMIT, eng.minThrottle);
   const tIgn = Math.round(tNode - burnEst * 0.5);
   const burn = coastSettleBurn(ctx, up, {
     tIgn,
     settle: 15,
+    // the same 4.5 g ceiling as the first burn: the light stage throttles down (to its 60 %
+    // minimum) instead of pressing the payload with 10 g or more at the end of the burn
+    gLimit: G_LIMIT,
     dir: (c) => vnorm(c.v),
     done: (r, v) => {
       const e = elements(r, v, MU_EARTH);

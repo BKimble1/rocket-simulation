@@ -4,6 +4,7 @@
  * captions, the narration and the sounds follow one clock (src/watch/player.ts).
  */
 import { useEffect, useRef, useState } from 'react';
+import { useDockHeight } from '../hooks/useDockHeight';
 import { useApp } from '../../state/store';
 import { MISSION_ORDER, OUTLINES } from '../../timeline/missions/outline';
 import type { MissionId } from '../../timeline/types';
@@ -47,6 +48,8 @@ export function WatchView() {
   const set = useApp((s) => s.set);
   const [chapters, setChapters] = useState(false);
   const bar = useRef<HTMLDivElement>(null);
+  const dock = useRef<HTMLDivElement>(null);
+  useDockHeight(dock, w.mission);
   useEffect(() => {
     watchRef.active = true;
     watchRef.publish = () => publishWatch();
@@ -142,7 +145,7 @@ export function WatchView() {
           </section>
         </div>
       )}
-      <div className="bottom-dock">
+      <div className="bottom-dock" ref={dock}>
         <div className="playbar panel" role="group" aria-label="Film playback">
           <button className="icon-btn icon-btn--play" onClick={() => watch.player?.toggle()} aria-label={w.playing ? 'Pause' : 'Play'}>
             {w.playing ? <Icon.pause size={18} /> : <Icon.play size={18} />}

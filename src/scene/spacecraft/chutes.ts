@@ -59,6 +59,7 @@ class Chute {
   private readonly pos: Float32Array;
   private readonly linePos: Float32Array;
   private readonly riserPos: Float32Array;
+  private packed = false;
 
   constructor(kit: Kit, def: ChuteDef) {
     this.def = def;
@@ -125,7 +126,22 @@ class Chute {
     this.group.rotation.set(0, d.azimuth, 0);
     this.group.rotateZ(-d.tilt * (0.25 + 0.75 * infl));
     this.group.visible = ext > 0.001;
-    if (!this.group.visible) return;
+    if (!this.group.visible) {
+      // packed: collapse the canopy and lines onto the attach point (bounds stay the capsule's)
+      if (!this.packed) {
+        this.packed = true;
+        this.pos.fill(0);
+        this.linePos.fill(0);
+        this.riserPos.fill(0);
+        for (const o of [this.canopyMesh, this.lines, this.riser]) {
+          o.geometry.attributes.position.needsUpdate = true;
+          o.geometry.computeBoundingSphere();
+          o.geometry.computeBoundingBox();
+        }
+      }
+      return;
+    }
+    this.packed = false;
     const D = d.d0;
     const sh = shapeAt(infl);
     const skirtR = sh.skirt * D;
@@ -171,6 +187,7 @@ class Chute {
     g.attributes.position.needsUpdate = true;
     g.computeVertexNormals();
     g.computeBoundingSphere();
+    g.computeBoundingBox();
     for (let s = 0; s < d.gores; s++) {
       const phi = (s / d.gores) * Math.PI * 2;
       const k = s * 6;
@@ -178,9 +195,11 @@ class Chute {
     }
     this.lines.geometry.attributes.position.needsUpdate = true;
     this.lines.geometry.computeBoundingSphere();
+    this.lines.geometry.computeBoundingBox();
     this.riserPos.set([0, 0, 0, 0, conf, 0]);
     this.riser.geometry.attributes.position.needsUpdate = true;
     this.riser.geometry.computeBoundingSphere();
+    this.riser.geometry.computeBoundingBox();
   }
 }
 

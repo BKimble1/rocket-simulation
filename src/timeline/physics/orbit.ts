@@ -28,6 +28,9 @@ export function retrogradeAttitude(r: V3, v: V3): Q {
   return qlook(vscale(v, -1), vscale(vnorm(h), -1));
 }
 
+/** Largest orbital angle one coast sample may span (rad). */
+const MAX_SWEEP = 2.5 * DEG;
+
 /**
  * Coast on a two-body orbit from the craft's current state to `until`, recording samples every
  * `every` seconds with the attitude from `attitude(r, v, t)` (the craft slews to it with its
@@ -40,12 +43,22 @@ export function coastKepler(ctx: Ctx | null, c: Craft, until: number, every: num
   const t0 = c.t;
   if (until <= t0 + 1e-9) return;
   const n = Math.max(1, Math.ceil((until - t0) / every));
+  const h = (until - t0) / n;
   let prevQ = c.q;
-  for (let i = 1; i <= n; i++) {
-    const t = i === n ? until : t0 + (i * (until - t0)) / n;
+  let t = t0;
+  let rate = vlen(vcross(c.r, c.v)) / vdot(c.r, c.r);
+  while (t < until - 1e-9) {
+    // uniform steps, shortened where the orbit turns fast (near a low perigee) so no step sweeps
+    // more than MAX_SWEEP of orbital angle: the tracks' cubic Hermite interpolation then stays
+    // within a metre of the conic (a 300 s step at a GTO perigee would be off by hundreds of metres)
+    let dt = Math.min(h, MAX_SWEEP / Math.max(rate, 1e-12));
+    if (t + dt > until - 1e-6 || until - (t + dt) < 0.2 * dt) dt = until - t;
+    const tn = t + dt >= until - 1e-9 ? until : t + dt;
+    dt = tn - t;
+    t = tn;
     const k = kepler(r0, v0, t - t0, MU_EARTH);
+    rate = vlen(vcross(k.r, k.v)) / vdot(k.r, k.r);
     const q = attitude ? attitude(k.r, k.v, t) : prevQ;
-    const dt = t - c.t;
     const w = attitude ? vscale(qdelta(prevQ, q), 1 / dt) : c.w;
     c.t = t;
     c.r = k.r;
@@ -76,6 +89,8 @@ export interface OrbitBurnOpts {
   ignition: number;
   tail: number;
   throttle: number;
+  /** Sensed-acceleration limit (m/s^2): the throttle comes down toward the engine's minimum as the craft gets lighter. */
+  gLimit?: number;
   dt: number;
   rate: { wMax: number; aMax: number };
   onStep?: (c: Craft) => void;
@@ -101,7 +116,8 @@ export function orbitBurn(ctx: Ctx | null, c: Craft, o: OrbitBurnOpts, recEvery 
   let cut = NaN;
   for (let guard = 0; guard < 200000; guard++) {
     const t = c.t;
-    const thr = clamp((t + o.dt - start) / o.ignition, 0, 1) * o.throttle;
+    let thr = clamp((t + o.dt - start) / o.ignition, 0, 1) * o.throttle;
+    if (o.gLimit) thr = Math.min(thr, Math.max(g.eng.minThrottle, (o.gLimit * c.mass) / (g.n * g.eng.thrustVac)));
     g.next = thr;
     const d = o.dir(c);
     const att: AttitudeCmd = { q: qlook(d, vscale(vnorm(vcross(c.r, c.v)), -1)), wMax: o.rate.wMax, aMax: o.rate.aMax, tau: 1.5 };

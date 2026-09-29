@@ -269,7 +269,8 @@ export function buildServiceModule(kit: Kit, mountY: number): ServiceBuilt {
     noz.push([r, throatY - (throatY - exitY) * t]);
   }
   const nozIn = noz.map(([r, y]) => [r - 0.006, y] as V2);
-  kit.mesh(sweep([...noz, ...[...nozIn].reverse()], true, { segs: kit.seg(72, 24), crease: 1.2 }).skin, P.thruster(), 'service-module', 'titanium', eng);
+  // the chamber and the radiatively cooled nozzle run hot (thermal lens class 3)
+  kit.mesh(sweep([...noz, ...[...nozIn].reverse()], true, { segs: kit.seg(72, 24), crease: 1.2 }).skin, P.thruster(), 'service-module', 'titanium', eng).userData.thermal = 3;
   if (hangar) for (const t of [0.35, 0.7, 0.98]) {
     const y = throatY - (throatY - exitY) * t;
     const r = rt + (re - rt) * (1 - Math.pow(1 - t, 1.7));
@@ -282,7 +283,7 @@ export function buildServiceModule(kit: Kit, mountY: number): ServiceBuilt {
     [0.1, throatY + 0.3],
     [0, throatY + 0.32],
   ];
-  kit.mesh(sweep(chamber, false, { segs: kit.seg(48, 16) }).skin, P.inconel(), 'service-module', 'titanium', eng);
+  kit.mesh(sweep(chamber, false, { segs: kit.seg(48, 16) }).skin, P.inconel(), 'service-module', 'titanium', eng).userData.thermal = 3;
   kit.mesh(cyl(0.16, 0.16, 0.06, kit.seg(40, 14)), P.steel(), 'service-module', 'titanium', eng, 0, throatY + 0.35, 0);
   if (hangar) {
     for (const [x, z] of [

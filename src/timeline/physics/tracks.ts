@@ -7,7 +7,7 @@
 import type { BodyId } from '../../vehicle/parts';
 import type { BodyTrack } from '../types';
 import type { Sample, Segment } from './craft';
-import { qrot, vcross, vsub, type Q, type V3 } from './vec';
+import { qrot, qslerp, vcross, vsub, type Q, type V3 } from './vec';
 
 export interface OriginSample {
   t: number;
@@ -37,6 +37,24 @@ export function segmentOrigins(samples: Sample[]): OriginSample[] {
   return out;
 }
 
+/** Time after a separation at which a body's own motion takes over (s). */
+const JOIN_DT = 0.02;
+
+/** Origin state between two samples of one segment, as the sampler interpolates it (cubic Hermite, slerp). */
+function originAt(a: OriginSample, b: OriginSample, t: number): OriginSample {
+  const h = b.t - a.t;
+  const u = (t - a.t) / h;
+  const u2 = u * u;
+  const u3 = u2 * u;
+  const h00 = 2 * u3 - 3 * u2 + 1;
+  const h10 = u3 - 2 * u2 + u;
+  const h01 = -2 * u3 + 3 * u2;
+  const h11 = u3 - u2;
+  const P = (k: 'x' | 'y' | 'z') => h00 * a.p[k] + h10 * h * a.v[k] + h01 * b.p[k] + h11 * h * b.v[k];
+  const Vl = (k: 'x' | 'y' | 'z') => a.v[k] + (b.v[k] - a.v[k]) * u;
+  return { t, p: { x: P('x'), y: P('y'), z: P('z') }, v: { x: Vl('x'), y: Vl('y'), z: Vl('z') }, q: qslerp(a.q, b.q, u), m: a.m + (b.m - a.m) * u };
+}
+
 /** A body's own samples (already origin poses), for bodies whose motion is authored directly. */
 export interface DirectSegment {
   bodies: BodyId[];
@@ -56,8 +74,19 @@ export function assembleTrack(body: BodyId, segments: Segment[], direct: DirectS
   const all: OriginSample[] = [];
   const minDt = opts.minDt ?? 1e-6;
   for (const p of parts) {
-    for (const s of p) {
-      if (all.length && s.t <= all[all.length - 1].t + minDt) continue;
+    for (let i = 0; i < p.length; i++) {
+      const s = p[i];
+      const last = all[all.length - 1];
+      if (last && s.t <= last.t + minDt) {
+        // A separation: the new segment starts where the old one ends, at the same pose but with
+        // an impulsive change of velocity (springs, pushers, a tumble kick that swings the model
+        // origin far from the centre of mass). The earlier sample is kept; a sample JOIN_DT later,
+        // on the new segment's own path, confines the jump to that sliver, so the cubic Hermite
+        // interval does not spread the old velocity over the new segment's first step.
+        const next = p[i + 1];
+        if (i === 0 && next && next.t - s.t > 4 * JOIN_DT && Math.hypot(s.v.x - last.v.x, s.v.y - last.v.y, s.v.z - last.v.z) > 1e-3) all.push(originAt(s, next, s.t + JOIN_DT));
+        continue;
+      }
       all.push(s);
     }
   }

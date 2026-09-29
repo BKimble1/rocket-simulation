@@ -312,27 +312,28 @@ const TAIL: Species = {
     const solid = c.kind === 'solid';
     rec.group = Group.Smoke;
     rec.size0 = s0 * ctx.sizeK;
-    rec.size1 = rec.size0 + shape.uJet * rec.tau * (0.22 + 0.12 * rnd(12)) * ctx.sizeK;
+    rec.size1 = rec.size0 + shape.uJet * rec.tau * (0.07 + 0.06 * rnd(12)) * ctx.sizeK;
     rec.tauS = rec.tau * 1.3;
     rec.sizeLin = 1.2 + 0.8 * (1 - shape.smoke);
     rec.life = 3.4 + 1.4 * rnd(13);
     rec.alpha0 = Math.min(1, (solid ? 0.8 : 0.5) * (0.35 + 0.65 * shape.smoke) * ctx.alphaK);
     rec.fadeIn0 = 0;
-    rec.fadeIn1 = 0.12;
+    rec.fadeIn1 = 0.05;
     rec.fadeOut = 0.55;
     rec.thin = 0.55;
     rec.thinRef = rec.size0;
     if (solid) {
       rec.alb0.setRGB(0.86, 0.84, 0.8);
       rec.alb1.setRGB(0.9, 0.89, 0.87);
-      rec.emit.setRGB(2.2, 1.0, 0.3).multiplyScalar(shape.lum);
-      rec.tauE = 0.25;
+      rec.emit.setRGB(1.2, 0.5, 0.14).multiplyScalar(shape.lum);
+      rec.tauE = 0.2;
     } else {
       const soot = 0.16 + 0.1 * rnd(14);
       rec.alb0.setRGB(soot * 1.12, soot, soot * 0.88);
       rec.alb1.setRGB(0.56, 0.55, 0.53);
-      rec.emit.setRGB(1.0, 0.3, 0.06).multiplyScalar(shape.lum * (0.5 + 0.8 * rnd(15)));
-      rec.tauE = 0.12 + 0.12 * rnd(16);
+      // the tail end of the afterburning flame: a brief, dim glow (many sprites overlap here)
+      rec.emit.setRGB(0.3, 0.075, 0.012).multiplyScalar(shape.lum * (0.5 + 0.8 * rnd(15)));
+      rec.tauE = 0.06 + 0.08 * rnd(16);
     }
     rec.tauC = 1.1 + 0.8 * rnd(17);
     rec.stretchLen = 0;
@@ -487,7 +488,7 @@ const GROUND: Species = {
     }
     rec.tauC = 10;
     if (hot) {
-      rec.emit.setRGB(4.2, 1.6, 0.42).multiplyScalar(F);
+      rec.emit.setRGB(2.2, 0.72, 0.14).multiplyScalar(F);
       rec.tauE = 0.3 + 0.35 * rnd(18);
     } else {
       rec.emit.setRGB(0, 0, 0);

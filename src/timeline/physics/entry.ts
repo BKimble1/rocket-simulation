@@ -260,8 +260,11 @@ export function floatCapsule(ctx: Ctx | null, c: Craft, end: number, record: boo
   const w = vscale(axis, OMEGA_EARTH);
   const origins: OriginSample[] = [];
   const n = Math.max(2, Math.ceil((end - t0) / 2));
-  for (let i = 1; i <= n + 1; i++) {
-    const t = t0 + ((end - t0) * i) / n;
+  // the water stops the descent within a fraction of a second: a first sample 0.15 s after
+  // contact keeps the interpolation from carrying the splashdown speed metres below the surface
+  const times = [t0 + 0.15];
+  for (let i = 1; i <= n + 1; i++) times.push(t0 + ((end - t0) * i) / n);
+  for (const t of times) {
     const rot = qaxis(axis, OMEGA_EARTH * (t - t0));
     const p = qrot(rot, o0);
     origins.push({ t, p, v: vcross(w, p), q: qmul(rot, q0), m: c.mass });

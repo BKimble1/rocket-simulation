@@ -154,7 +154,7 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   p.noiseK = 1.5;
   p.radK = 2.6;
   // sooty tail (thins with altitude) handing over to the smoke particles
-  p.smokeSigma = (solid ? 0.5 : 0.42) * s.smoke * st;
+  p.smokeSigma = (solid ? 0.9 : 1.0) * s.smoke * st;
   p.smokeIn = solid ? [s.smokeStart, s.smokeStart + 8] : [4, s.smokeStart + 14];
   p.sootOuter = solid ? 0 : 0.75;
   p.smokeA.copy(solid ? COL.solidSmokeA : COL.sootA);

@@ -256,6 +256,38 @@ export function buildPad(): Pad {
     const m0 = trenchXZ(TRENCH.sBack - 0.25, -hw);
     const m1 = trenchXZ(TRENCH.sBack - 0.25, hw);
     B.add(rod(P(m0.x, -0.55, m0.z), P(m1.x, -0.55, m1.z), 0.2, 16), SM('galv'), undefined, { part: 'sound-suppression' });
+    // stiffening ribs down the face (they carry the cooling-water channels): the curve of the
+    // steel face reads from any angle
+    for (let i = 0; i < 6; i++) {
+      const v = -hw + 0.95 + (i * (2 * hw - 1.9)) / 5;
+      const pts: THREE.Vector3[] = [];
+      for (let k = 0; k < DEFLECTOR.length; k++) {
+        const [s0, y0] = DEFLECTOR[Math.max(0, k - 1)];
+        const [s1, y1] = DEFLECTOR[Math.min(DEFLECTOR.length - 1, k + 1)];
+        const l = Math.hypot(s1 - s0, y1 - y0);
+        const ns = -(y1 - y0) / l;
+        const ny = (s1 - s0) / l;
+        const [sk, yk] = DEFLECTOR[k];
+        const q = trenchXZ(sk + ns * 0.09, v);
+        pts.push(P(q.x, yk + ny * 0.09, q.z));
+      }
+      B.add(pipe(pts, 0.08, 0.6, 8, 3), SM('deflector'), undefined, { part: 'flame-deflector', material: 'stainless' });
+    }
+  }
+
+  // ───────────── the flame opening's steel coaming on the hardstand ─────────────
+  {
+    const edge = (a: { x: number; z: number }, b: { x: number; z: number }, out: { x: number; z: number }) => {
+      const len = Math.hypot(b.x - a.x, b.z - a.z);
+      const m = new THREE.Matrix4().makeRotationY(-Math.atan2(b.z - a.z, b.x - a.x)).setPosition((a.x + b.x) / 2 + out.x * 0.2, 0.05, (a.z + b.z) / 2 + out.z * 0.2);
+      B.add(bevelBox(len + 0.4, 0.1, 0.4, 0.02), SM('galv'), m, { part: 'flame-deflector' });
+      // painted edge band beyond the coaming
+      const m2 = new THREE.Matrix4().makeRotationY(-Math.atan2(b.z - a.z, b.x - a.x)).setPosition((a.x + b.x) / 2 + out.x * 0.75, 0.012, (a.z + b.z) / 2 + out.z * 0.75);
+      B.add(box(len + 1.5, 0.02, 0.6), SM('yellow'), m2, { cast: false, receive: true });
+    };
+    edge(back0, nL, { x: -TV.x, z: -TV.z });
+    edge(back1, nR, { x: TV.x, z: TV.z });
+    edge(back0, back1, { x: -TU.x, z: -TU.z });
   }
 
   // ───────────── launch mount ─────────────
@@ -367,24 +399,38 @@ export function buildPad(): Pad {
 
   B.part = 'launch-mount';
   // ───────────── hold-down clamps (at the vehicle fittings: +X, +Z, -X, -Z) ─────────────
-  // static bases merge into the pad; the four jaws are one instanced mesh posed each frame
+  // Each clamp: a painted pedestal on the deck with a stainless saddle under the vehicle's
+  // hold-down pin and a tall hook arm pivoting on the pedestal; the arm's notch sits over the
+  // pin. On release the arms rotate up and outboard (~80 deg) so the rising lug is clear.
+  // Static bases merge into the pad; the four arms are one instanced mesh posed each frame.
   const rPin = MOUNT.gripR + 0.1; // vehicle's pin radius
   const yPin = PAD.nozzleExitHeight + 1.46;
-  const jawPivot = v3(2.95, deckTop + 1.05, 0);
+  const jawPivot = v3(2.95, deckTop + 0.5, 0);
   const jawBases: THREE.Matrix4[] = [];
   for (const azDeg of MOUNT.clampAz) {
     const a = (azDeg * Math.PI) / 180;
     const frame = new THREE.Matrix4().makeRotationY(-a); // local +X = radial outward (from +x toward +z)
     const L = B.view(frame);
-    // pedestal on the deck (outside the flame hole) and the cantilevered saddle under the pin
-    L.at(bevelBox(1.15, 0.95, 1.0, 0.05), SM('steelDark'), 3.2, deckTop + 0.475, 0, 0, { part: 'launch-mount' });
-    L.at(bevelBox(0.5, 0.18, 1.3, 0.03), SM('steelDark'), 3.35, deckTop + 0.09, 0, 0);
-    for (const t of [-0.3, 0.3]) {
+    // base plate and a yoke of two pedestal housings (safety yellow, reads against the dark
+    // deck) the arm swings between, with the hinge pin through both
+    L.at(bevelBox(2.2, 0.12, 1.5, 0.03), SM('steelDark'), 3.6, deckTop + 0.06, 0, 0);
+    for (const t of [-0.43, 0.43]) {
+      L.at(bevelBox(1.5, 1.5, 0.26, 0.05), SM('yellow'), 3.55, deckTop + 0.12 + 0.75, t, 0);
+      L.at(bevelBox(1.58, 0.1, 0.32, 0.02), SM('steelDark'), 3.55, deckTop + 1.67, t, 0);
+    }
+    L.at(bevelBox(0.4, 0.45, 1.12, 0.04), SM('yellow'), 4.1, deckTop + 0.12 + 0.225, 0, 0);
+    L.add(rod(v3(jawPivot.x, jawPivot.y, -0.6), v3(jawPivot.x, jawPivot.y, 0.6), 0.09, 16), SM('stainless'));
+    // release actuator (hydraulic cylinder) behind the yoke, clear of the arm's swing
+    L.add(rod(v3(4.55, deckTop + 0.2, 0), v3(4.55, deckTop + 1.25, 0), 0.15, 16), SM('steelDark'));
+    L.add(rod(v3(4.55, deckTop + 1.25, 0), v3(4.55, deckTop + 1.5, 0), 0.06, 12), SM('stainless'));
+    L.at(bevelBox(0.5, 0.1, 0.5, 0.02), SM('steelDark'), 4.55, deckTop + 0.17, 0, 0);
+    // saddle cheeks under the pin, clear of the arm's side plates
+    for (const t of [-0.36, 0.36]) {
       const cheek = extrude(
         [
-          [rPin - 0.12, yPin - 0.02],
-          [rPin + 0.1, yPin - 0.02],
-          [rPin + 0.2, yPin - 0.14],
+          [rPin - 0.12, yPin - 0.05],
+          [rPin + 0.1, yPin - 0.05],
+          [rPin + 0.2, yPin - 0.16],
           [2.75, yPin - 0.2],
           [2.75, deckTop - 0.02],
           [rPin + 0.05, deckTop + 0.02],
@@ -395,37 +441,42 @@ export function buildPad(): Pad {
       cheek.translate(0, 0, t - 0.07);
       L.add(cheek, SM('stainless'), undefined, { part: 'launch-mount', material: 'stainless' });
     }
-    L.at(bevelBox(0.7, 0.14, 0.74, 0.02), SM('stainless'), 2.4, deckTop + 0.07, 0, 0, { part: 'launch-mount', material: 'stainless' });
-    // actuator body behind the pedestal
-    L.add(rod(v3(3.9, deckTop + 0.45, 0), v3(3.35, deckTop + 1.2, 0), 0.13, 16), SM('stainless'));
-    L.at(bevelBox(0.5, 0.5, 0.6, 0.04), SM('steelDark'), 3.95, deckTop + 0.35, 0);
+    L.at(bevelBox(0.7, 0.14, 0.9, 0.02), SM('stainless'), 2.4, deckTop + 0.07, 0, 0, { part: 'launch-mount', material: 'stainless' });
     jawBases.push(frame.clone().multiply(new THREE.Matrix4().makeTranslation(jawPivot.x, jawPivot.y, jawPivot.z)));
   }
-  // the jaw: two side plates hooking over the pin, a bridge block and the hinge pin (tangential axis)
+  // the arm: two side plates (a tall hook with a notch over the pin), a top bridge and the boss
   const jawParts: { g: THREE.BufferGeometry }[] = [];
-  const py = yPin - jawPivot.y;
   const px = rPin - jawPivot.x;
-  for (const t of [-0.26, 0.26]) {
+  const py = yPin - jawPivot.y;
+  for (const t of [-0.2, 0.2]) {
     const plate = extrude(
       [
-        [0.35, 0.22],
-        [-0.35, 0.22],
-        [px - 0.05, 0.05],
-        [px - 0.18, -0.02],
-        [px - 0.16, py + 0.1],
-        [px + 0.02, py + 0.02],
-        [px + 0.14, py + 0.12],
-        [px + 0.16, -0.18],
-        [0.35, -0.2],
+        [0.3, -0.25],
+        [0.3, 0.45],
+        [0.05, 1.1],
+        [-0.45, 1.3],
+        [px - 0.15, py + 0.7],
+        [px - 0.16, py + 0.09],
+        [px - 0.07, py + 0.085],
+        [px + 0.04, py + 0.065],
+        [px + 0.09, py - 0.02],
+        [px + 0.05, py - 0.12],
+        [px + 0.35, py - 0.1],
+        [-0.1, -0.3],
       ],
       0.12,
-      0.01,
+      0.012,
     );
     plate.translate(0, 0, t - 0.06);
     jawParts.push({ g: plate });
   }
-  jawParts.push({ g: bevelBox(0.9, 0.3, 0.64, 0.03).translate(-0.35, 0.02, 0) });
-  jawParts.push({ g: rod(v3(0, 0, -0.42), v3(0, 0, 0.42), 0.1, 16) });
+  // bridge across the top of the hook and a web down its back
+  const bridge = bevelBox(0.75, 0.18, 0.52, 0.03);
+  bridge.rotateZ(Math.atan2(1.3 - (py + 0.7), -0.45 - (px - 0.15)));
+  bridge.translate((px - 0.15 - 0.45) / 2, (py + 0.7 + 1.3) / 2 - 0.02, 0);
+  jawParts.push({ g: bridge });
+  jawParts.push({ g: bevelBox(0.2, 0.95, 0.52, 0.03).translate(0.14, 0.55, 0) });
+  jawParts.push({ g: cyl(0.26, 0.52, 20).rotateX(Math.PI / 2) });
   const jaws = new THREE.InstancedMesh(mergeParts(jawParts), SM('stainless'), jawBases.length);
   jaws.name = 'holddown-jaws';
   jaws.castShadow = jaws.receiveShadow = true;
@@ -472,7 +523,7 @@ export function buildPad(): Pad {
     jawBases.forEach((base, i) => {
       // release is simultaneous in reality; the stagger of a few ms is invisible
       const k = smooth(0.0 + i * 0.01, 0.55 + i * 0.01, h);
-      _m.copy(base).multiply(_r.makeRotationZ(-k * 1.35)); // swing up and out ~77 deg
+      _m.copy(base).multiply(_r.makeRotationZ(-k * 1.4)); // swing up and outboard ~80 deg
       jaws.setMatrixAt(i, _m);
     });
     jaws.instanceMatrix.needsUpdate = true;

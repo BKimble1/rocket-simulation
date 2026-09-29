@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TANKS, tankVolumeOf, levelHeight, volumeAt, liquidPoly, centroidAt } from './tanks';
+import { TANKS, tankVolumeOf, levelHeight, levelHeightFast, volumeAt, liquidPoly, centroidAt } from './tanks';
 import { S1, S2, tankVolume } from '../../vehicle/spec';
 
 describe('vehicle tanks', () => {
@@ -48,5 +48,10 @@ describe('vehicle tanks', () => {
       expect(c).toBeGreaterThan(t.yMin);
       expect(c).toBeLessThan(t.yMax);
     }
+  });
+
+  it('the fast level lookup agrees with the exact solution within 2 cm', () => {
+    for (const t of Object.values(TANKS))
+      for (let f = 0; f <= 1.0001; f += 0.05) expect(Math.abs(levelHeightFast(t, f) - levelHeight(t, f))).toBeLessThan(0.02);
   });
 });

@@ -331,41 +331,93 @@ function engines(ctx: Ctx, hs: Section) {
   ctx.movers.engines.forEach((m, k) => ctx.movers.boots.push({ mesh, offset: k * per, segs, engine: m, rTop: 0.47, yTop: S.s1HeatShield - 0.015, rBot: rb + 0.012, yBotEngine: yEng, folds }));
 }
 
-const _bp = new THREE.Vector3();
-const _bt = new THREE.Vector3();
 const _bb = new THREE.Vector3();
+let _ring = new Float64Array(0);
 const _bq = new THREE.Quaternion();
 
 /** Update the boot shapes for the current engine gimbal rotations (no allocations). */
-export function updateBoots(ctx: Ctx, rot: (m: EngineMount, out: THREE.Quaternion) => THREE.Quaternion) {
+export function updateBoots(ctx: Ctx, rot: (m: EngineMount, out: THREE.Quaternion) => THREE.Quaternion, only?: (m: EngineMount) => boolean) {
   const boots = ctx.movers.boots;
   if (!boots.length) return;
-  const pos = boots[0].mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+  const geo = boots[0].mesh.geometry;
+  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+  const nor = geo.getAttribute('normal') as THREE.BufferAttribute;
+  const P = pos.array as Float32Array;
+  const N = nor.array as Float32Array;
   for (const b of boots) {
+    if (only && !only(b.engine)) continue;
     const q = rot(b.engine, _bq);
     const segs = b.segs;
+    const cols = segs + 1;
     const rows = b.folds * 4 + 1;
     const piv = b.engine.pivot;
+    // the two rings once per column: top ring fixed on the plate, bottom ring on the nozzle
+    // (rotates with the engine); the rows in between are blends of them
+    if (_ring.length < cols * 8) _ring = new Float64Array(cols * 8);
+    const RG = _ring;
+    for (let i = 0; i <= segs; i++) {
+      const phi = (i / segs) * Math.PI * 2;
+      const sn = Math.sin(phi);
+      const c = Math.cos(phi);
+      _bb.set(b.rBot * sn, b.yBotEngine, b.rBot * c).applyQuaternion(q).add(piv);
+      const o = i * 8;
+      RG[o] = piv.x + b.rTop * sn;
+      RG[o + 1] = b.yTop;
+      RG[o + 2] = piv.z + b.rTop * c;
+      RG[o + 3] = _bb.x;
+      RG[o + 4] = _bb.y;
+      RG[o + 5] = _bb.z;
+      RG[o + 6] = sn;
+      RG[o + 7] = c;
+    }
     for (let j = 0; j < rows; j++) {
       const t = j / (rows - 1);
       const bulge = Math.sin(t * Math.PI) * 0.035 + (j % 4 === 1 ? 0.018 : j % 4 === 3 ? -0.008 : 0.006);
       const w = t * t * (3 - 2 * t) * 0.35 + t * 0.65;
+      const w0 = 1 - w;
       for (let i = 0; i <= segs; i++) {
-        const phi = (i / segs) * Math.PI * 2;
-        const sn = Math.sin(phi);
-        const c = Math.cos(phi);
-        // top ring fixed on the plate; bottom ring on the nozzle (rotates with the engine)
-        _bt.set(piv.x + b.rTop * sn, b.yTop, piv.z + b.rTop * c);
-        _bb.set(b.rBot * sn, b.yBotEngine, b.rBot * c).applyQuaternion(q).add(piv);
-        _bp.lerpVectors(_bt, _bb, w);
-        _bp.x += sn * bulge;
-        _bp.z += c * bulge;
-        pos.setXYZ(b.offset + j * (segs + 1) + i, _bp.x, _bp.y, _bp.z);
+        const o = i * 8;
+        const k = (b.offset + j * cols + i) * 3;
+        P[k] = RG[o] * w0 + RG[o + 3] * w + RG[o + 6] * bulge;
+        P[k + 1] = RG[o + 1] * w0 + RG[o + 4] * w;
+        P[k + 2] = RG[o + 2] * w0 + RG[o + 5] * w + RG[o + 7] * bulge;
+      }
+    }
+    // grid normals from central differences (the grid is a closed loop in i, open in j): far
+    // cheaper than re-deriving them from the triangles every frame
+    for (let j = 0; j < rows; j++) {
+      const ja = (j > 0 ? j - 1 : j) * cols;
+      const jb = (j < rows - 1 ? j + 1 : j) * cols;
+      for (let i = 0; i <= segs; i++) {
+        const il = i > 0 ? i - 1 : segs - 1;
+        const ir = i < segs ? i + 1 : 1;
+        const a = (b.offset + j * cols + il) * 3;
+        const c2 = (b.offset + j * cols + ir) * 3;
+        const d = (b.offset + ja + i) * 3;
+        const e = (b.offset + jb + i) * 3;
+        const ux = P[c2] - P[a];
+        const uy = P[c2 + 1] - P[a + 1];
+        const uz = P[c2 + 2] - P[a + 2];
+        const vx = P[e] - P[d];
+        const vy = P[e + 1] - P[d + 1];
+        const vz = P[e + 2] - P[d + 2];
+        // down the boot x around (+phi) points outward
+        let nx = vy * uz - vz * uy;
+        let ny = vz * ux - vx * uz;
+        let nz = vx * uy - vy * ux;
+        const l = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz + 1e-20);
+        nx *= l;
+        ny *= l;
+        nz *= l;
+        const k = (b.offset + j * cols + i) * 3;
+        N[k] = nx;
+        N[k + 1] = ny;
+        N[k + 2] = nz;
       }
     }
   }
   pos.needsUpdate = true;
-  boots[0].mesh.geometry.computeVertexNormals();
+  nor.needsUpdate = true;
 }
 
 // ───────────────────────────── tanks ─────────────────────────────

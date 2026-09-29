@@ -266,28 +266,80 @@ export class Instances {
   }
 }
 
-/** A pipe along a polyline with bends of radius `bend` at the corners. */
-export function pipe(points: THREE.Vector3[], r: number, bend = r * 3, radial = 12): THREE.BufferGeometry {
-  const path = new THREE.CurvePath<THREE.Vector3>();
-  let prev = points[0].clone();
+/**
+ * A pipe along a polyline with bends of radius `bend` at the corners: rings only where the
+ * direction changes (one span per straight run, `arc` spans per bend), oriented by parallel
+ * transport so the surface does not twist.
+ */
+export function pipe(points: THREE.Vector3[], r: number, bend = r * 3, radial = 12, arc = 8): THREE.BufferGeometry {
+  // centreline samples
+  const c: THREE.Vector3[] = [points[0].clone()];
   for (let i = 1; i < points.length - 1; i++) {
     const p = points[i];
-    const a = new THREE.Vector3().subVectors(prev, p);
+    const a = new THREE.Vector3().subVectors(c[c.length - 1], p);
     const b = new THREE.Vector3().subVectors(points[i + 1], p);
-    const la = a.length();
-    const lb = b.length();
-    const k = Math.min(bend, la * 0.45, lb * 0.45);
+    const k = Math.min(bend, a.length() * 0.45, b.length() * 0.45);
     const p0 = p.clone().addScaledVector(a.normalize(), k);
     const p1 = p.clone().addScaledVector(b.normalize(), k);
-    if (prev.distanceTo(p0) > 1e-4) path.add(new THREE.LineCurve3(prev.clone(), p0));
-    path.add(new THREE.QuadraticBezierCurve3(p0, p.clone(), p1));
-    prev = p1;
+    const q = new THREE.QuadraticBezierCurve3(p0, p.clone(), p1);
+    for (let s = 0; s <= arc; s++) {
+      const pt = q.getPoint(s / arc);
+      if (pt.distanceTo(c[c.length - 1]) > 1e-4) c.push(pt);
+    }
   }
-  path.add(new THREE.LineCurve3(prev, points[points.length - 1].clone()));
-  let len = 0;
-  for (const c of path.curves) len += c.getLength();
-  const segs = Math.max(4, Math.min(600, Math.round(len / Math.max(r * 2, 0.4)) + points.length * 6));
-  return new THREE.TubeGeometry(path as unknown as THREE.Curve<THREE.Vector3>, segs, r, radial, false);
+  const end = points[points.length - 1].clone();
+  if (end.distanceTo(c[c.length - 1]) > 1e-4) c.push(end);
+  const n = c.length;
+  // tangents (averaged at interior samples) and a parallel-transported normal
+  const T = c.map((p, i) => {
+    const t = new THREE.Vector3();
+    if (i > 0) t.add(new THREE.Vector3().subVectors(p, c[i - 1]).normalize());
+    if (i < n - 1) t.add(new THREE.Vector3().subVectors(c[i + 1], p).normalize());
+    return t.normalize();
+  });
+  const N: THREE.Vector3[] = [];
+  {
+    const t0 = T[0];
+    const helper = Math.abs(t0.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+    N.push(new THREE.Vector3().crossVectors(t0, helper).normalize());
+    for (let i = 1; i < n; i++) {
+      const q = new THREE.Quaternion().setFromUnitVectors(T[i - 1], T[i]);
+      N.push(N[i - 1].clone().applyQuaternion(q).addScaledVector(T[i], -N[i - 1].clone().applyQuaternion(q).dot(T[i])).normalize());
+    }
+  }
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  let along = 0;
+  for (let i = 0; i < n; i++) {
+    if (i > 0) along += c[i].distanceTo(c[i - 1]);
+    const B = new THREE.Vector3().crossVectors(T[i], N[i]);
+    // at a bend sample the ring is the cross-section of the averaged tangent (no pinching)
+    for (let j = 0; j <= radial; j++) {
+      const a = (j / radial) * Math.PI * 2;
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      const nx = N[i].x * dx + B.x * dy;
+      const ny = N[i].y * dx + B.y * dy;
+      const nz = N[i].z * dx + B.z * dy;
+      pos.push(c[i].x + nx * r, c[i].y + ny * r, c[i].z + nz * r);
+      nor.push(nx, ny, nz);
+      uv.push(j / radial, along / (2 * Math.PI * r));
+    }
+  }
+  for (let i = 0; i < n - 1; i++)
+    for (let j = 0; j < radial; j++) {
+      const a = i * (radial + 1) + j;
+      const b = a + radial + 1;
+      idx.push(a, a + 1, b, b, a + 1, b + 1);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  return g;
 }
 
 /** Extrude a 2D profile (x, y) along +Z by depth, optional bevel. */

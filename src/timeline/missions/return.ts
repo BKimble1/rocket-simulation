@@ -26,7 +26,7 @@ import { Craft, type Env } from '../physics/craft';
 import { Ctx } from '../physics/context';
 import { CAPSULE_AREA, DROGUE_CDA, MAIN_CDA, flyCapsuleDescent, type DescentResult } from '../physics/entry';
 import { elements } from '../physics/kepler';
-import { apsidesKm, coastKepler, orbitBurn, retrogradeAttitude } from '../physics/orbit';
+import { apsidesKm, coastKepler, orbitBurn, retrogradeAttitude, zenithAttitude } from '../physics/orbit';
 import { absState, angleIn, circularOrbit, cwPropagate, lvlh, lvlhAttitude, orbitState, type CircularOrbit, type Rel } from '../physics/rendezvous';
 import { CAPSULE_DOCK_Y, CAPSULE_ITEM, ENG_SM, SM_COM, SM_DRY, SM_PROP_FULL, STATION_DOCK, STATION_MASS, areaOf, sumMass, type MassItem } from '../physics/vehicle';
 import { DEG, qaxisX, qdelta, qslerp, v3, vadd, vcross, vlen, vnorm, vscale, type Q, type V3 } from '../physics/vec';
@@ -51,6 +51,8 @@ interface ReturnRun {
   depart: number;
   deorbit: { start: number; cut: number; end: number; dv: number; perigeeKm: number };
   smSep: number;
+  /** Service-module propellant left when it separates (kg). */
+  smPropLeft: number;
   smEnd: number;
   d: DescentResult;
   splashAngle: number;
@@ -106,11 +108,20 @@ function fly(ctx: Ctx | null, env: Env, theta0: number, tU: number, start: numbe
     cap.w = vscale(orb.h, n);
     if (ctx) cap.record();
   }
-  cap.t = tHand;
-  // hand over to the integrated orbit: coast, turn retrograde, deorbit burn
+  // hand over to the integrated orbit exactly at tHand (the loop's last sample may fall short of it)
+  {
+    const s = absState(orb, tHand, relAt(tHand));
+    cap.t = tHand;
+    cap.r = s.p;
+    cap.v = s.v;
+    cap.q = lvlhAttitude(lvlh(orb, tHand));
+    cap.w = vscale(orb.h, n);
+    if (ctx) cap.record();
+  }
+  // coast holding the local-vertical attitude, turn retrograde, deorbit burn
   const tD = tU + DEORBIT;
   const turn = tD - 300;
-  coastKepler(ctx, cap, turn, 30, null);
+  coastKepler(ctx, cap, turn, 30, zenithAttitude);
   const q0 = cap.q;
   const qT = retrogradeAttitude(cap.r, cap.v);
   while (cap.t < tD - 1e-9) {
@@ -145,6 +156,7 @@ function fly(ctx: Ctx | null, env: Env, theta0: number, tU: number, start: numbe
     if (ctx) ctx.rec(cap, 10);
   }
   const smSep = cap.t;
+  const smPropLeft = cap.tanks.sm ?? 0;
   const sm = cap.split({ bodies: ['service'], fixedMass: SM_DRY, tankIds: ['sm'], aero: { area: areaOf(SERVICE_MODULE.diameter), cd: cdTumbling }, comFn: () => SM_COM, parentFixedMass: CAPSULE.mass, parentAero: { area: CAPSULE_AREA, cd: cdCapsule }, parentComFn: comFrom(CAP_ONLY) });
   sm.groups = [];
   // separation: springs push the service module sideways (1.5 m/s) with a slow tumble
@@ -169,7 +181,7 @@ function fly(ctx: Ctx | null, env: Env, theta0: number, tU: number, start: numbe
   const d = flyCapsuleDescent(ctx, cap, { drogueCdA: DROGUE_CDA, mainCdA: MAIN_CDA, reefFrac: 0.12, drogueAlt: 7000, mainAlt: 2000, disreefDelay: 8, liftLD: 0.13, comAboveNadir: 1.45, side: vnorm(vcross(cap.r, cap.v)), eiAlt: 120e3, record: !!ctx, end, rcsChannel: 'cap.rcs' }, 90e3);
   if (ctx) for (let t = tHand; t <= end + 60; t += 60) setStation(t);
   const splashAngle = angleIn(orb, d.splashPos);
-  return { undock: tU, depart: tU + DEPART, deorbit: { ...burn, dv, perigeeKm }, smSep, smEnd, d, splashAngle, cap, orb, dvDepart };
+  return { undock: tU, depart: tU + DEPART, deorbit: { ...burn, dv, perigeeKm }, smSep, smPropLeft, smEnd, d, splashAngle, cap, orb, dvDepart };
 }
 
 export function buildReturn(): MissionTimeline {
@@ -275,7 +287,7 @@ export function buildReturn(): MissionTimeline {
   f('deorbit.burnS', run.deorbit.cut - run.deorbit.start);
   f('deorbit.perigeeKm', run.deorbit.perigeeKm);
   f('smSep.t', run.smSep);
-  f('smSep.smPropLeftKg', 0);
+  f('smSep.smPropLeftKg', run.smPropLeft);
   f('entryInterface.t', d.ei);
   f('entry.peakHeating.t', d.peakHeating.t);
   f('entry.peakHeating.altKm', d.peakHeating.alt / 1000);

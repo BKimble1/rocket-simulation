@@ -276,7 +276,7 @@ describe.each(MISSION_ORDER)('%s timeline', (id) => {
     }
   });
 
-  it('has a contiguous, monotonic presentation map of 8 to 20 minutes', () => {
+  it('has a contiguous, monotonic presentation map of 8 to 15 minutes', () => {
     const m = tl(id);
     const P = m.pres;
     expect(P[0].p0).toBe(0);
@@ -296,7 +296,7 @@ describe.each(MISSION_ORDER)('%s timeline', (id) => {
     }
     const min = presDuration(P) / 60;
     expect(min).toBeGreaterThan(8);
-    expect(min).toBeLessThan(20);
+    expect(min).toBeLessThan(15);
   });
 
   it('has a gap-free shot list covering the mission', () => {

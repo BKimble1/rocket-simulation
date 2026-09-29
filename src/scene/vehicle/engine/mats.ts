@@ -472,11 +472,11 @@ function patchGlow(m: THREE.MeshStandardMaterial, uniform: { value: number }) {
           // red-orange), dimming toward the exit (dull red, then nothing visible)
           float t = clamp(vGlowT, 0.0, 1.0);
           float hot = exp(-4.6 * t);
-          vec3 c = mix(vec3(0.46, 0.03, 0.006), vec3(1.0, 0.25, 0.035), hot);
-          totalEmissiveRadiance += c * hot * 1.5 * uGlow;
+          vec3 c = mix(vec3(0.42, 0.022, 0.004), vec3(0.98, 0.2, 0.026), hot);
+          totalEmissiveRadiance += c * hot * 1.2 * uGlow;
           // where it glows, emission dominates the look (a lit, reflective surface would wash the
           // dark red-orange out to a pale peach in a bright hangar)
-          float lit = 1.0 - 0.75 * smoothstep(0.0, 0.6, hot * uGlow);
+          float lit = 1.0 - 0.85 * smoothstep(0.0, 0.5, hot * uGlow);
           diffuseColor.rgb *= lit;
           roughnessFactor = mix(roughnessFactor, 0.85, 1.0 - lit);
         }`,

@@ -345,7 +345,8 @@ function flyDetached(ctx: Ctx, d: Craft, until: number) {
       } else g.next = 1;
     }
     d.step(dt, null);
-    ctx.rec(d, 1.0);
+    // dense samples while the tower's motor burns (tens of m/s^2 switching on and off)
+    ctx.rec(d, burning ? 0.1 : 1.0);
   }
   ctx.rec(d, 0, true);
 }
@@ -374,7 +375,9 @@ export function landedBooster(ctx: Ctx, b: Craft, end: number) {
   const axis = { x: EARTH_AXIS.x, y: EARTH_AXIS.y, z: EARTH_AXIS.z };
   const origins: OriginSample[] = [];
   const step = Math.max(2, (end - t0) / 400);
-  for (let t = t0 + 0.5; t <= end + step; t += t === t0 + 0.5 ? step - 0.5 : step) {
+  // first sample 0.02 s after contact: the legs stop the descent at once, and a later first
+  // sample would let the interpolation carry the touchdown speed below the pad surface
+  for (let t = t0 + 0.02; t <= end + step; t += t === t0 + 0.02 ? step - 0.02 : step) {
     const rot = qaxis(axis, OMEGA_EARTH * (t - t0));
     const p = qrot(rot, o0);
     origins.push({ t, p, v: vcross({ x: axis.x * OMEGA_EARTH, y: axis.y * OMEGA_EARTH, z: axis.z * OMEGA_EARTH }, p), q: qmul(rot, q0), m: b.mass });
@@ -450,7 +453,7 @@ export type { AttitudeCmd, V3 };
 export function coastSettleBurn(
   ctx: Ctx,
   up: Craft,
-  o: { tIgn: number; settle: number; dir: (c: Craft) => V3; done: (r: V3, v: V3) => number; throttle?: number; dt?: number; onStep?: (c: Craft) => void },
+  o: { tIgn: number; settle: number; dir: (c: Craft) => V3; done: (r: V3, v: V3) => number; throttle?: number; gLimit?: number; dt?: number; onStep?: (c: Craft) => void },
 ): { settleStart: number; start: number; cut: number; end: number } {
   const rec = (c: Craft) => s2Channels(ctx, c);
   const pro = (c: Craft): AttitudeCmd => ({ q: progradeQ(c.r, c.v), wMax: 2 * DEG, aMax: 0.5 * DEG, tau: 3 });
@@ -491,7 +494,7 @@ function coastKeplerProgradeTo(ctx: Ctx, c: Craft, until: number) {
   coastKepler(ctx, c, until, 20, (r, v) => progradeQ(r, v));
 }
 
-function orbitBurnS2(ctx: Ctx, up: Craft, o: { dir: (c: Craft) => V3; done: (r: V3, v: V3) => number; throttle?: number; dt?: number; onStep?: (c: Craft) => void }) {
+function orbitBurnS2(ctx: Ctx, up: Craft, o: { dir: (c: Craft) => V3; done: (r: V3, v: V3) => number; throttle?: number; gLimit?: number; dt?: number; onStep?: (c: Craft) => void }) {
   return orbitBurn(ctx, up, {
     group: 's2',
     dir: o.dir,
@@ -499,6 +502,7 @@ function orbitBurnS2(ctx: Ctx, up: Craft, o: { dir: (c: Craft) => V3; done: (r: 
     ignition: 1.5,
     tail: 0.6,
     throttle: o.throttle ?? 1,
+    gLimit: o.gLimit,
     dt: o.dt ?? 0.25,
     rate: { wMax: 3 * DEG, aMax: 1 * DEG },
     onStep: (c) => {

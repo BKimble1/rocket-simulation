@@ -58,7 +58,14 @@ export default function Dev() {
     for (const g of Object.values(model.bodies)) if (g) root.add(g);
     model.setState({});
     root.updateMatrixWorld(true);
-    const bounds = new THREE.Box3().setFromObject(root);
+    // framing bounds over what is visible (packed chutes, section caps and interiors are hidden)
+    const bounds = new THREE.Box3();
+    root.traverseVisible((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      m.geometry.computeBoundingBox();
+      bounds.union(m.geometry.boundingBox!.clone().applyMatrix4(m.matrixWorld));
+    });
     (window as unknown as Record<string, unknown>).__spacecraft = { model, root, bounds };
     return { model, root, bounds };
   }, [kind, detail, mount]);

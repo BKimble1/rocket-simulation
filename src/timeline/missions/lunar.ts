@@ -93,6 +93,9 @@ export function buildLunar(): MissionTimeline {
   const burn = coastSettleBurn(ctx, up, {
     tIgn,
     settle: 15,
+    // the same 4.5 g ceiling as the first burn: the light stage throttles down (to its 60 %
+    // minimum) instead of pressing the payload with 10 g or more at the end of the burn
+    gLimit: 4.5 * 9.80665,
     dir: (c) => vnorm(c.v),
     done: (r, v) => (vlen(v) ** 2) / 2 - MU_EARTH / vlen(r) - eTli,
   });
@@ -148,7 +151,8 @@ export function buildLunar(): MissionTimeline {
   up.extra = v3();
   ctx.ch.key('s2.rcs', up.t, 0.6);
   ctx.ch.key('s2.rcs', up.t + 0.5, 0);
-  coastCislunar(up, upEnd, (c) => ctx.rec(c, 120));
+  // recorded as densely as the probe near the Earth, so the two stay correctly placed side by side
+  coastCislunar(up, upEnd, (c) => ctx.rec(c, vlen(c.r) - R_EARTH < 20_000e3 ? 20 : 120));
   ctx.rec(up, 0, true);
 
   // probe: arrays, then the three-body coast through the flyby and out
@@ -215,15 +219,22 @@ export function buildLunar(): MissionTimeline {
     end,
   );
 
-  // ── presentation: 1x through powered flight, the cruise compressed hard, the flyby slower
+  // ── presentation (under 15 minutes): 1x through the first-stage flight, staging and the
+  // injection, the long steady upper-stage burn and the coasts accelerated, the cruise compressed
+  // hard, the flyby slower
   const pres = new Pres(START)
+    .to(T.fairingSep + 20)
+    .to(tSeco1 - 20, 2, rateNote('Upper-stage burn', 2))
     .to(tSeco1 + 20)
     .to(burn.settleStart - 20, 20, rateNote('Coast in the parking orbit', 20))
-    .to(tSep + 130)
+    .to(burn.end + 15)
+    .to(tSep - 15, 4, rateNote('Coast', 4))
+    .to(tSep + 30)
+    .to(tSep + 130, 4, rateNote('Arrays and antenna deploying', 4))
     .to(tSep + 2 * H, 120, rateNote('Coast', 120))
     .omit(fb.soiEnter - 6 * H, 'Quiet interval omitted: about two days of coasting outward')
     .to(fb.t - H, 1800, rateNote('Coast', 1800))
-    .to(fb.t + H, 90, rateNote('Flyby', 90))
+    .to(fb.t + H, 100, rateNote('Flyby', 100))
     .to(end, 2400, rateNote('Coast', 2400)).segs;
 
   // ── facts

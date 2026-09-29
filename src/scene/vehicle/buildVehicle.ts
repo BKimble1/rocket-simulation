@@ -317,9 +317,10 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     engineAngles(m);
     return gimbalQ(angP, angY, out);
   };
-  const applyGimbals = () => {
+  const applyGimbals = (s1: boolean, s2: boolean) => {
     let cluster = false;
     ctx.movers.engines.forEach((m, i) => {
+      if (m.kind === 'E-1' ? !s1 : !s2) return;
       engineAngles(m);
       gimbalQ(angP, angY, _q);
       if (m.instance !== undefined) {
@@ -338,14 +339,25 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
       exits[i].set(0, m.engine.exitY, 0).applyQuaternion(_q).add(m.pivot);
     });
     if (cluster) ctx.movers.cluster?.commit();
-    if (ctx.movers.boots.length) updateBoots(ctx, bootRot);
+    // the flexible boots follow the booster gimbals; below 0.05 deg of change the difference is
+    // invisible, so small steering corrections do not rebuild them every frame
+    if (s1 && ctx.movers.boots.length) {
+      const p = eff.s1GimbalPitch;
+      const y = eff.s1GimbalYaw;
+      if (!(Math.abs(p - bootAt.p) < 0.05 && Math.abs(y - bootAt.y) < 0.05) || (p === 0 && y === 0 && (bootAt.p !== 0 || bootAt.y !== 0))) {
+        bootAt.p = p;
+        bootAt.y = y;
+        updateBoots(ctx, bootRot);
+      }
+    }
   };
+  const bootAt = { p: NaN, y: NaN };
 
   const setLiquidVisibility = () => {
     const on = cutA > 0.001;
     for (const l of liquids) {
-      l.mesh.visible = on && !l.empty;
-      for (const c of l.caps) c.visible = on && !l.empty;
+      if (on) l.flush();
+      l.show(on);
     }
   };
 
@@ -364,9 +376,10 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
       poseFairing(ctx, eff.fairingOpen);
     }
     let liquidsChanged = false;
+    const shown = cutA > 0.001;
     for (const l of liquids) {
       const f = l.tank === 's1Lox' ? eff.s1Lox : l.tank === 's1Rp1' ? eff.s1Rp1 : l.tank === 's2Lox' ? eff.s2Lox : eff.s2Rp1;
-      if (l.setLevel(f)) liquidsChanged = true;
+      if (l.setLevel(f, shown)) liquidsChanged = true;
     }
     if (liquidsChanged) setLiquidVisibility();
     if (eff.frost !== done.frost) {
@@ -379,12 +392,14 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     }
     stacked = stackLift < 0.3 && attached(bodies.booster, bodies.upper);
     const stk = stacked ? 1 : 0;
-    if (eff.s1GimbalPitch !== done.gp || eff.s1GimbalYaw !== done.gy || eff.s2GimbalPitch !== done.gp2 || stk !== done.stk) {
+    const g1 = eff.s1GimbalPitch !== done.gp || eff.s1GimbalYaw !== done.gy;
+    const g2 = eff.s2GimbalPitch !== done.gp2 || stk !== done.stk;
+    if (g1 || g2) {
       done.gp = eff.s1GimbalPitch;
       done.gy = eff.s1GimbalYaw;
       done.gp2 = eff.s2GimbalPitch;
       done.stk = stk;
-      applyGimbals();
+      applyGimbals(g1, g2);
     }
   };
 

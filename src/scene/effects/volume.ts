@@ -222,7 +222,7 @@ void main() {
     vec3 e = mix(uGlowCore, uGlowRim, clamp(x, 0.0, 1.0)) * (uGlowI * rad * ex * exp(-y / uGlowDecay));
     // absorption and scattering
     float sa = smoothstep(uSmokeIn.x, uSmokeIn.y, y) * mix(1.0, (0.15 + smoothstep(0.25, 0.9, x)) * (1.6 - 1.4 * n2), uSootOuter);
-    float sig = uSmokeSigma * sa * rad * mix(turb, 1.0, uSootOuter) * endF * min(1.0, ex * 4.0);
+    float sig = uSmokeSigma * sa * rad * mix(turb, 1.0, uSootOuter) * endF * min(1.0, ex * 8.0);
     float sigS = uScatSigma * rad * ex * endF * (0.6 + 0.8 * n2);
     float ext = sig + sigS + sigF * endF;
     vec3 alb = mix(uSmokeA, uSmokeB, smoothstep(uSmokeIn.x, uY1, y));

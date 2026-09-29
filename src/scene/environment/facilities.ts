@@ -411,7 +411,7 @@ export function buildFacilities(maps: SiteMaps, detail: number): Facilities {
 
   // ───────────── perimeter fence ─────────────
   {
-    const posts = new Instances(new THREE.CylinderGeometry(0.045, 0.045, 1, 6, 1), SM('galv'));
+    const posts = new Instances(new THREE.CylinderGeometry(0.045, 0.045, 1, 5, 1, true), SM('galv'));
     const pos: number[] = [];
     const uv: number[] = [];
     const idx: number[] = [];

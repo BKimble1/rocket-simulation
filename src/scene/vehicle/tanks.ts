@@ -150,6 +150,41 @@ export function levelHeight(t: TankDef, frac: number): number {
   return (lo + hi) / 2;
 }
 
+const levelTables = new Map<TankId, { y: Float64Array; v: Float64Array }>();
+
+/**
+ * levelHeight through a cached volume table (built once per tank, then a binary search and a
+ * linear interpolation: cheap enough to run every frame during a drain). Within about 1 cm of
+ * the exact solution.
+ */
+export function levelHeightFast(t: TankDef, frac: number): number {
+  let tab = levelTables.get(t.id);
+  if (!tab) {
+    const n = 241;
+    const y = new Float64Array(n);
+    const v = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      y[i] = t.yMin + ((t.yMax - t.yMin) * i) / (n - 1);
+      v[i] = volumeAt(t, y[i]);
+    }
+    levelTables.set(t.id, (tab = { y, v }));
+  }
+  const f = Math.max(0, Math.min(1, frac));
+  const want = f * 0.97 * tankVolumeOf(t);
+  const { y, v } = tab;
+  let lo = 0;
+  let hi = v.length - 1;
+  if (want <= v[0]) return y[0];
+  if (want >= v[hi]) return y[hi];
+  while (hi - lo > 1) {
+    const m = (lo + hi) >> 1;
+    if (v[m] < want) lo = m;
+    else hi = m;
+  }
+  const k = (want - v[lo]) / Math.max(1e-12, v[hi] - v[lo]);
+  return y[lo] + (y[hi] - y[lo]) * k;
+}
+
 /** Centroid height of the liquid at free-surface height h. */
 export function centroidAt(t: TankDef, h: number): number {
   const r = rs(t);

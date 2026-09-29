@@ -279,7 +279,10 @@ export function createSpace(opts: SpaceOptions) {
     // split the rays just beyond the subject (inside the layer a little further, so the cloud
     // right around the subject is drawn in front of it); far subjects: everything is 'back'
     cloudU.uSplit.value = subjDist < 5e5 ? Math.max(regime === 1 ? 60 : 0, subjDist * (regime === 1 ? 1.08 : 1.03) + 15) : 0;
-    for (const m of cloudLayers) m.visible = haveClouds;
+    // with no subject nearby (uSplit 0) every cloud is in the back layer: skip the front pass
+    cloudLayers[0].visible = haveClouds;
+    cloudLayers[1].visible = haveClouds && cloudU.uSplit.value > 0;
+    cloudLayers[2].visible = haveClouds;
     skyState.cloudBase = CLOUD_BASE;
     skyState.cloudTop = CLOUD_TOP;
     if (regime === 1 && haveClouds) {

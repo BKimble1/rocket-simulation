@@ -77,6 +77,9 @@ export class Channels {
   }
 }
 
+/** Equal up to floating-point noise (a level carried across a separation may differ in the last bit). */
+const same = (a: number, b: number) => Math.abs(a - b) <= 1e-12;
+
 function simplify(t: number[], v: number[], tol: number): Channel {
   const n = t.length;
   if (n <= 2) return { t: [...t], v: [...v] };
@@ -87,7 +90,7 @@ function simplify(t: number[], v: number[], tol: number): Channel {
     // can we drop i (line from the last kept point a to i+1 reproduces every point between)?
     // The first and last keys of an exactly constant run are always kept, so a level that
     // stops changing (a tank after cutoff, a throttle at zero) is never smeared into it.
-    const corner = (v[i] === v[i - 1]) !== (v[i] === v[i + 1]);
+    const corner = same(v[i], v[i - 1]) !== same(v[i], v[i + 1]);
     let ok = !corner && i - a < 400;
     const t0 = t[a];
     const t1 = t[i + 1];

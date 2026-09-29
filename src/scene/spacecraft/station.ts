@@ -145,7 +145,7 @@ export function buildStation(kit: Kit): Built {
     kit.mesh(noz, P.thruster(), ...T_MOD, prop, z, 0.02, 0);
   }
   for (const sz of [-1, 1]) {
-    const fin = kit.mesh(box(0.05, 3.6, 2.2), radiator(), ...T_MOD, prop, 0, 3.1, sz * 2.75);
+    const fin = kit.mesh(box(0.05, 3.6, 2.2), radiator(), ...T_ARR, prop, 0, 3.1, sz * 2.75);
     uvMetres(fin.geometry, 1);
     kit.mesh(box(0.08, 0.3, 1.2), P.aluMilled(), ...T_MOD, prop, 0, 3.1, sz * 1.8);
   }
@@ -338,7 +338,7 @@ export function buildStation(kit: Kit): Built {
     const rz = sz * 10;
     kit.mesh(cyl(0.3, 0.3, 0.6, 16), P.whitePaint(), ...T_MOD, body, 0, ty - tw - 0.3, rz);
     for (let k = 0; k < 3; k++) {
-      const p = kit.mesh(box(0.08, 2.8, 2.6), radiator(), ...T_MOD, body, 0, ty - tw - 0.6 - 1.45 - k * 2.9, rz);
+      const p = kit.mesh(box(0.08, 2.8, 2.6), radiator(), ...T_ARR, body, 0, ty - tw - 0.6 - 1.45 - k * 2.9, rz);
       uvMetres(p.geometry, 1);
     }
   }

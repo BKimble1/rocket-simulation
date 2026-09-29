@@ -1,5 +1,6 @@
 /** Explore mode: the hangar, the toolbar, the part finder, the lesson and materials panels. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useDockHeight } from '../hooks/useDockHeight';
 import { useApp } from '../../state/store';
 import { ExploreToolbar } from './Toolbar';
 import { PartFinder } from './PartFinder';
@@ -25,6 +26,8 @@ export function Explore() {
   const thermal = useApp((s) => s.overlays.thermal);
   const set = useApp((s) => s.set);
   const [finder, setFinder] = useState(false);
+  const dock = useRef<HTMLDivElement>(null);
+  useDockHeight(dock);
   useEffect(() => () => startDemo(null), []);
   const pausedAt = inspect && playback.player ? presToMission(playback.player.tl.pres, inspect.from.p) : null;
   const phase = inspect && playback.player && pausedAt !== null ? playback.player.tl.phases.filter((p) => pausedAt >= p.start).pop() : null;
@@ -62,7 +65,7 @@ export function Explore() {
           </ul>
         </aside>
       )}
-      <div className="bottom-dock">
+      <div className="bottom-dock" ref={dock}>
         <DemoBar />
         <ExploreToolbar onParts={() => setFinder((f) => !f)} />
       </div>

@@ -330,7 +330,8 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
     }
     if (cutting) {
       const u = clamp((t + dt - cutStart) / TAIL_S1, 0, 1);
-      throttleCmd = cutFrom * (1 - u);
+      // exactly zero at the end of the transient (not a rounding residue that still burns)
+      throttleCmd = u >= 1 - 1e-9 ? 0 : cutFrom * (1 - u);
     }
     center.next = throttleCmd;
     outer.next = throttleCmd;
