@@ -147,9 +147,17 @@ export function Hangar() {
   }, [tier]);
 
   const shaft = useRef(0);
+  const idle = useRef(0);
   useFrame(() => {
     if (frame.location !== 'hangar' && director.wantLocation !== 'hangar') return;
     const dt = frame.dt;
+    // home screen: a slow, steady drift around the vehicle until the viewer takes the camera
+    if (director.input.active) idle.current = 0;
+    else idle.current += dt;
+    if (useApp.getState().view === 'home' && !director.reduced && idle.current > 2 && !part) {
+      director.hangarGoal.az += dt * 1.6;
+      director.hangarTau = 0.6;
+    }
     // view transitions (1.1 s), same parts throughout
     const va = viewAnim.current;
     const rate = dt / (director.reduced ? 0.35 : 1.1);

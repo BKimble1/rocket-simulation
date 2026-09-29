@@ -12,6 +12,8 @@ import { frame } from '../scene/frame';
 import { stageHooks } from '../scene/Stage';
 import { effects } from '../scene/effects/input';
 import { snapFlight } from '../director/director';
+import { FLAGS } from '../config';
+import { missionToPres } from '../timeline/sample';
 
 const cache = new Map<MissionId, MissionTimeline>();
 
@@ -153,4 +155,14 @@ export function installPlaybackTick() {
     for (const e of pl.drainEvents()) for (const f of playback.onEvent) f(e);
     publish();
   };
+}
+
+if (FLAGS.hooks && typeof window !== 'undefined') {
+  const w = window as unknown as Record<string, unknown>;
+  /** Test hook: seek the mission explorer to a mission time (s). */
+  w.__rocketSeekMission = (t: number) => {
+    const pl = playback.player;
+    if (pl) seekPres(missionToPres(pl.tl.pres, t));
+  };
+  w.__rocketPlayback = playback;
 }
