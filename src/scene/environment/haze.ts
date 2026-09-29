@@ -39,6 +39,8 @@ export const hazeUniforms = {
   uHazeCam: { value: new THREE.Vector3(0, 6371000, 0) },
   uHazeMarch: { value: 0 },
   uHazeSteps: { value: 8 },
+  /** Sample distribution of the march (the globe's: uniform near the ground, dense toward the ground from above 1 km). */
+  uHazeWarp: { value: 0 },
   /** The sky module's atmosphere tables and Sun irradiance (shared objects: always current). */
   uTransLUT: { value: lut.trans },
   uMsLUT: { value: lut.ms },
@@ -62,7 +64,9 @@ export function updateHaze() {
   u.uHazeSun.value.copy(skyState.sunColor).multiplyScalar(0.06 * skyState.sunIntensity);
   u.uHazeCam.value.copy(frame.camAbs);
   u.uHazeMarch.value = smoothstep(60, 400, frame.camAlt);
-  u.uHazeSteps.value = Math.max(6, Math.min(12, tierSpec().atmoSamples[0]));
+  // the globe's own step count and sample distribution, so the terrain's fading edge matches it
+  u.uHazeSteps.value = Math.max(6, Math.min(16, tierSpec().atmoSamples[0]));
+  u.uHazeWarp.value = frame.camAlt < 1000 ? 0 : 2;
 }
 
 /** GLSL: declarations shared by vertex/fragment patches. */
@@ -86,6 +90,7 @@ varying vec3 vHazePos;
 uniform vec3 uHazeCam;
 uniform float uHazeMarch;
 uniform int uHazeSteps;
+uniform int uHazeWarp;
 uniform vec3 uHazeColor;
 uniform vec3 uHazeSun;
 uniform vec3 uSunW;
@@ -114,7 +119,7 @@ vec3 siteHaze( vec3 col, vec3 wp ) {
   if ( uHazeMarch <= 0.0 ) return cheap;
   // the globe's scattering integral along the same ray (camera inside the atmosphere)
   vec3 Tm;
-  vec3 Lm = integrateScattering( uHazeCam, v, uSunW, 0.0, L, uHazeSteps, 0.5, 0, Tm ) * SUN_E;
+  vec3 Lm = integrateScattering( uHazeCam, v, uSunW, 0.0, L, uHazeSteps, 0.5, uHazeWarp, Tm ) * SUN_E;
   return mix( cheap, col * Tm + Lm, uHazeMarch );
 }
 `;

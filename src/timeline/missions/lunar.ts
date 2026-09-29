@@ -2,20 +2,20 @@
  * Lunar flyby: expendable booster, upper-stage burn to a 200 km parking orbit, a coast to the
  * departure point, settling thrusters and a restart for trans-lunar injection (TLI), probe
  * separation, then about three days of coasting under the pull of both the Earth and the Moon
- * (restricted three-body model, see physics/cislunar.ts), a far-side closest approach about
- * 1,500 km above the lunar surface, and the outbound leg away from the Moon (a flyby: the probe
- * is fast enough relative to the Moon that it is not captured).
+ * (restricted three-body model, see physics/cislunar.ts), a closest approach about 1,500 km
+ * above the Moon on its TRAILING side, and the outbound leg away from the Earth-Moon system.
  *
- * Physics note: with a direct three-day transfer in the Moon's orbital plane, a pass behind the
- * Moon (far side, as seen from the Earth) is on the Moon's leading side: the Moon takes energy
- * and angular momentum and bends the path back toward the Earth (the free-return geometry of
- * Apollo 13). After leaving the sphere of influence the probe is on a long Earth orbit whose
- * perigee lies below the surface (about -6,000 km): uncorrected, it would re-enter about three
- * days after leaving the sphere of influence, and the soi-exit label says so (the outbound.*
- * facts give the numbers). A pass
- * on the trailing side (near the limb, seen from the Earth) would add energy instead and send
- * it out of the Earth-Moon system (findMoonPhase(..., 'trailing'): hyperbolic, e about 1.9).
- *
+ * Physics note (a gravity assist): the probe crosses the Moon's orbit just behind the Moon, so
+ * its closest approach is on the side the Moon is moving away from (the trailing side), near the
+ * edge of the disc as seen from the Earth. Seen from the Moon the probe only swings around and
+ * leaves at the speed it came in with, but the Moon's pull, aimed forward along the Moon's own
+ * motion, adds energy and angular momentum relative to the Earth: the probe leaves the sphere
+ * of influence faster than Earth escape speed at that distance, on a hyperbolic path
+ * (eccentricity about 1.9) that carries it out of the Earth-Moon system ("swing past the Moon
+ * and continue outbound", as the outline says). A pass around the far side (the leading side
+ * for this three-day transfer) would do the opposite and bend the path back toward the Earth
+ * (the free-return geometry): findMoonPhase(..., 'far').
+
  * The Moon's orbit lies in the parking-orbit plane (the launch is assumed timed for that
  * geometry, as in world/frames.ts). The TLI energy is chosen for a three-day trip to the Moon's
  * distance and the Moon's phase at T-0 by a deterministic search. The Moon's gravity is switched
@@ -140,7 +140,7 @@ export function buildLunar(): MissionTimeline {
   ctx.ev('payload-sep', tSep, 'Probe separation: springs push it away at 0.4 m/s', 'separation', ['satellite', 'upper'], 'sep');
   ctx.attached.satellite = { to: 'upper', until: tSep };
 
-  // ── Moon phase: deterministic search for a far-side pass at FLYBY_ALT
+  // ── Moon phase: deterministic search for a trailing-side pass at FLYBY_ALT
   const found = findMoonPhase(
     probe,
     FLYBY_ALT,
@@ -195,16 +195,24 @@ export function buildLunar(): MissionTimeline {
   const end = probe.t;
   if (Number.isNaN(fb.soiExit)) throw new Error('lunar flyby: the probe did not leave the sphere of influence');
   ctx.ev('soi-enter', fb.soiEnter, `Entering the Moon's sphere of influence (${(SOI_MOON / 1e6).toFixed(0)},000 km): the Moon's pull now dominates`, 'milestone', ['satellite']);
-  ctx.ev('closest-approach', fb.t, `Closest approach: ${num(fb.alt / 1000)} km above the far side`, 'milestone', ['satellite']);
+  const where =
+    fb.angleFromEarthDeg > 110 ? 'on the far side, beyond the Moon as seen from the Earth' : fb.angleFromEarthDeg < 70 ? 'on the side facing the Earth' : 'near the edge of the disc as seen from the Earth';
+  const caLabel = fb.trailing
+    ? `Closest approach: ${num(fb.alt / 1000)} km above the Moon, passing behind it in its orbital motion (the trailing side), ${where}: the Moon's pull adds energy`
+    : `Closest approach: ${num(fb.alt / 1000)} km above the Moon, ahead of it in its orbital motion (the leading side), ${where}: the Moon's pull takes energy`;
+  ctx.ev('closest-approach', fb.t, caLabel, 'milestone', ['satellite']);
   // where the flyby leaves the probe (two-body Earth orbit from the final state)
   const elEnd = elements(probe.r, probe.v, MU_EARTH);
+  // geocentric speed at the sphere-of-influence exit, and Earth escape speed there
+  const exitSpeed = vlen(fb.soiExitV!);
+  const exitEscape = Math.sqrt((2 * MU_EARTH) / vlen(fb.soiExitR!));
   const returns = elEnd.e < 1 && elEnd.rp < R_EARTH + ENTRY_ALT;
   const tReturn = returns ? timeToRadiusIn(probe.r, probe.v, R_EARTH + ENTRY_ALT) : NaN;
   const exitLabel = returns
     ? `Leaving the Moon's sphere of influence: not captured. The flyby has turned the path back toward the Earth (a free-return path): uncorrected, it would re-enter about ${Math.round((probe.t + tReturn - fb.soiExit) / 86400)} days later`
     : elEnd.e < 1
       ? "Leaving the Moon's sphere of influence: not captured, on a new, high Earth orbit"
-      : "Leaving the Moon's sphere of influence: not captured, leaving the Earth-Moon system";
+      : `Leaving the Moon's sphere of influence: not captured. The flyby has added energy: ${(exitSpeed / 1000).toFixed(2)} km/s relative to the Earth, above escape speed, so the probe leaves the Earth-Moon system`;
   ctx.ev('soi-exit', fb.soiExit, exitLabel, 'milestone', ['satellite']);
   ctx.exists.upper = [START, upEnd];
   ctx.exists.satellite = [START, end];
@@ -287,7 +295,11 @@ export function buildLunar(): MissionTimeline {
   ctx.fact('closestApproach.angleFromEarthDeg', fb.angleFromEarthDeg);
   ctx.fact('closestApproach.speedRelMoon', relSpeedAt(ctx, fb.t, phase0));
   ctx.fact('cruise.days', (fb.t - tSep) / 86400);
+  ctx.fact('soiExit.speed', exitSpeed);
+  ctx.fact('soiExit.escapeSpeed', exitEscape);
+  ctx.fact('soiExit.distanceKm', vlen(fb.soiExitR!) / 1000);
   ctx.fact('outbound.energy', elOut.energy);
+  ctx.fact('outbound.vInf', elOut.energy > 0 ? Math.sqrt(2 * elOut.energy) : 0);
   ctx.fact('outbound.ecc', elOut.e);
   ctx.fact('outbound.radialSpeed', vdot(probe.r, probe.v) / vlen(probe.r));
   ctx.fact('outbound.distanceKm', vlen(probe.r) / 1000);
