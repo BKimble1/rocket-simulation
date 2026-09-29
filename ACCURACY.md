@@ -91,11 +91,157 @@ the picture ("Slow motion ×0.6"). Playback speed changes never desynchronize th
 
 ## Computed facts per mission
 
-The table below is produced from `buildMission(id).facts` (see `scripts/mission-report.mjs`)
-and is checked by the tests in `src/timeline`.
+The tables below are produced from `buildMission(id).facts` by `node scripts/accuracy-facts.mjs` (all facts: `node scripts/mission-report.mjs`)
+and are checked by the tests in `src/timeline` (the lesson numbers are checked against them in `src/content`).
 
 <!-- FACTS:BEGIN -->
-(Filled in from the reference trajectories.)
+### Satellite to low Earth orbit
+
+| Fact | Value | Unit | Meaning |
+|---|---:|---|---|
+| `liftoffMass` | 441,243 | kg | stack mass at liftoff (T-0) |
+| `liftoffTW` | 1.204 | ratio | liftoff thrust-to-weight: 7 x E-1 sea-level rated thrust / liftoff weight |
+| `maxQ.t` | 82.8 | s | time of maximum dynamic pressure |
+| `maxQ.kPa` | 21.95 | kPa | maximum dynamic pressure |
+| `maxQ.altKm` | 12.29 | km | altitude at maximum dynamic pressure |
+| `meco.t` | 147.4 | s | first-stage main engine cutoff |
+| `meco.altKm` | 53.53 | km | altitude at the end of the 0.8 s MECO shutdown transient (the stack climbs about 1 km more after the MECO event on orbital flights) |
+| `meco.speed` | 1,956 | m/s | inertial speed at the end of the MECO shutdown transient |
+| `meco.s1PropLeft` | 50,323 | kg | first-stage propellant left after the MECO shutdown transient (the landing reserve on recovery flights) |
+| `stageSep.t` | 151.2 | s | stage separation |
+| `fairingSep.t` | 224.7 | s | payload fairing separation command (the halves release 1.2 s later) |
+| `seco.t` | 437.1 | s | upper-stage engine cutoff (SECO) into the insertion orbit |
+| `insertion.periKm` | 200 | km | perigee altitude of the insertion orbit at SECO |
+| `insertion.apoKm` | 400 | km | apogee altitude of the insertion orbit at SECO |
+| `circ.dv` | 56.68 | m/s | velocity change of the circularization burn |
+| `orbit.periKm` | 399.6 | km | final orbit perigee altitude |
+| `orbit.apoKm` | 400.4 | km | final orbit apogee altitude |
+| `orbit.incDeg` | 28.5 | deg | final orbit inclination |
+| `orbit.periodMin` | 92.42 | min | final orbit period |
+| `rtls.boostbackDv` | 1,789 | m/s | velocity change of the boostback burn |
+| `rtls.entryDv` | 539.2 | m/s | velocity change of the entry burn |
+| `rtls.landingDv` | 539.8 | m/s | velocity change of the landing burn |
+| `rtls.landingErrorM` | 0.3788 | m | touchdown distance from the landing-zone centre |
+| `rtls.touchdownSpeed` | 1.147 | m/s | booster speed at touchdown |
+| `rtls.propLeftKg` | 711.6 | kg | booster propellant left after touchdown |
+
+### Suborbital research flight
+
+| Fact | Value | Unit | Meaning |
+|---|---:|---|---|
+| `s1LoadKg` | 54,097 | kg | first-stage propellant loaded (partial load, computed) |
+| `liftoffMass` | 84,301 | kg | stack mass at liftoff (T-0) |
+| `meco.t` | 60.4 | s | first-stage main engine cutoff |
+| `meco.altKm` | 36.09 | km | altitude at the end of the 0.8 s MECO shutdown transient (the stack climbs about 1 km more after the MECO event on orbital flights) |
+| `meco.speed` | 1,313 | m/s | inertial speed at the end of the MECO shutdown transient |
+| `capsuleSep.t` | 96.4 | s | capsule separation (suborbital: from the booster; station: from the upper stage) |
+| `apogee.km` | 116.7 | km | capsule apogee altitude |
+| `karman.freeFallS` | 119 | s | time the capsule spends above 100 km |
+| `entry.peakG` | 5.68 | g | peak sensed deceleration of the capsule during entry |
+| `entry.peakHeating.kWm2` | 12.65 | kW/m^2 | peak stagnation-point heating rate (Sutton-Graves) |
+| `drogue.t` | 413.4 | s | drogue parachute deployment |
+| `main.t` | 513.4 | s | main parachute deployment (reefed) |
+| `splash.speed` | 5.379 | m/s | capsule speed at splashdown (under the three mains) |
+| `rtls.landingErrorM` | 0.5359 | m | touchdown distance from the landing-zone centre |
+| `rtls.touchdownSpeed` | 1.188 | m/s | booster speed at touchdown |
+| `rtls.propLeftKg` | 387.1 | kg | booster propellant left after touchdown |
+
+### Geostationary transfer
+
+| Fact | Value | Unit | Meaning |
+|---|---:|---|---|
+| `liftoffMass` | 436,543 | kg | stack mass at liftoff (T-0) |
+| `meco.t` | 174 | s | first-stage main engine cutoff |
+| `meco.s1PropLeft` | 1,500 | kg | first-stage propellant left after the MECO shutdown transient (the landing reserve on recovery flights) |
+| `boosterImpact.downrangeKm` | 897.2 | km | ground distance from the pad to where the expended booster falls into the ocean |
+| `parking.periKm` | 200 | km | parking orbit perigee altitude |
+| `parking.apoKm` | 200 | km | parking orbit apogee altitude |
+| `seco1.t` | 426.9 | s | first upper-stage cutoff, into the parking orbit |
+| `ses2.t` | 1,558 | s | upper-stage restart for the GTO injection |
+| `injection.burnS` | 51.48 | s | duration of the GTO injection burn |
+| `gto.periKm` | 200.6 | km | transfer orbit perigee altitude |
+| `gto.apoKm` | 35,788 | km | transfer orbit apogee altitude (target 35,786 km) |
+| `apogee.climbH` | 5.224 | h | time from satellite separation to apogee |
+| `apogeeBurn.count` | 3 | count | number of apogee-engine burns, each centred on a later apogee (the satellite coasts through the first for checkout) |
+| `apogeeBurn.burn1Min` | 87.33 | min | duration of the first apogee burn |
+| `apogeeBurn.burn2Min` | 58.37 | min | duration of the second apogee burn |
+| `apogeeBurn.burn3Min` | 40.32 | min | duration of the third (last) apogee burn |
+| `apogeeBurn.spanH` | 30.45 | h | time from the first ignition to the end of the last burn |
+| `apogeeBurn.dvIdeal` | 1,836 | m/s | ideal impulsive velocity change at the first apogee to a geostationary orbit, the 28.5 deg plane change included |
+| `apogeeBurn.dv` | 1,845 | m/s | velocity change the burns delivered together (rocket equation); a little above the ideal change: finite-burn loss |
+| `apogeeBurn.propLeftKg` | 99.73 | kg | satellite propellant left after the last burn (for station keeping) |
+| `final.periKm` | 35,786 | km | satellite orbit perigee altitude after the last burn |
+| `final.apoKm` | 35,792 | km | satellite orbit apogee altitude after the last burn |
+| `final.incDeg` | 0.0349 | deg | satellite orbit inclination after the last burn |
+| `final.periodH` | 23.93 | h | satellite orbit period after the last burn (geostationary: one sidereal day, 23.93 h) |
+
+### Station delivery
+
+| Fact | Value | Unit | Meaning |
+|---|---:|---|---|
+| `crew.capsuleKg` | 8,300 | kg | crew capsule mass flown |
+| `crew.serviceModuleKg` | 4,100 | kg | service module mass flown (dry + propellant) |
+| `crew.abortTowerKg` | 5,400 | kg | abort tower mass flown |
+| `liftoffMass` | 448,943 | kg | stack mass at liftoff (T-0) |
+| `liftoffTW` | 1.183 | ratio | liftoff thrust-to-weight: 7 x E-1 sea-level rated thrust / liftoff weight |
+| `maxQ.kPa` | 21.48 | kPa | maximum dynamic pressure |
+| `meco.t` | 174 | s | first-stage main engine cutoff |
+| `boosterImpact.downrangeKm` | 734.7 | km | ground distance from the pad to where the expended booster falls into the ocean |
+| `les.t` | 196.8 | s | abort tower jettison |
+| `seco.t` | 459.3 | s | upper-stage engine cutoff (SECO) into the insertion orbit |
+| `insertion.periKm` | 200 | km | perigee altitude of the insertion orbit at SECO |
+| `insertion.apoKm` | 250 | km | apogee altitude of the insertion orbit at SECO |
+| `phasing.revs` | 4 | count | phasing revolutions before the first raise burn |
+| `phasingBurn1.dv` | 42.43 | m/s | its velocity change |
+| `phasingBurn2.dv` | 57.19 | m/s | its velocity change |
+| `raise.periKm` | 397 | km | capsule orbit perigee altitude after the raise burns |
+| `raise.apoKm` | 398.2 | km | capsule orbit apogee altitude after the raise burns |
+| `docking.closingSpeed` | 0.08 | m/s | closing speed at contact |
+| `docking.hoursAfterLaunch` | 8.369 | h | time from liftoff to soft capture |
+| `sm.propLeftKg` | 1,108 | kg | service-module propellant left after docking |
+| `station.altKm` | 400 | km | station orbit altitude (circular) |
+
+### Capsule return
+
+| Fact | Value | Unit | Meaning |
+|---|---:|---|---|
+| `capsuleKg` | 8,300 | kg | crew capsule mass (spec.ts CAPSULE) |
+| `serviceModuleKg` | 3,708 | kg | service module mass at undocking: dry mass plus the propellant the station mission arrives with |
+| `undock.smPropKg` | 1,108 | kg | service-module propellant at undocking (the station mission's sm.propLeftKg, shared constant SM_PROP_AT_DOCKING) |
+| `deorbit.dv` | 103.9 | m/s | deorbit burn velocity change (retrograde, service-module engine) |
+| `deorbit.burnS` | 45.64 | s | deorbit burn duration |
+| `deorbit.perigeeKm` | 45 | km | perigee altitude after the deorbit burn |
+| `smSep.dvLeft` | 196 | m/s | velocity change that propellant could still give the capsule and service module (rocket equation): the deorbit margin |
+| `entry.peakHeating.altKm` | 58.18 | km | altitude of peak heating |
+| `entry.peakHeating.kWm2` | 400.6 | kW/m^2 | peak stagnation-point heating rate (Sutton-Graves) |
+| `entry.peakHeating.speed` | 6,305 | m/s | air-relative speed at peak heating |
+| `entry.peakG` | 4.181 | g | peak sensed deceleration of the capsule during entry |
+| `entry.peakG.altKm` | 38.01 | km | altitude of the peak deceleration |
+| `entry.blackoutS` | 382 | s | duration of the high-heating band (heating above a quarter of its peak; plasma blackout) |
+| `drogue.t` | 85,148 | s | drogue parachute deployment |
+| `main.t` | 85,224 | s | main parachute deployment (reefed) |
+| `splash.speed` | 7.562 | m/s | capsule speed at splashdown (under the three mains) |
+| `splash.eastOfPadKm` | 271.5 | km | splashdown distance east of the pad |
+
+### Lunar flyby
+
+| Fact | Value | Unit | Meaning |
+|---|---:|---|---|
+| `liftoffMass` | 434,343 | kg | stack mass at liftoff (T-0) |
+| `parking.periKm` | 200 | km | parking orbit perigee altitude |
+| `parking.apoKm` | 200.1 | km | parking orbit apogee altitude |
+| `tli.t` | 1,920 | s | trans-lunar injection burn start |
+| `tli.burnS` | 60.92 | s | TLI burn duration |
+| `tli.speed` | 10,945 | m/s | inertial speed at TLI cutoff |
+| `tli.c3km2s2` | -1.444 | km^2/s^2 | characteristic energy after TLI (negative: still bound to the Earth) |
+| `cruise.days` | 2.744 | days | time from probe separation to closest approach |
+| `closestApproach.altKm` | 1,500 | km | altitude above the lunar surface at closest approach |
+| `closestApproach.angleFromEarthDeg` | 77.07 | deg | angle between the Earth direction and the probe, seen from the Moon |
+| `closestApproach.speedRelMoon` | 2,078 | m/s | speed relative to the Moon at closest approach |
+| `soiExit.speed` | 1,743 | m/s | speed relative to the Earth when the probe leaves the Moon's sphere of influence |
+| `soiExit.escapeSpeed` | 1,331 | m/s | Earth escape speed at that distance (the probe leaves the Earth-Moon system when it is faster) |
+| `outbound.vInf` | 1,114 | m/s | hyperbolic excess speed relative to the Earth after the flyby: the speed left far from the Earth (0 when still bound) |
+| `outbound.ecc` | 1.861 | ratio | geocentric eccentricity after the flyby (above 1: hyperbolic, leaving the Earth-Moon system) |
 <!-- FACTS:END -->
 
 ## Sources
