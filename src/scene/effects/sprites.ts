@@ -282,6 +282,10 @@ void main() {
   float sunVis = 1.0 - 0.72 * shadow;
   // a thick cloud scatters many times: its sunlit side is brighter than a white wall would be
   vec3 light = uSunCol * sunVis * mix(wrap * 1.3 + hg * (1.0 - dens) * 5.0, 0.8 + 0.4 * wrap + hg * 6.0, thinMedium);
+  // multiple scattering: sunlight diffuses through a thick cloud and leaves it on every side,
+  // so a sunlit steam cloud stays white on its shaded side (a few times darker than its lit
+  // side, not ten), greyer toward its far side and its base
+  light += uSunCol * (0.4 * (1.0 - thinMedium) * (1.0 - 0.6 * shadow) * (0.6 + 0.4 * dens));
   float up = dot(n, uUpView) * 0.5 + 0.5;
   // inside a thick cloud light scatters many times and mixes: its shaded parts take a more
   // neutral grey than the blue sky alone would give

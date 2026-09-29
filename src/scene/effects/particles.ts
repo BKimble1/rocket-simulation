@@ -445,7 +445,8 @@ const GROUND: Species = {
       uz = dz * sp * Math.cos(el);
       uy = sp * Math.sin(el);
       rec.tau = 1.3 + 0.9 * rnd(7);
-      hot = onMount && rnd(8) < 0.3 ? 1 : 0;
+      // a few puffs carry the flame's glow out of the trench for a moment at engine start
+      hot = onMount && rnd(8) < 0.16 ? 1 : 0;
     } else if (onMount) {
       // steam boiling up around the mount (deluge water flashing in the exhaust)
       const a = rnd(2) * Math.PI * 2;
@@ -471,7 +472,7 @@ const GROUND: Species = {
       uz = Math.sin(a) * sp;
       uy = 2 + 7 * rnd(6);
       rec.tau = 1.1 + 0.7 * rnd(7);
-      hot = hN < 60 && rnd(8) < 0.25 ? 1 : 0;
+      hot = hN < 60 && rnd(8) < 0.14 ? 1 : 0;
     }
     padPoint(ts, x, y, z, rec.p0);
     padDir(ts, ux, uy, uz, rec.u0);
@@ -499,19 +500,19 @@ const GROUND: Species = {
     rec.thinRef = rec.size0 * 2;
     // mostly white steam (deluge water boiled by the exhaust, condensing as it cools), with
     // some neutral grey combustion smoke that pales as it mixes with the steam
-    if (rnd(16) < 0.18) {
-      const g = 0.5 + 0.08 * rnd(17);
-      rec.alb0.setRGB(g, g, g * 1.01);
-      rec.alb1.setRGB(0.8, 0.8, 0.81);
+    if (rnd(16) < 0.14) {
+      const g = 0.56 + 0.08 * rnd(17);
+      rec.alb0.setRGB(g, g, g * 1.02);
+      rec.alb1.setRGB(0.84, 0.84, 0.85);
     } else {
-      const w = 0.9 + 0.07 * rnd(17);
-      rec.alb0.setRGB(w, w, w);
-      rec.alb1.setRGB(w, w, w);
+      const w = 0.93 + 0.06 * rnd(17);
+      rec.alb0.setRGB(w, w, w * 1.01);
+      rec.alb1.setRGB(w, w, w * 1.01);
     }
-    rec.tauC = 10;
+    rec.tauC = 7;
     if (hot) {
-      rec.emit.setRGB(2.2, 0.72, 0.14).multiplyScalar(F);
-      rec.tauE = 0.3 + 0.35 * rnd(18);
+      rec.emit.setRGB(1.7, 0.6, 0.13).multiplyScalar(F);
+      rec.tauE = 0.2 + 0.25 * rnd(18);
     } else {
       rec.emit.setRGB(0, 0, 0);
       rec.tauE = 1;

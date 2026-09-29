@@ -162,7 +162,7 @@ export class EffectsSystem {
     // clouds read white in sunlight (only their parts right beside the flame glow orange), while
     // at night or at low Sun the flame is what lights them.
     const day = Math.min(1, (L.sunCol.r * 0.3 + L.sunCol.g * 0.5 + L.sunCol.b * 0.2) / 2.2);
-    const flameOnSmoke = 0.7 - 0.5 * day;
+    const flameOnSmoke = 0.7 - 0.58 * day;
     sf[0].col.copy(f0.col).multiplyScalar(f0.intensity * flameOnSmoke);
 
     // entry plasma (the secondary light goes to the plasma when there is one)
