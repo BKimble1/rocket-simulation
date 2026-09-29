@@ -256,7 +256,10 @@ varying float vTile;
 varying float vFade;
 void main() {
   #include <logdepthbuf_fragment>
+  // tiles 4-7: the same billows for thin media (puffs, vapour, spray), lit through
   float tile = floor(vTile + 0.5);
+  float thinMedium = step(3.5, tile);
+  tile = mod(tile, 4.0);
   vec2 base = vec2(mod(tile, 2.0), floor(tile / 2.0)) * 0.5;
   vec2 uvT = base + (vUv * 0.5 + 0.5) * 0.5;
   vec4 tx = texture2D(uAtlas, uvT);
@@ -278,7 +281,7 @@ void main() {
   float hg = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) / 12.566;
   float sunVis = 1.0 - 0.72 * shadow;
   // a thick cloud scatters many times: its sunlit side is brighter than a white wall would be
-  vec3 light = uSunCol * sunVis * (wrap * 1.3 + hg * (1.0 - dens) * 5.0);
+  vec3 light = uSunCol * sunVis * mix(wrap * 1.3 + hg * (1.0 - dens) * 5.0, 0.55 + 0.5 * wrap + hg * 6.0, thinMedium);
   float up = dot(n, uUpView) * 0.5 + 0.5;
   light += mix(uGround, uSky, up) * (1.25 - 0.35 * shadow);
   // the flame is an extended source tens of metres long: soften the falloff near it
@@ -402,6 +405,9 @@ class Batch {
 }
 
 const fwd = new THREE.Vector3();
+/** Occlusion grid for the overdraw control (screen cells). */
+const GW = 24;
+const GH = 14;
 const tmp = new THREE.Vector3();
 const cen = new THREE.Vector3();
 
@@ -450,6 +456,12 @@ export class SpriteRenderer {
   private depth = new Float32Array(0);
   private idx: number[] = [];
   capacity: number;
+  /** Most screen area the sprites may cover, in screens (set from the quality tier). */
+  fillBudget = 40;
+  private grid = new Float32Array(GW * GH);
+  /** Screen area covered by the last frame's sprites, and what the overdraw control dropped (diagnostics). */
+  fill = 0;
+  culled = { offscreen: 0, hidden: 0, budget: 0 };
 
   constructor(capacity: number) {
     this.capacity = capacity;
@@ -476,6 +488,76 @@ export class SpriteRenderer {
   }
 
   /**
+   * Overdraw control, nearest sprites first: (1) sprites off screen are dropped; (2) sprites
+   * hidden behind nearer ones (a coarse screen grid accumulates their opacity) are dropped, so
+   * the inside of a dense cloud costs nothing; (3) the screen area of what remains is capped
+   * (fillBudget, in screens), keeping the nearest. Marks dropped entries of idx with -1.
+   */
+  private cull(ps: Particle[], idx: number[], depth: Float32Array, camera: THREE.Camera, ox: number, oy: number, oz: number) {
+    const P = camera.projectionMatrix.elements;
+    const p0 = P[0];
+    const p5 = P[5];
+    // camera basis from its world matrix (matrixWorldInverse is only refreshed at render time)
+    const W = camera.matrixWorld.elements;
+    const rxX = W[0], rxY = W[1], rxZ = W[2];
+    const uyX = W[4], uyY = W[5], uyZ = W[6];
+    const cpX = W[12], cpY = W[13], cpZ = W[14];
+    const rl = Math.hypot(rxX, rxY, rxZ) || 1;
+    const ul = Math.hypot(uyX, uyY, uyZ) || 1;
+    const T = this.grid;
+    T.fill(1);
+    let fill = 0;
+    const cs = this.culled;
+    cs.offscreen = cs.hidden = cs.budget = 0;
+    for (let q = idx.length - 1; q >= 0; q--) {
+      const i = idx[q];
+      const p = ps[i];
+      const d = depth[i];
+      const x = p.pos.x - ox - cpX;
+      const y = p.pos.y - oy - cpY;
+      const z = p.pos.z - oz - cpZ;
+      const cx = ((x * rxX + y * rxY + z * rxZ) / rl) * (p0 / d);
+      const cy = ((x * uyX + y * uyY + z * uyZ) / ul) * (p5 / d);
+      const r = p.radius + 0.5 * p.stretch;
+      const rx = (r * p0) / d;
+      const ry = (r * p5) / d;
+      if (cx - rx > 1 || cx + rx < -1 || cy - ry > 1 || cy + ry < -1) {
+        idx[q] = -1;
+        cs.offscreen++;
+        continue;
+      }
+      // grid cells under the dense middle of the sprite (60 % of its radius)
+      const ix0 = Math.max(0, Math.floor(((cx - 0.6 * rx + 1) / 2) * GW));
+      const ix1 = Math.min(GW - 1, Math.floor(((cx + 0.6 * rx + 1) / 2) * GW));
+      const iy0 = Math.max(0, Math.floor(((cy - 0.6 * ry + 1) / 2) * GH));
+      const iy1 = Math.min(GH - 1, Math.floor(((cy + 0.6 * ry + 1) / 2) * GH));
+      const glows = p.emit.r + p.emit.g + p.emit.b > 0.05;
+      if (ix1 >= ix0 && iy1 >= iy0 && !glows) {
+        let tMax = 0;
+        for (let gy = iy0; gy <= iy1 && tMax < 0.04; gy++) for (let gx = ix0; gx <= ix1; gx++) tMax = Math.max(tMax, T[gy * GW + gx]);
+        if (tMax < 0.04) {
+          idx[q] = -1;
+          cs.hidden++;
+          continue;
+        }
+      }
+      const cov = Math.min(1.5, Math.PI * rx * ry * 0.25);
+      if (cov > 0.02 && fill + cov > this.fillBudget) {
+        idx[q] = -1;
+        cs.budget++;
+        continue;
+      }
+      fill += cov;
+      // only sprites whose dense middle spans whole cells hide what is behind them
+      if (0.6 * rx >= 2 / GW && 0.6 * ry >= 2 / GH) {
+        const k = 1 - 0.7 * Math.min(1, p.alpha);
+        for (let gy = iy0; gy <= iy1; gy++) for (let gx = ix0; gx <= ix1; gx++) T[gy * GW + gx] *= k;
+      }
+    }
+    this.fill = fill;
+  }
+
+  /**
    * Fill the batches from the evaluated particles. `origin` is the floating origin (frame I);
    * `splitDepth` is the view depth of the plume: particles farther than it draw before the plume.
    */
@@ -490,26 +572,29 @@ export class SpriteRenderer {
     const ox = origin.x;
     const oy = origin.y;
     const oz = origin.z;
+    const cw = camera.matrixWorld.elements;
     const idx = this.idx;
     idx.length = 0;
     for (let i = 0; i < n; i++) {
       const p = ps[i];
-      const x = p.pos.x - ox;
-      const y = p.pos.y - oy;
-      const z = p.pos.z - oz;
+      const x = p.pos.x - ox - cw[12];
+      const y = p.pos.y - oy - cw[13];
+      const z = p.pos.z - oz - cw[14];
       const d = x * fwd.x + y * fwd.y + z * fwd.z;
-      const reach = p.radius + p.stretch;
-      if (d < -reach) continue;
-      // sub-pixel and nearly transparent: skip
+      // behind the camera, or so close that the near fade (vFade) hides it
+      if (d < p.radius * 0.18) continue;
+      // nearly transparent: skip
       if (p.alpha < 0.01 && p.emit.r + p.emit.g + p.emit.b < 0.01) continue;
       this.depth[i] = d;
       idx.push(i);
     }
     const depth = this.depth;
     idx.sort((a, b) => depth[b] - depth[a]);
+    this.cull(ps, idx, depth, camera, ox, oy, oz);
     let nf = 0;
     let nn = 0;
     for (const i of idx) {
+      if (i < 0) continue;
       const p = ps[i];
       const b = depth[i] > splitDepth ? this.far : this.near;
       const j = b === this.far ? nf++ : nn++;
@@ -519,7 +604,7 @@ export class SpriteRenderer {
       b.shape.array[j * 4] = p.radius;
       b.shape.array[j * 4 + 1] = p.rot;
       b.shape.array[j * 4 + 2] = p.stretch;
-      b.shape.array[j * 4 + 3] = p.variant;
+      b.shape.array[j * 4 + 3] = p.variant + (p.group === Group.Puff || p.group === Group.Vent || p.group === Group.Water ? 4 : 0);
       b.axis.array[j * 3] = p.axis.x;
       b.axis.array[j * 3 + 1] = p.axis.y;
       b.axis.array[j * 3 + 2] = p.axis.z;

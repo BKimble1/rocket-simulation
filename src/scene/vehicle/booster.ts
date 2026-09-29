@@ -889,8 +889,10 @@ function interstage(ctx: Ctx) {
     rodG.position.set(c.x, y1 - 0.16, c.z);
     s.group.add(rodG);
     kit.own(rodG, 'booster');
-    const r1 = new THREE.CylinderGeometry(0.022, 0.022, 0.2, 14);
-    r1.translate(0, 0.08, 0);
+    // the piston rod runs down into its housing: long enough to stay engaged at full stroke
+    // (0.45 m in the staging demonstration)
+    const r1 = new THREE.CylinderGeometry(0.022, 0.022, 0.75, 14);
+    r1.translate(0, 0.17 - 0.375, 0);
     const pad = new THREE.CylinderGeometry(0.05, 0.05, 0.02, 16);
     pad.translate(0, 0.17, 0);
     kit.add(rodG, mergeAll([r1, pad]), { ...pSpec, look: 'stainless', mat: 'stainless' });

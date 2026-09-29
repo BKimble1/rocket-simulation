@@ -12,7 +12,7 @@
  * a real vehicle.
  */
 import { ABORT_TOWER, BODY_DIAMETER, CAPSULE, DOME_HEIGHT, E1, E1V, FAIRING, G0, GRID_FINS, LEGS, PAYLOADS, PROPELLANTS, S1, S2, S1_ENGINE_LAYOUT, SERVICE_MODULE, STATIONS, tankVolume } from '../../vehicle/spec';
-import { MOON_DISTANCE, MOON_PERIOD, MU_EARTH, MU_MOON, OMEGA_EARTH, R_EARTH, SITE } from '../../world/frames';
+import { MOON_DISTANCE, MOON_PERIOD, MU_EARTH, MU_MOON, OMEGA_EARTH, R_EARTH, R_MOON, SITE } from '../../world/frames';
 import { LANDING_ZONE, PAD } from '../../world/site';
 import { OUTLINES } from '../../timeline/missions/outline';
 
@@ -74,10 +74,44 @@ export const PROFILE = {
   crewGLimit: 4,
   /** LEO upper-stage engine cutoff after liftoff (leo.ts: about 7.3 min), s. */
   leoSeco: 437,
-  /** GTO explanatory apogee burn as flown (gto.ts): velocity change (m/s), duration (h) and the final circular altitude (m). */
-  gtoBurnDv: 1830,
-  gtoBurnHours: 3,
-  gtoFinalAlt: 32000e3,
+  /**
+   * GTO apogee-burn campaign as flown (gto.ts, explanatory): the satellite's 450 N, Isp 320 s
+   * engine and its 1,700 kg of propellant; it coasts through the first apogee for checkout, then
+   * makes three burns (minutes) centred on the next three apogees. The orbit after each burn
+   * (perigee altitude, m; inclination, deg), the span from the first ignition to the last cutoff
+   * (h) and the propellant the burns use (kg).
+   */
+  apogeeEngine: { thrust: 450, isp: 320, propellant: 1700 },
+  gtoBurnMin: [87, 58, 40],
+  gtoAfterBurn: [
+    { peri: 6750e3, inc: 12.5 },
+    { peri: 17900e3, inc: 4.5 },
+    { peri: 35786e3, inc: 0.04 },
+  ],
+  gtoCampaignHours: 30,
+  gtoBurnProp: 1600,
+  /** Velocity change the three burns deliver together (rocket equation), m/s. */
+  gtoBurnDv: 1845,
+  /**
+   * Lunar flyby as flown (lunar.ts): trans-lunar injection burn (s) and speed at cutoff (m/s);
+   * closest approach altitude (m), the angle between the Earth direction and the probe seen from
+   * the Moon (deg) and the speed relative to the Moon there (m/s); the speed relative to the
+   * Earth on entering the Moon's sphere of influence (m/s); and at the exit, the speed relative to
+   * the Earth (m/s) and the distance from the Earth (m).
+   */
+  tliBurnS: 61,
+  tliSpeedFlown: 10944,
+  flybyAlt: 1500e3,
+  flybyAngleFromEarthDeg: 77,
+  flybySpeedRelMoon: 2078,
+  /** How far the Moon turns the probe's velocity relative to the Moon, from sphere-of-influence entry to exit (deg). */
+  flybyTurnDeg: 64,
+  soiArrivalSpeed: 1020,
+  soiExitSpeed: 1743,
+  soiExitDist: 450e6,
+  /** Service-module propellant at undocking: what the station mission arrives with (station.ts SM_PROP_AT_DOCKING), kg; and the module's dry mass (timeline physics), kg. */
+  smPropAtUndock: 1108,
+  smDry: 2600,
 } as const;
 
 /**
@@ -277,6 +311,31 @@ const escapeSpeed = Math.sqrt((2 * MU_EARTH) / (R_EARTH + PARKING_ALT));
 const moonSpeed = (2 * Math.PI * MOON_DISTANCE) / MOON_PERIOD;
 const soiRadius = MOON_DISTANCE * (MU_MOON / MU_EARTH) ** 0.4;
 const eclipseFraction = (2 * Math.asin(R_EARTH / (R_EARTH + LEO_ALT))) / (2 * Math.PI);
+/** Coast time of the minimum-energy path whose far point just reaches the Moon's distance (half its period). */
+const tliMinCoastDays = period(tliA) / 2 / 86400;
+/**
+ * The flyby seen from the Moon (two-body about the Moon, from the flown closest approach): the
+ * speed far from the Moon (hyperbolic excess) and at the edge of its sphere of influence, the
+ * same on the way in and on the way out. Seen from the Earth at the exit: the escape speed at
+ * that distance and the speed left far from the Earth.
+ */
+const flybyR = R_MOON + PROFILE.flybyAlt;
+const flybyVinfMoon = Math.sqrt(PROFILE.flybySpeedRelMoon ** 2 - (2 * MU_MOON) / flybyR);
+const flybyRelAtSoi = Math.sqrt(flybyVinfMoon ** 2 + (2 * MU_MOON) / soiRadius);
+const soiExitEscape = Math.sqrt((2 * MU_EARTH) / PROFILE.soiExitDist);
+const soiExitVinf = Math.sqrt(PROFILE.soiExitSpeed ** 2 - soiExitEscape ** 2);
+/**
+ * Geostationary apogee campaign: the plane change priced on its own at geostationary height and
+ * in the parking orbit (2·v·sin(i/2)), the apogee engine's acceleration on the full satellite,
+ * and the ideal propellant and engine time for the combined circularization and plane change.
+ */
+const geoPlaneOnlyDv = 2 * geoSpeed * Math.sin(incl / 2);
+const parkingPlaneDv = 2 * parkingSpeed * Math.sin(incl / 2);
+const apogeeVe = PROFILE.apogeeEngine.isp * G0;
+const apogeeAccel = PROFILE.apogeeEngine.thrust / PAYLOADS.gtoSat.mass;
+const apogeePropIdeal = PAYLOADS.gtoSat.mass * (1 - Math.exp(-circPlane / apogeeVe));
+const apogeeBurnHoursIdeal = apogeePropIdeal / (PROFILE.apogeeEngine.thrust / apogeeVe) / 3600;
+const gtoBurnHours = PROFILE.gtoBurnMin.reduce((a, b) => a + b, 0) / 60;
 
 // ---- capsule and recovery ----
 /**
@@ -311,7 +370,12 @@ const timeAbove = (floor: number) => {
 };
 const suborbitalFreeFall = timeAbove(PROFILE.freeFallFloor);
 const smMdot = SERVICE_MODULE.engineThrust / (SERVICE_MODULE.ispVac * G0);
-const smDeorbitProp = PAYLOADS.capsule.mass * (1 - Math.exp(-deorbitDv / (SERVICE_MODULE.ispVac * G0)));
+/** Capsule and service module at undocking: the module carries the propellant the station mission arrives with. */
+const smStackAtUndock = CAPSULE.mass + PROFILE.smDry + PROFILE.smPropAtUndock;
+const smDeorbitProp = smStackAtUndock * (1 - Math.exp(-deorbitDv / (SERVICE_MODULE.ispVac * G0)));
+/** Propellant left at service-module separation and the velocity change it could still give (the deorbit margin). */
+const smPropAfterDeorbit = PROFILE.smPropAtUndock - smDeorbitProp;
+const smMarginDv = SERVICE_MODULE.ispVac * G0 * Math.log((CAPSULE.mass + PROFILE.smDry + smPropAfterDeorbit) / (CAPSULE.mass + PROFILE.smDry));
 
 // ---- geometry ----
 const ringRadius = Math.hypot(S1_ENGINE_LAYOUT[1].x, S1_ENGINE_LAYOUT[1].z);
@@ -459,6 +523,17 @@ export const D = {
   escapeSpeed,
   moonSpeed,
   soiRadius,
+  tliMinCoastDays,
+  flybyVinfMoon,
+  flybyRelAtSoi,
+  soiExitEscape,
+  soiExitVinf,
+  geoPlaneOnlyDv,
+  parkingPlaneDv,
+  apogeeAccel,
+  apogeePropIdeal,
+  apogeeBurnHoursIdeal,
+  gtoBurnHours,
   // capsule
   entryInertial,
   entryAir,
@@ -478,8 +553,11 @@ export const D = {
   /** Kinetic energy per kilogram: orbital entry (relative to the air) over the suborbital fall. */
   suborbitalEnergyRatio: entryAir ** 2 / suborbitalFallSpeed ** 2,
   smMdot,
+  smStackAtUndock,
   smDeorbitProp,
   smDeorbitBurn: smDeorbitProp / smMdot,
+  smPropAfterDeorbit,
+  smMarginDv,
   lesTW: ABORT_TOWER.motorThrust / ((CAPSULE.mass + ABORT_TOWER.mass) * G0),
   /** Crew hatch sill: 58.3 m above the nozzle exit plane in the capsule stack, the level of the tower's crew access arm (scene/environment/tower.ts). */
   crewHatchHeight: PAD.nozzleExitHeight + 58.3,
@@ -671,9 +749,44 @@ export const F = {
   rtlsReserve: `${fmt(PROFILE.rtlsReserve / 1e3)} t`,
   crewGLimit: `${fmt(PROFILE.crewGLimit)} g`,
   leoSeco: `${fmt(PROFILE.leoSeco / 60, 1)} minutes`,
-  gtoBurnDv: kms(PROFILE.gtoBurnDv, 1),
-  gtoBurnHours: `${fmt(PROFILE.gtoBurnHours)} hours`,
-  gtoFinalAlt: km(PROFILE.gtoFinalAlt),
+  apogeeThrust: `${fmt(PROFILE.apogeeEngine.thrust)} N`,
+  apogeeIsp: `${fmt(PROFILE.apogeeEngine.isp)} s`,
+  apogeeAccel: `${fmt(D.apogeeAccel, 3)} m/s²`,
+  apogeeAccelG: `about 1/${fmt(G0 / D.apogeeAccel)} of g`,
+  satPropellant: `${fmt(PROFILE.apogeeEngine.propellant)} kg`,
+  gtoBurnCount: countWord(PROFILE.gtoBurnMin.length),
+  gtoBurnCountCap: countWord(PROFILE.gtoBurnMin.length, true),
+  gtoBurnMins: `${PROFILE.gtoBurnMin.slice(0, -1).map((m) => fmt(m)).join(', ')} and ${fmt(PROFILE.gtoBurnMin[PROFILE.gtoBurnMin.length - 1])} min`,
+  gtoBurnHours: `${fmt(D.gtoBurnHours, 1)} hours`,
+  apogeeBurnHoursIdeal: `${fmt(D.apogeeBurnHoursIdeal, 1)} hours`,
+  apogeePropIdeal: `${fmt(sig(D.apogeePropIdeal, 2))} kg`,
+  gtoBurnProp: `${fmt(PROFILE.gtoBurnProp)} kg`,
+  satPropLeft: `${fmt(PROFILE.apogeeEngine.propellant - PROFILE.gtoBurnProp)} kg`,
+  gtoBurnDv: `${fmt(PROFILE.gtoBurnDv)} m/s`,
+  circularizePlaneDvMs: `${fmt(D.circularizePlaneDv)} m/s`,
+  gtoCampaign: `${fmt(PROFILE.gtoCampaignHours)} hours`,
+  gtoPeri1: km(PROFILE.gtoAfterBurn[0].peri),
+  gtoPeri2: km(PROFILE.gtoAfterBurn[1].peri),
+  gtoInc1: `${fmt(PROFILE.gtoAfterBurn[0].inc, 1)}°`,
+  gtoInc2: `${fmt(PROFILE.gtoAfterBurn[1].inc, 1)}°`,
+  gtoIncFinal: `${fmt(PROFILE.gtoAfterBurn[2].inc, 2)}°`,
+  geoAlt: km(GEO_ALT),
+  geoPlaneOnlyDv: kms(D.geoPlaneOnlyDv),
+  parkingPlaneDv: kms(D.parkingPlaneDv),
+  circPlusPlaneSeparate: kms(D.circularizeDv + D.geoPlaneOnlyDv),
+  tliBurn: `${fmt(PROFILE.tliBurnS)} s`,
+  tliSpeedFlown: kms(PROFILE.tliSpeedFlown),
+  tliMinCoastDays: `${fmt(D.tliMinCoastDays)} days`,
+  flybyAlt: km(PROFILE.flybyAlt),
+  flybyAngle: `${fmt(PROFILE.flybyAngleFromEarthDeg)}°`,
+  flybySpeedRelMoon: kms(PROFILE.flybySpeedRelMoon, 1),
+  flybyRelAtSoi: kms(D.flybyRelAtSoi, 1),
+  flybyTurn: `${fmt(PROFILE.flybyTurnDeg)}°`,
+  soiArrivalSpeed: kms(PROFILE.soiArrivalSpeed, 1),
+  soiExitSpeed: kms(PROFILE.soiExitSpeed, 2),
+  soiExitDist: `${fmt(sig(PROFILE.soiExitDist / 1e3, 2))} km`,
+  soiExitEscape: kms(D.soiExitEscape, 2),
+  soiExitVinf: kms(D.soiExitVinf, 1),
   tradeS1: `${fmt(D.tradeS1)} kg`,
   tradeS2: `${fmt(D.tradeS2)} kg`,
   // mission-profile values (see PROFILE)
@@ -767,6 +880,10 @@ export const F = {
   smIsp: `${SERVICE_MODULE.ispVac} s`,
   smDeorbitProp: `${fmt(sig(D.smDeorbitProp, 2))} kg`,
   smDeorbitBurn: `${fmt(sig(D.smDeorbitBurn, 2))} s`,
+  smStackAtUndock: `${fmt(sig(D.smStackAtUndock, 3))} kg`,
+  smPropAtUndock: `${fmt(PROFILE.smPropAtUndock)} kg`,
+  smPropAfterDeorbit: `${fmt(sig(D.smPropAfterDeorbit, 2))} kg`,
+  smMarginDv: `${fmt(sig(D.smMarginDv, 2))} m/s`,
   deorbitDv: `${fmt(D.deorbitDv)} m/s`,
   deorbitFraction: `${fmt((100 * D.deorbitDv) / D.leoSpeed, 1)} %`,
   towerLength: `${fmt(ABORT_TOWER.length, 1)} m`,

@@ -62,6 +62,8 @@ const smooth = (a: number, b: number, x: number) => {
 export const plumeDebug = { only: null as string | null };
 
 /** TEA-TEB (pyrophoric igniter) flash: bright green at the nozzle for the first ~0.5 s. */
+const GREEN_LIGHT = new THREE.Color(0.25, 1.0, 0.35);
+
 export const greenFlash = (since: number) => smooth(0, 0.03, since) * (1 - smooth(0.18, 0.55, since));
 
 /** Engine start transient: the flame builds over ~0.7 s. */
@@ -118,7 +120,7 @@ function engineCore(e: EmitterSnap, p: VolumeParams, steps: number) {
     blob(p, y, 0.11 * s, re * (0.42 - 0.035 * n), 26 * thr * vis * Math.pow(0.72, n), bcol(COL.diamond).lerp(COL.green, green * 0.8));
   }
   // TEA-TEB: the pyrophoric igniter burns bright green at the exit for a fraction of a second
-  blob(p, 0.6 * D, 1.2 * D, 1.1 * re, 2.6 * green, bcol(COL.green));
+  blob(p, 0.6 * D, 1.2 * D, 1.1 * re, 7 * green, bcol(COL.green));
   // flame envelope around the core
   p.flameI = (solid ? 5 : 1.5) * thr * lumAir * (0.3 + 0.7 * st);
   p.flameSigma = solid ? 2.5 : 0.9;
@@ -167,8 +169,8 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   // the under-expanded plume at altitude: sunlit translucent envelope with an orange glow near the nozzles
   const wbal = smooth(1.6, 14, s.pr);
   // condensed exhaust and afterburning keep the ballooned plume bright as it spreads
-  p.exK = 1 - 0.55 * wbal;
-  p.scatSigma = 0.55 * wbal * sq;
+  p.exK = 1 - 0.45 * wbal;
+  p.scatSigma = 0.4 * wbal * sq;
   p.scatAlb.copy(COL.envelope);
   p.glowI = 1.4 * wbal * sq * st * (solid ? 2 : 1);
   // the ballooned plume is smooth: fine turbulence would only show as grain over its width
@@ -193,7 +195,8 @@ function ggJet(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.Lb = 0.8 + 4 * (1 - sm);
   p.spread = 0.085 + 0.12 * (1 - sm);
   p.y0 = 0;
-  p.y1 = (17 + 26 * (1 - sm)) * (0.3 + 0.7 * st);
+  // in dense air the rich exhaust burns within ~10 m; in thin air it streams out much farther
+  p.y1 = (11 + 32 * (1 - sm)) * (0.3 + 0.7 * st);
   p.steps = steps;
   p.seed = hashId(e.id) * 31 + 5;
   p.margin = 1.4;
@@ -203,10 +206,10 @@ function ggJet(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.smokeA.copy(COL.ggSoot);
   p.smokeB.copy(COL.ggSootB);
   // in dense air the rich exhaust afterburns in patches along its edge
-  p.flameI = 1.2 * sm * e.throttle * st;
+  p.flameI = 1.6 * sm * e.throttle * st;
   p.flameSigma = 2.5;
   p.flameIn = [0.4, 1.2];
-  p.flameLen = 5;
+  p.flameLen = 8;
   p.flameA.copy(COL.ggFlameA);
   p.flameB.copy(COL.ggFlameB);
   p.turb = 0.75;
@@ -285,6 +288,11 @@ export class PlumeSet {
   /** View depth of the dominant plume (smoke farther than this draws before the plumes). */
   splitDepth = Infinity;
 
+  /** Plume volumes drawn this frame. */
+  get count(): number {
+    return this.used;
+  }
+
   private take(): Volume | null {
     if (this.used >= MAX_VOLUMES) return null;
     let v = this.vols[this.used];
@@ -334,6 +342,12 @@ export class PlumeSet {
       L.col.setRGB(1.0, 0.56, 0.24);
       const since = startUp(c.sinceIgnition);
       L.intensity = (c.kind === 'solid' ? 1500 : 1150) * Math.min(1.3, c.flow / 1.97) * s.lum * (0.2 + 0.8 * since) * flicker(0.77) * (0.3 + 0.7 * Math.min(1, s.rhoRatio * 3 + 0.2));
+      // the TEA-TEB igniter flash lights the pad green for a moment
+      const g = c.kind === 'solid' ? 0 : greenFlash(c.sinceIgnition);
+      if (g > 0) {
+        L.col.lerp(GREEN_LIGHT, 0.9 * g);
+        L.intensity = Math.max(L.intensity, 700 * g);
+      }
       // exhaust flashing out of the flame trench while the vehicle is on or just above the mount
       const hN = c.centroid.length() - R_EARTH;
       const L2 = this.lights[1];

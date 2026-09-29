@@ -243,7 +243,7 @@ describe('tracks and timing', () => {
 });
 
 describe('lunar flyby outcome', () => {
-  it('says where the flyby leaves the probe, and the free-return estimate holds', () => {
+  it('says where the flyby leaves the probe, with the speed and energy the track has', () => {
     const m = tl('lunar');
     const f = m.facts;
     const label = m.events.find((e) => e.id === 'soi-exit')!.label;
@@ -264,6 +264,16 @@ describe('lunar flyby outcome', () => {
     } else {
       expect(f['outbound.earthReturnDays']).toBe(0);
       expect(label).not.toMatch(/back toward the Earth/);
+    }
+    if (energy > 0) {
+      // unbound: the label says it leaves the system, with the speed at the sphere-of-influence exit
+      expect(label).toMatch(/leaves the Earth-Moon system/);
+      expect(Math.sqrt(2 * energy)).toBeCloseTo(f['outbound.vInf'], 0);
+      bodyAt(m.bodies.satellite!, ev(m, 'soi-exit'), S);
+      expect(Math.abs(S.vel.length() - f['soiExit.speed'])).toBeLessThan(2);
+      expect(Math.abs(S.pos.length() / 1000 - f['soiExit.distanceKm'])).toBeLessThan(5);
+      expect(label).toContain(`${(f['soiExit.speed'] / 1000).toFixed(2)} km/s`);
+      expect(f['soiExit.escapeSpeed']).toBeCloseTo(Math.sqrt((2 * MU_EARTH) / (f['soiExit.distanceKm'] * 1000)), 3);
     }
   });
 });

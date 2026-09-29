@@ -5,6 +5,7 @@
  *   detail=flight|hangar  view=intact|cutaway|exploded  amt=0..1  part=<PartId>  dim=1
  *   lens=materials|thermal  mat=<MaterialId>  legs= fins= defl= open= frost= scorch= lox= rp1=
  *   gp= gy= (booster gimbal pitch/yaw deg)  demo=<DemoId>  p=0..1 (omit to loop)  info=1
+ *   lift=<m> (raise the vehicle; 3 m by default with legs deployed or the exploded view)
  * Camera: az, el, dist, tx, ty, tz, fov (see dev/index.tsx).
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -107,6 +108,10 @@ export default function Dev() {
       satArrays: num('arrays', 0),
       smArrays: num('arrays', 0),
     });
+    // like the hangar stand (3 m): deployed legs and the exploded engines reach below the nozzle
+    // exit plane, so lift the vehicle off the floor for them (or on request: lift=<m>)
+    const lift = q.has('lift') ? num('lift', 3) : view === 'exploded' || num('legs', 0) > 0 || q.get('demo') === 'booster-recovery' ? 3 : 0;
+    model.root.position.y = lift;
     if (q.get('info') === '1') {
       const w = window as unknown as Record<string, unknown>;
       w.__vehicle = model;

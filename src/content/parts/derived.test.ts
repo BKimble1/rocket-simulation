@@ -6,7 +6,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { ABORT_TOWER, CAPSULE, E1, E1V, FAIRING, G0, LEGS, PAYLOADS, S1, S2, SERVICE_MODULE } from '../../vehicle/spec';
-import { MU_EARTH, OMEGA_EARTH, R_EARTH, SITE } from '../../world/frames';
+import { EARTH_AXIS, MU_EARTH, MU_MOON, OMEGA_EARTH, R_EARTH, R_MOON, SITE, moonVelocity } from '../../world/frames';
+import { ENG_SAT } from '../../timeline/physics/vehicle';
+import { elements } from '../../timeline/physics/kepler';
 import type { MissionId, MissionTimeline } from '../../timeline/types';
 import { buildMission, telemetryAt } from '../../timeline/build';
 import { D, F, PROFILE, REFERENCE, exitPressureRatio, fmt, perigeeAfterRetroBurn, sig, thrustCoefficient } from './derived';
@@ -211,12 +213,62 @@ describe('orbital numbers (two-body, spherical Earth)', () => {
     quoted(F.circularizePlaneDv);
   });
 
+  it('apogee campaign: plane change priced alone, engine acceleration, ideal propellant and firing time', () => {
+    const ra = R_EARTH + 35786e3;
+    const a = (2 * R_EARTH + 200e3 + 35786e3) / 2;
+    const va = vis(ra, a);
+    const vc = Math.sqrt(MU_EARTH / ra);
+    const i = (28.5 * Math.PI) / 180;
+    const combined = Math.sqrt(va * va + vc * vc - 2 * va * vc * Math.cos(i));
+    expect(D.geoPlaneOnlyDv).toBeCloseTo(2 * vc * Math.sin(i / 2), 6);
+    expect(D.parkingPlaneDv).toBeCloseTo(2 * Math.sqrt(MU_EARTH / (R_EARTH + 200e3)) * Math.sin(i / 2), 6);
+    // turning the orbit where the satellite is slow, together with the circularizing push, is far cheaper than either alone
+    expect(combined).toBeLessThan(vc - va + D.geoPlaneOnlyDv - 1000);
+    const m0 = PAYLOADS.gtoSat.mass;
+    const ve = 320 * G0;
+    expect(D.apogeeAccel).toBeCloseTo(450 / m0, 9);
+    const prop = m0 * (1 - Math.exp(-combined / ve));
+    expect(D.apogeePropIdeal).toBeCloseTo(prop, 6);
+    expect(D.apogeeBurnHoursIdeal).toBeCloseTo(prop / (450 / ve) / 3600, 6);
+    expect(F.apogeeAccel).toBe('0.125 m/s²');
+    expect(F.apogeeAccelG).toBe('about 1/78 of g');
+    expect(F.geoPlaneOnlyDv).toBe('1.51 km/s');
+    expect(F.parkingPlaneDv).toBe('3.83 km/s');
+    expect(F.circPlusPlaneSeparate).toBe('2.99 km/s');
+    expect(F.apogeeBurnHoursIdeal).toBe('3.1 hours');
+    expect(F.gtoBurnMins).toBe('87, 58 and 40 min');
+    for (const s of [F.geoPlaneOnlyDv, F.parkingPlaneDv, F.circPlusPlaneSeparate, F.apogeeAccel, F.apogeeBurnHoursIdeal, F.gtoBurnMins, F.gtoPeri1, F.gtoPeri2, F.gtoIncFinal]) quoted(s);
+  });
+
+  it('lunar flyby seen from the Moon and from the Earth', () => {
+    const rp = R_MOON + PROFILE.flybyAlt;
+    const vinf = Math.sqrt(PROFILE.flybySpeedRelMoon ** 2 - (2 * MU_MOON) / rp);
+    expect(D.flybyVinfMoon).toBeCloseTo(vinf, 6);
+    expect(D.flybyRelAtSoi).toBeCloseTo(Math.sqrt(vinf ** 2 + (2 * MU_MOON) / D.soiRadius), 6);
+    const esc = Math.sqrt((2 * MU_EARTH) / PROFILE.soiExitDist);
+    expect(D.soiExitEscape).toBeCloseTo(esc, 6);
+    expect(D.soiExitVinf).toBeCloseTo(Math.sqrt(PROFILE.soiExitSpeed ** 2 - esc ** 2), 6);
+    expect(PROFILE.soiExitSpeed).toBeGreaterThan(esc);
+    expect(F.flybyRelAtSoi).toBe('1.2 km/s');
+    expect(F.soiExitEscape).toBe('1.33 km/s');
+    expect(F.soiExitVinf).toBe('1.1 km/s');
+    expect(F.tliMinCoastDays).toBe('5 days');
+    for (const s of [F.flybyAlt, F.flybyAngle, F.flybyRelAtSoi, F.flybyTurn, F.soiExitSpeed, F.soiExitEscape, F.soiExitVinf, F.soiArrivalSpeed, F.tliBurn, F.tliMinCoastDays]) quoted(s);
+  });
+
   it('deorbit burn lowers the far side of the orbit into the atmosphere', () => {
     expect(D.deorbitPerigee).toBeGreaterThan(30e3);
     expect(D.deorbitPerigee).toBeLessThan(90e3);
     expect(F.deorbitPerigee).toBe('58 km');
-    const m = PAYLOADS.capsule.mass;
+    // the capsule and service module at undocking, with the propellant the station mission arrives with
+    const dry = CAPSULE.mass + PROFILE.smDry;
+    const m = dry + PROFILE.smPropAtUndock;
     expect(D.smDeorbitProp).toBeCloseTo(m * (1 - Math.exp(-100 / (SERVICE_MODULE.ispVac * G0))), 6);
+    const left = PROFILE.smPropAtUndock - D.smDeorbitProp;
+    expect(D.smMarginDv).toBeCloseTo(SERVICE_MODULE.ispVac * G0 * Math.log((dry + left) / dry), 6);
+    expect(F.smPropAfterDeorbit).toBe('730 kg');
+    expect(F.smMarginDv).toBe('200 m/s');
+    quoted(F.smMarginDv);
     quoted(F.deorbitPerigee);
   });
 
@@ -342,25 +394,94 @@ describe('profile values match the built timelines', () => {
     near(f['parking.apoKm'], PROFILE.parkingAlt / 1e3, 10, 'parking apogee');
     near(f['injection.dvIdeal'], D.gtoInjectionDv, 0.03 * D.gtoInjectionDv, 'injection velocity change');
     near(f['gto.apoKm'], 35786, 300, 'transfer apogee');
-    // the explanatory apogee burn as flown (the cards say it ends short of geostationary height)
-    near(f['apogeeBurn.dv'], PROFILE.gtoBurnDv, 50, 'apogee burn velocity change');
-    near(f['apogeeBurn.durationH'], PROFILE.gtoBurnHours, 0.5, 'apogee burn duration');
-    near(f['final.periKm'], PROFILE.gtoFinalAlt / 1e3, 1000, 'final orbit perigee');
-    near(f['final.apoKm'], PROFILE.gtoFinalAlt / 1e3, 1000, 'final orbit apogee');
+    // the apogee campaign as the cards tell it: checkout coast through the first apogee, then three
+    // burns centred on the next apogees, raising the perigee and removing the tilt in steps
+    expect(f['apogeeBurn.count']).toBe(PROFILE.gtoBurnMin.length);
+    PROFILE.gtoBurnMin.forEach((m, k) => near(f[`apogeeBurn.burn${k + 1}Min`], m, 1, `burn ${k + 1} duration`));
+    near(f['apogeeBurn.durationH'], D.gtoBurnHours, 0.05, 'total engine time');
+    near(f['apogeeBurn.durationH'], D.apogeeBurnHoursIdeal, 0.1, 'engine time the ideal change needs');
+    near(f['apogeeBurn.spanH'], PROFILE.gtoCampaignHours, 1, 'first ignition to last cutoff');
+    near(f['apogeeBurn.dv'], PROFILE.gtoBurnDv, 10, 'velocity change the burns deliver');
+    near(f['apogeeBurn.dvIdeal'], D.circularizePlaneDv, 5, 'ideal change with the plane change');
+    expect(f['apogeeBurn.dv'] / D.circularizePlaneDv, 'within 1 % of the ideal').toBeLessThan(1.01);
+    near(f['apogeeBurn.propUsedKg'], PROFILE.gtoBurnProp, 10, 'propellant the burns use');
+    near(f['apogeeBurn.propUsedKg'] + f['apogeeBurn.propLeftKg'], PROFILE.apogeeEngine.propellant, 1, 'satellite propellant');
+    near(D.apogeePropIdeal, PROFILE.gtoBurnProp, 30, 'ideal propellant against the flown');
+    expect(ENG_SAT.thrustVac).toBe(PROFILE.apogeeEngine.thrust);
+    expect(ENG_SAT.ispVac).toBe(PROFILE.apogeeEngine.isp);
+    near(f['final.periKm'], 35786, 50, 'final orbit perigee');
+    near(f['final.apoKm'], 35786, 50, 'final orbit apogee');
+    near(f['final.incDeg'], PROFILE.gtoAfterBurn[2].inc, 0.01, 'final inclination');
+    near(f['final.periodH'], 23.934, 0.01, 'one sidereal day');
+    const t = (id: string) => tl.events.find((e) => e.id === id)!.t;
+    expect(t('apogee-burn-start') - t('apogee'), 'a whole checkout orbit before the first burn').toBeGreaterThan(0.8 * f['gto.periodH'] * 3600);
+    // the orbit after each burn, from the satellite track between burns
+    const thr = tl.channels['sat.apogee.throttle']!;
+    const ends: number[] = [];
+    for (let k = 1; k < thr.t.length; k++) if (thr.v[k - 1] > 0.5 && thr.v[k] <= 0.5) ends.push(thr.t[k]);
+    expect(ends.length).toBe(PROFILE.gtoBurnMin.length);
+    const sat = tl.bodies.satellite!;
+    ends.forEach((te, k) => {
+      let n = 0;
+      while (n < sat.t.length - 1 && sat.t[n] < te + 600) n++;
+      const r = { x: sat.pos[3 * n], y: sat.pos[3 * n + 1], z: sat.pos[3 * n + 2] };
+      const v = { x: sat.vel[3 * n], y: sat.vel[3 * n + 1], z: sat.vel[3 * n + 2] };
+      const e = elements(r, v, MU_EARTH, { x: EARTH_AXIS.x, y: EARTH_AXIS.y, z: EARTH_AXIS.z });
+      near((e.rp - R_EARTH) / 1e3, PROFILE.gtoAfterBurn[k].peri / 1e3, 100, `perigee after burn ${k + 1}`);
+      near((e.i * 180) / Math.PI, PROFILE.gtoAfterBurn[k].inc, 0.2, `inclination after burn ${k + 1}`);
+    });
   });
 
-  it('lunar: parking orbit, trans-lunar injection speed, sphere of influence and the three-day coast', () => {
+  it('lunar: parking orbit, trans-lunar injection, sphere of influence, trailing-side flyby and the escape', () => {
     const tl = built('lunar');
     if (!tl) return;
     const f = tl.facts;
     near(f['parking.periKm'], PROFILE.parkingAlt / 1e3, 10, 'parking perigee');
     near(f['tli.speed'], D.tliSpeed, 0.01 * D.tliSpeed, 'speed after trans-lunar injection');
+    near(f['tli.speed'], PROFILE.tliSpeedFlown, 15, 'speed after trans-lunar injection as flown');
+    near(f['tli.burnS'], PROFILE.tliBurnS, 1.5, 'injection burn duration');
     near(f['soiKm'], D.soiRadius / 1e3, 0.02 * (D.soiRadius / 1e3), 'sphere of influence');
     near(f['cruise.days'], 3, 0.5, 'coast to the Moon (the cards say about three days)');
-    // the outbound card describes a free-return path that falls back to Earth about three days later
-    expect(f['closestApproach.farSide']).toBe(1);
-    expect(f['outbound.perigeeAltKm']).toBeLessThan(0);
-    near(f['outbound.earthReturnDays'], 3, 0.5, 'return to Earth after leaving the sphere of influence');
+    // a little above the minimum-energy speed, so the trip takes about three days, not about five
+    expect(f['tli.speed']).toBeGreaterThan(D.tliSpeed);
+    near(D.tliMinCoastDays, 5, 0.5, 'coast on the minimum-energy path');
+    // closest approach: behind the Moon in its motion, near the limb seen from the Earth, not the far side
+    near(f['closestApproach.altKm'], PROFILE.flybyAlt / 1e3, 50, 'closest approach altitude');
+    expect(f['closestApproach.trailingSide']).toBe(1);
+    expect(f['closestApproach.farSide']).toBe(0);
+    near(f['closestApproach.angleFromEarthDeg'], PROFILE.flybyAngleFromEarthDeg, 2, 'angle from the Earth direction');
+    near(f['closestApproach.speedRelMoon'], PROFILE.flybySpeedRelMoon, 10, 'speed relative to the Moon');
+    // the gravity assist seen from the Moon: the same speed in and out, only the direction turned
+    const sat = tl.bodies.satellite!;
+    const at = (id: string) => {
+      const te = tl.events.find((e) => e.id === id)!.t;
+      let n = 0;
+      while (n < sat.t.length - 1 && sat.t[n] < te) n++;
+      const v = { x: sat.vel[3 * n], y: sat.vel[3 * n + 1], z: sat.vel[3 * n + 2] };
+      const m = moonVelocity(sat.t[n], tl.moonPhase0);
+      const rel = { x: v.x - m.x, y: v.y - m.y, z: v.z - m.z };
+      const len = (a: { x: number; y: number; z: number }) => Math.hypot(a.x, a.y, a.z);
+      const dot = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => a.x * b.x + a.y * b.y + a.z * b.z;
+      return { speed: len(v), rel, relSpeed: len(rel), relToMoonMotionDeg: (Math.acos(dot(rel, m) / (len(rel) * len(m))) * 180) / Math.PI, dot, len };
+    };
+    const inb = at('soi-enter');
+    const out = at('soi-exit');
+    near(inb.relSpeed, D.flybyRelAtSoi, 0.03 * D.flybyRelAtSoi, 'speed relative to the Moon on entry');
+    near(out.relSpeed, inb.relSpeed, 0.02 * inb.relSpeed, 'speed relative to the Moon on exit equals entry');
+    const turn = (Math.acos(inb.dot(inb.rel, out.rel) / (inb.relSpeed * out.relSpeed)) * 180) / Math.PI;
+    near(turn, PROFILE.flybyTurnDeg, 2, 'turn of the relative velocity');
+    expect(inb.relToMoonMotionDeg, 'arrives partly against the Moon\'s motion').toBeGreaterThan(90);
+    expect(out.relToMoonMotionDeg, 'leaves partly along the Moon\'s motion').toBeLessThan(90);
+    // and from the Earth: faster out than in, above escape speed, on a hyperbola
+    near(inb.speed, PROFILE.soiArrivalSpeed, 20, 'speed relative to the Earth on entering the sphere of influence');
+    near(f['soiExit.speed'], PROFILE.soiExitSpeed, 10, 'speed relative to the Earth at the exit');
+    near(f['soiExit.distanceKm'], PROFILE.soiExitDist / 1e3, 0.01 * (PROFILE.soiExitDist / 1e3), 'distance at the exit');
+    near(f['soiExit.escapeSpeed'], D.soiExitEscape, 2, 'escape speed at the exit');
+    expect(f['soiExit.speed']).toBeGreaterThan(f['soiExit.escapeSpeed']);
+    expect(f['outbound.energy']).toBeGreaterThan(0);
+    expect(f['outbound.ecc']).toBeGreaterThan(1);
+    near(f['outbound.vInf'], D.soiExitVinf, 0.03 * D.soiExitVinf, 'speed left far from the Earth');
+    expect(f['outbound.earthReturnDays']).toBe(0);
   });
 
   it('station: insertion orbit, phasing laps, hold points, closing speed, tower jettison after ignition', () => {
@@ -375,6 +496,8 @@ describe('profile values match the built timelines', () => {
     for (const h of PROFILE.holdPoints) expect(labels, `hold point ${h} m`).toContain(`${h} m`);
     const t = (id: string) => tl.events.find((e) => e.id === id)!.t;
     expect(t('les-jettison')).toBeGreaterThan(t('ses1'));
+    // the return mission starts with what the station mission arrives with
+    near(f['sm.propLeftKg'], PROFILE.smPropAtUndock, 1, 'service-module propellant at docking');
   });
 
   it('station: the dataset crew stack is flown on an expended booster, liftoff mass and thrust-to-weight as quoted', () => {
@@ -406,6 +529,12 @@ describe('profile values match the built timelines', () => {
     expect(label('drogue-deploy')).toContain(F.drogueAlt);
     expect(label('main-deploy')).toContain(F.mainAlt);
     near(f['splash.speed'], D.descentThree, 1.5, 'splashdown speed against the three-main estimate');
+    // the deorbit estimate is made for the stack at undocking, with the station mission's leftover propellant
+    near(f['undock.smPropKg'], PROFILE.smPropAtUndock, 1, 'service-module propellant at undocking');
+    near(f['serviceModuleKg'], PROFILE.smDry + PROFILE.smPropAtUndock, 1, 'service module at undocking');
+    near(f['deorbit.burnS'], D.smDeorbitBurn, 3, 'deorbit burn duration');
+    near(f['smSep.smPropLeftKg'], D.smPropAfterDeorbit, 25, 'propellant left at service-module separation');
+    near(f['smSep.dvLeft'], D.smMarginDv, 8, 'deorbit margin');
   });
 
   it('suborbital: planned high point', () => {

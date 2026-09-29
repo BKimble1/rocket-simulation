@@ -14,6 +14,7 @@ import { chan } from '../timeline/sample';
 import type { MissionId, MissionTimeline } from '../timeline/types';
 import { E1, FAIRING, G0, LEGS, PAYLOADS, S1, S2 } from '../vehicle/spec';
 import { MOON_DISTANCE, MU_EARTH, MU_MOON, R_EARTH } from '../world/frames';
+import { F } from './parts/derived';
 
 const fmt = (x: number, d = 0) => x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const gloss = (id: string) => {
@@ -72,8 +73,16 @@ describe('mission figures from orbital mechanics (frames.ts constants)', () => {
     expect(gloss('deorbit-burn')).toContain('about 100 m/s');
   });
 
-  it('inclination: a launch due east from the pad latitude gives an inclination equal to it', () => {
+  it('inclination: a launch due east from the pad latitude gives an inclination equal to it; turning it costs least where the orbit is slow', () => {
     expect(gloss('inclination')).toContain('28.5° N gives an inclination of 28.5°');
+    const i = (28.5 * Math.PI) / 180;
+    const turn = (r: number) => 2 * Math.sqrt(MU_EARTH / r) * Math.sin(i / 2);
+    expect(gloss('inclination')).toContain(`about ${fmt(turn(R_EARTH + 200e3) / 1e3, 2)} km/s in the 200 km parking orbit`);
+    expect(gloss('inclination')).toContain(`about ${fmt(turn(R_EARTH + 35786e3) / 1e3, 2)} km/s at geostationary height`);
+  });
+
+  it('escape speed falls with distance: about 11.0 km/s at 200 km', () => {
+    expect(gloss('escape-speed')).toContain(`about ${fmt(Math.sqrt((2 * MU_EARTH) / (R_EARTH + 200e3)) / 1e3, 1)} km/s`);
   });
 });
 
@@ -207,8 +216,24 @@ describe.skipIf(!gto)('content claims against the GTO mission timeline', () => {
     expect(Math.round(factOf(m, 'apogee.climbH'))).toBe(5);
     expect(check('orbit-parking-vs-transfer')).toContain('about 200 km');
     // events in the order the check teaches
-    const order = ['seco1', 'settling', 'ses2', 'seco2', 'payload-sep', 'apogee-burn-start'];
+    const order = ['seco1', 'settling', 'ses2', 'seco2', 'payload-sep', 'apogee', 'apogee-burn-start', 'apogee-burn-end'];
     for (let k = 1; k < order.length; k++) expect(ev(m, order[k])).toBeGreaterThan(ev(m, order[k - 1]));
+  });
+
+  it('three apogee burns (87, 58 and 40 min, 3.1 h in all) end in geostationary orbit; about 1,600 kg of propellant', () => {
+    expect(factOf(m, 'apogeeBurn.count')).toBe(3);
+    const mins = [1, 2, 3].map((k) => Math.round(factOf(m, `apogeeBurn.burn${k}Min`)));
+    const burns = check('missions-gto-burns');
+    expect(burns).toContain(`${mins[0]}, ${mins[1]} and ${mins[2]} min`);
+    expect(burns).toContain(`about ${fmt(factOf(m, 'apogeeBurn.durationH'), 1)} hours of firing`);
+    expect(burns).toContain(`${fmt(PAYLOADS.gtoSat.mass)} kg satellite only ${fmt(450 / PAYLOADS.gtoSat.mass, 3)} m/s²`);
+    expect(burns).toContain(`about ${fmt(factOf(m, 'apogeeBurn.dvIdeal') / 1e3, 2)} km/s`);
+    expect(burns).toContain(`${fmt(factOf(m, 'final.periKm'))} km`);
+    expect(check('missions-gto-handoff')).toContain(`about ${fmt(Math.round(factOf(m, 'apogeeBurn.propUsedKg') / 100) * 100)} kg of propellant`);
+    expect(check('orbit-gto-order')).toContain('next three apogees');
+    expect(gloss('circularization')).toContain('three burns centred on successive apogees');
+    expect(gloss('geostationary-orbit')).toContain(`${fmt(factOf(m, 'final.periodH'), 2)} h`);
+    expect(Math.abs(factOf(m, 'final.apoKm') - 35786)).toBeLessThan(50);
   });
 });
 
@@ -253,16 +278,33 @@ describe.skipIf(!sub)('content claims against the suborbital timeline', () => {
 const lunar = tryBuild('lunar');
 describe.skipIf(!lunar)('content claims against the lunar flyby timeline', () => {
   const m = lunar as MissionTimeline;
-  it('about three days of coast; the sphere of influence (about 66,000 km) late in it; closest approach 1,000 to 3,000 km behind the Moon', () => {
+  it('about three days of coast; the sphere of influence (about 66,000 km) late in it; closest approach about 1,500 km on the trailing side; out of the Earth-Moon system', () => {
     expect(Math.round(factOf(m, 'soiKm') / 1e3)).toBe(66);
     expect(Math.round((ev(m, 'closest-approach') - ev(m, 'seco2')) / 86400)).toBe(3);
     expect(ev(m, 'soi-enter')).toBeGreaterThan(ev(m, 'seco2') + 0.5 * (ev(m, 'closest-approach') - ev(m, 'seco2')));
     expect(ev(m, 'soi-enter')).toBeLessThan(ev(m, 'closest-approach'));
     const alt = factOf(m, 'closestApproach.altKm');
-    expect(alt).toBeGreaterThan(990);
-    expect(alt).toBeLessThan(3000);
-    expect(factOf(m, 'closestApproach.farSide')).toBe(1);
-    expect(check('missions-flyby')).toContain('about 1,000 to 3,000 km above the far side');
+    expect(Math.round(alt / 100) * 100).toBe(1500);
+    expect(factOf(m, 'closestApproach.trailingSide')).toBe(1);
+    expect(factOf(m, 'closestApproach.farSide')).toBe(0);
+    expect(check('missions-flyby')).toContain(`about ${fmt(Math.round(alt / 100) * 100)} km above the Moon’s trailing side`);
+    expect(gloss('flyby')).toContain(`about ${fmt(Math.round(alt / 100) * 100)} km above the Moon`);
     expect(check('missions-lunar-order')).toContain('coasts for about three days: late in the coast');
+    expect(check('missions-lunar-order')).toContain('leaves the Earth-Moon system');
+    // the gravity assist: faster than escape speed at the exit, as the check and the glossary quote
+    const vOut = factOf(m, 'soiExit.speed');
+    const esc = Math.sqrt((2 * MU_EARTH) / (factOf(m, 'soiExit.distanceKm') * 1e3));
+    expect(vOut).toBeGreaterThan(esc);
+    expect(factOf(m, 'outbound.ecc')).toBeGreaterThan(1);
+    for (const t of [check('missions-gravity-assist'), gloss('gravity-assist'), gloss('escape-speed')]) expect(t).toContain(`about ${fmt(vOut / 1e3, 2)} km/s`);
+    expect(check('missions-gravity-assist')).toContain(`the ${fmt(esc / 1e3, 2)} km/s escape speed`);
+    expect(gloss('escape-speed')).toContain(`about ${fmt(esc / 1e3, 2)} km/s`);
+    expect(gloss('escape-speed')).toContain(`at ${fmt(Math.round(factOf(m, 'soiExit.distanceKm') / 1e4) * 1e4)} km`);
+    // the Moon-frame numbers, which parts/derived.test.ts checks against the track
+    const ga = check('missions-gravity-assist');
+    expect(ga).toContain(`arrives at about ${F.flybyRelAtSoi} and leaves at about ${F.flybyRelAtSoi}`);
+    expect(ga).toContain(`by about ${F.flybyTurn}`);
+    expect(ga).toContain(`(about ${F.moonSpeed})`);
+    expect(gloss('gravity-assist')).toContain(`about ${F.soiArrivalSpeed} relative to Earth on arrival`);
   });
 });

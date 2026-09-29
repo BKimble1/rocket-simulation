@@ -15,7 +15,7 @@ import { EARTH_AXIS, MU_EARTH, OMEGA_EARTH, R_EARTH, siteFrameQuaternion, sitePo
 import type { EffectsSource } from './input';
 import { TICK, SnapshotCache, type ClusterSnap, type EmitterSnap, type Snapshot } from './snapshot';
 import { airDensity, columnRadius, columnShape, makeColumnShape, mixingTau, RHO_SL, SMALL_THRUSTER, windAt } from './physics';
-import { DELUGE, MOUNT_HOLE, TRENCH_DIR, TRENCH_EXIT, VENTS, type PadJet } from './pad';
+import { DELUGE, GROUND_VENTS, MOUNT_HOLE, pickJet, TRENCH_DIR, TRENCH_EXIT, VENTS, type PadJet } from './pad';
 
 // ───────────────────────────── records ─────────────────────────────
 
@@ -240,6 +240,8 @@ export interface SpeciesCtx {
   /** Size and opacity compensation for a reduced budget. */
   sizeK: number;
   alphaK: number;
+  /** Mission time until which the launch pad's own effects run (ground vents); -Infinity: no pad. */
+  padUntil: number;
 }
 
 interface Species {
@@ -251,6 +253,8 @@ interface Species {
   life: number;
   /** 'window' species spawn once per slot inside [start, end] (ground cloud). */
   window: boolean;
+  /** Lowest budget the spawn rate is scaled to (continuity needs a minimum rate). */
+  budgetFloor?: number;
   /** dt: the pool's actual spawn interval (s), after the tier budget. */
   spawn(k: number, ts: number, dt: number, snap: Snapshot, rec: Rec, rnd: (j: number) => number, ctx: SpeciesCtx): boolean;
 }
@@ -266,14 +270,15 @@ function smokeSources(snap: Snapshot): ClusterSnap[] {
 /** Shared by the tail and the trail: start where the exhaust column hands over to smoke. */
 function exhaustStart(c: ClusterSnap, ts: number, rec: Rec, rnd: (j: number) => number, dtS: number, m: number): number {
   columnShape(c.kind, c.Rc, c.Req, c.throttle, c.ambientPressure, c.altitude, shape);
-  const y = shape.handoff * (0.88 + 0.24 * rnd(1));
+  // modest scatter: large random offsets along the flow would bunch the few particles into beads
+  const y = shape.handoff * (0.94 + 0.12 * rnd(1));
   const R = columnRadius(shape, y);
   const lat = perp(c.dir, rnd(2) * Math.PI * 2, v1);
   const rr = Math.sqrt(rnd(3)) * R * 0.4;
   rec.p0.copy(c.centroid).addScaledVector(c.dir, y).addScaledVector(lat, rr);
   // the gas leaves the column at uJet relative to the vehicle, which itself moves through the air
-  rec.u0.copy(c.dir).multiplyScalar(shape.uJet * (0.8 + 0.4 * rnd(4))).addScaledVector(lat, shape.uJet * 0.12 * (rnd(5) - 0.3)).add(c.airVel);
-  rec.tau = mixingTau(shape.rhoRatio) * (0.8 + 0.4 * rnd(6));
+  rec.u0.copy(c.dir).multiplyScalar(shape.uJet * (0.9 + 0.2 * rnd(4))).addScaledVector(lat, shape.uJet * 0.12 * (rnd(5) - 0.3)).add(c.airVel);
+  rec.tau = mixingTau(shape.rhoRatio) * (0.9 + 0.2 * rnd(6));
   rec.mode = Mode.Air;
   rec.up.copy(rec.p0).normalize();
   const h = rec.p0.length() - R_EARTH;
@@ -303,6 +308,7 @@ const TAIL: Species = {
   dtT: 6,
   life: 5,
   window: false,
+  budgetFloor: 0.6,
   spawn(k, ts, dt, snap, rec, rnd, ctx) {
     const list = smokeSources(snap);
     if (!list.length) return false;
@@ -331,8 +337,9 @@ const TAIL: Species = {
     if (solid) {
       rec.alb0.setRGB(0.86, 0.84, 0.8);
       rec.alb1.setRGB(0.9, 0.89, 0.87);
-      rec.emit.setRGB(1.2, 0.5, 0.14).multiplyScalar(shape.lum);
-      rec.tauE = 0.2;
+      // the glowing exhaust belongs to the flame volume; the smoke leaving it cools fast
+      rec.emit.setRGB(0.9, 0.4, 0.1).multiplyScalar(shape.lum);
+      rec.tauE = 0.06;
     } else {
       // kerosene soot: nearly black at the end of the flame, greying slowly as it mixes
       const soot = 0.1 + 0.08 * rnd(14);
@@ -538,9 +545,18 @@ const VENT: Species = {
   life: 7.2,
   window: false,
   spawn(k, ts, _dt, snap, rec, rnd, ctx) {
-    const v = snap.pad.venting;
-    if (v < 0.01 || rnd(0) > v || !vehicleOnPad(snap)) return false;
-    const j = VENTS[((k % VENTS.length) + VENTS.length) % VENTS.length];
+    // every fourth slot: the ground LOX storage vents (continuous boil-off); the rest: the
+    // vehicle's vents while it is being topped off (pad.venting)
+    const ground = GROUND_VENTS.length > 0 && ((k % 4) + 4) % 4 === 0;
+    let j: PadJet;
+    if (ground) {
+      if (ts > ctx.padUntil) return false;
+      j = GROUND_VENTS[Math.floor(rnd(1) * GROUND_VENTS.length)];
+    } else {
+      const v = snap.pad.venting;
+      if (v < 0.01 || rnd(0) > v || !vehicleOnPad(snap)) return false;
+      j = VENTS[((k % VENTS.length) + VENTS.length) % VENTS.length];
+    }
     jetSpawn(j, ts, rec, rnd, 0.35, 0.6);
     rec.mode = Mode.Air;
     rec.group = Group.Vent;
@@ -583,12 +599,12 @@ const WATER: Species = {
   dtT: 2,
   life: 2.9,
   window: false,
-  spawn(k, ts, _dt, snap, rec, rnd, ctx) {
+  spawn(_k, ts, _dt, snap, rec, rnd, ctx) {
     const d = snap.pad.deluge;
     if (d < 0.01 || rnd(0) > d) return false;
-    const idx = ((k % DELUGE.length) + DELUGE.length) % DELUGE.length;
-    const j = DELUGE[idx];
-    const cannon = idx < 4;
+    if (!DELUGE.length) return false;
+    const j = pickJet(DELUGE, rnd(1));
+    const cannon = !!j.cannon;
     jetSpawn(j, ts, rec, rnd, cannon ? 0.07 : 0.2, cannon ? 0.16 : 0.3);
     rec.mode = Mode.Ballistic;
     rec.group = Group.Water;
@@ -724,7 +740,7 @@ class Pool {
       this.n = Math.max(40, Math.round(720 * budget));
       this.dtT = sp.dtT;
     } else {
-      this.dtT = Math.max(1, Math.round(sp.dtT / budget));
+      this.dtT = Math.max(1, Math.round(sp.dtT / Math.max(budget, sp.budgetFloor ?? 0)));
       this.n = Math.ceil((sp.life * TICK) / this.dtT) + 1;
     }
     this.recs = Array.from({ length: this.n }, makeRec);
@@ -758,7 +774,7 @@ export class ParticleSystem {
   /** Evaluated live particles (valid after update, `count` of them). */
   out: Particle[] = [];
   count = 0;
-  ctx: SpeciesCtx = { budget: 1, sizeK: 1, alphaK: 1 };
+  ctx: SpeciesCtx = { budget: 1, sizeK: 1, alphaK: 1, padUntil: -Infinity };
   private lastT = NaN;
   private lastEpoch = -1;
   /** Spawn computations done by the last update (diagnostics, tests). */
@@ -770,7 +786,7 @@ export class ParticleSystem {
 
   setBudget(b: number) {
     const budget = Math.min(2, Math.max(0.1, b));
-    this.ctx = { budget, sizeK: Math.pow(budget, -0.3), alphaK: Math.pow(budget, -0.2) };
+    this.ctx = { budget, sizeK: Math.pow(budget, -0.3), alphaK: Math.pow(budget, -0.2), padUntil: this.ctx?.padUntil ?? -Infinity };
     this.pools = SPECIES.map((s) => new Pool(s, budget));
     this.lastT = NaN;
   }
@@ -801,6 +817,12 @@ export class ParticleSystem {
     const full = epoch !== this.lastEpoch || !(t >= this.lastT - 1e-9);
     this.lastEpoch = epoch;
     this.lastT = t;
+    // a mission launched from the pad: its ground vents run until ten minutes after the blast
+    const padUntil = src.groundBlastStart !== null ? (src.groundBlastEnd ?? src.groundBlastStart) + 600 : -Infinity;
+    if (padUntil !== this.ctx.padUntil) {
+      this.ctx.padUntil = padUntil;
+      for (const p of this.pools) p.invalidate();
+    }
     for (const p of this.pools) {
       if (full) p.invalidate();
       if (p.sp.window) p.setWindow(src.groundBlastStart, src.groundBlastEnd);

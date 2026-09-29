@@ -220,7 +220,7 @@ export function columnShape(kind: EmitterKind, Rc: number, Req: number, throttle
     return out;
   }
   // kerosene: over-expanded at sea level (pr < 1: slight necking), ballooning above ~5 km
-  const bal = pr > 1 ? Req * 0.9 * Math.sqrt(pr) : Req * (0.93 + 0.07 * pr);
+  const bal = pr > 1 ? Req * 1.15 * Math.sqrt(pr) : Req * (0.93 + 0.07 * pr);
   out.Rbal = Math.min(Math.max(Rc * (pr > 1 ? 1 : 0.97), bal), 380);
   out.Lb = 0.9 * out.Rbal + 2;
   const thick = Math.min(1, rhoRatio * 3);

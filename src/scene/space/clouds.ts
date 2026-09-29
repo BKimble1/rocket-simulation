@@ -85,6 +85,7 @@ uniform int uSteps;
 uniform int uLightSteps;
 uniform float uPixel;
 uniform float uFade;       // overall opacity (fade in once textures exist)
+uniform float uLimbKeep;   // share kept of the clouds seen beyond the Earth's limb (0 from high up)
 
 float hgPhase(float c, float g) {
   float g2 = g * g;
@@ -185,6 +186,11 @@ void main() {
   vec2 rng = layerRange(d, b);
   float t0 = rng.x, t1 = rng.y;
   if (t1 <= t0 || uFade <= 0.0) return;
+  // From high up, the layer beyond the limb is thinner than a pixel of this reduced-resolution
+  // march: drawn, it steps and breaks into dashes along the horizon. The clouds on the globe
+  // up to the limb remain.
+  float keep = raySphere(b, uCs.z).x > 0.0 ? 1.0 : uLimbKeep;
+  if (keep <= 0.0) return;
 
   gDirEF = uToEF * d;
   gSunEF = uToEF * uSun;
@@ -209,6 +215,8 @@ void main() {
     vec4 c = marchSegment(ba, bb, n, jit, tm);
     outBack = withAir(c, b, d, tm);
   }
+  outFront *= keep;
+  outBack *= keep;
 }
 `;
 
@@ -287,6 +295,7 @@ export function makeCloudUniforms(shared: Record<string, THREE.IUniform>): Recor
     uSteps: { value: 48 },
     uLightSteps: { value: 4 },
     uFade: { value: 0 },
+    uLimbKeep: { value: 1 },
     uFullRes: { value: new THREE.Vector2(1, 1) },
     uLowRes: { value: new THREE.Vector2(1, 1) },
   };

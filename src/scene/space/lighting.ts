@@ -42,12 +42,43 @@ function albedoAt(alt: number) {
   return 0.13 + (0.3 - 0.13) * k;
 }
 
+/** Bond albedo of the Earth with its clouds, and the tint of its reflected light (Rayleigh blue). */
+const EARTH_ALBEDO = 0.3;
+const EARTH_TINT = new THREE.Vector3(0.86, 0.96, 1.12);
+
+/**
+ * Earthshine far from the Earth: irradiance on a surface facing the Earth from a Lambert sphere
+ * of Bond albedo A at distance r, E = (2/3) A E_sun (R/r)^2 Phi(alpha), with the Lambert phase
+ * law Phi(alpha) = (sin(alpha) + (pi - alpha) cos(alpha)) / pi and alpha the angle at the Earth
+ * between the Sun and the point (0: the point sees a full Earth). Per channel, scene units.
+ */
+export function earthshine(p: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+  const r = p.length();
+  const alpha = Math.acos(THREE.MathUtils.clamp(p.dot(SUN_DIRECTION) / r, -1, 1));
+  const phi = (Math.sin(alpha) + (Math.PI - alpha) * Math.cos(alpha)) / Math.PI;
+  const e = (2 / 3) * EARTH_ALBEDO * (R_EARTH / r) ** 2 * phi;
+  return out.copy(EARTH_TINT).multiplyScalar(e).multiply(SUN_RGB);
+}
+
+/** Altitudes (m) over which the sampled ground irradiance hands over to the analytic earthshine
+ *  (the sample directions stop resolving the Earth's disk as it shrinks). */
+const FAR_A = 1_500_000;
+const FAR_B = 4_000_000;
+const _far = new THREE.Vector3();
+
 /**
  * Irradiance from the sky (upper hemisphere) and from the ground/Earth (lower hemisphere) on
  * surfaces facing up and down at point p (frame I, relative to the Earth's centre).
  */
 export function hemisphereIrradiance(p: THREE.Vector3, sky: THREE.Vector3, ground: THREE.Vector3): void {
   const r = p.length();
+  const wFar = THREE.MathUtils.smoothstep(r - R_EARTH, FAR_A, FAR_B);
+  if (wFar >= 1) {
+    // deep space: no sky, the Earth a small disk
+    sky.set(0, 0, 0);
+    earthshine(p, ground);
+    return;
+  }
   const up = _a.copy(p).divideScalar(r);
   _q.setFromUnitVectors(Y, up);
   sky.set(0, 0, 0);
@@ -73,6 +104,7 @@ export function hemisphereIrradiance(p: THREE.Vector3, sky: THREE.Vector3, groun
   }
   sky.multiplyScalar(Math.PI / HEMI.length).multiply(SUN_RGB);
   ground.multiplyScalar(Math.PI / HEMI.length).multiply(SUN_RGB);
+  if (wFar > 0) ground.lerp(earthshine(p, _far), wFar);
 }
 
 const _sky = new THREE.Vector3();

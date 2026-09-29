@@ -124,12 +124,12 @@ vec3 field(vec3 p) {
     float s = (y - yf) / th;
     float layer = smoothstep(-0.08, 0.3, s) * (1.0 - smoothstep(0.78, 1.08, s));
     float radial = clamp(1.15 - 0.55 * (r / R) * (r / R), 0.25, 1.15) * (1.0 - smoothstep(1.02, 1.25, r / R));
-    e += mix(uColRim, uColHot, clamp(1.2 - r / R, 0.0, 1.0)) * (layer * radial * 11.0);
+    e += mix(uColRim, uColHot, clamp(1.2 - r / R, 0.0, 1.0)) * (layer * radial * 5.0);
   }
   // hot gas turning around the shoulder
   float yr = faceY(R);
   float dsh = length(vec2(r - R * 1.03, y - yr * 1.1)) / (0.2 * R);
-  e += uColRim * exp(-dsh * dsh) * 7.0;
+  e += uColRim * exp(-dsh * dsh) * 3.5;
   // shear layer and wake behind the body
   if (y < yr) {
     float x = yr - y;
@@ -140,11 +140,11 @@ vec3 field(vec3 p) {
     // fades out before the end of the bounding volume (no visible cut)
     float tailFade = 1.0 - smoothstep(0.55, 0.95, x / max(yr - uY0, 1e-3));
     float sl = exp(-pow((r - rsl) / w, 2.0)) * exp(-x / uWake) * (0.6 + 0.8 * nz) * tailFade;
-    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 1.6;
+    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 1.0;
   }
   // soft glow around the stagnation region (the eye sees the bright layer bleed)
   float hd = length(vec2(r, y - uDelta * 0.5)) / (0.9 * R);
-  e += uColHot * exp(-hd * hd) * 0.45;
+  e += uColHot * exp(-hd * hd) * 0.25;
   return e;
 }
 
@@ -189,6 +189,8 @@ void main() {
 `;
 
 let geo: THREE.CylinderGeometry | null = null;
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const Q_INV = new THREE.Quaternion();
 
 export class PlasmaVolume {
   mesh: THREE.Mesh;
@@ -241,10 +243,10 @@ export class PlasmaVolume {
     const I = Math.pow(Math.max(0, Math.min(1.5, s.intensity)), 1.3);
     const m = this.mesh;
     m.position.copy(rel);
-    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), s.dir);
+    m.quaternion.setFromUnitVectors(Y_AXIS, s.dir);
     m.updateMatrix();
     m.matrixAutoUpdate = false;
-    const qi = m.quaternion.clone().invert();
+    const qi = Q_INV.copy(m.quaternion).invert();
     const cam = (u.uCam.value as THREE.Vector3).copy(rel).negate().applyQuaternion(qi);
     u.uTime.value = time;
     u.uI.value = I;

@@ -27,11 +27,26 @@ function aftSkirt(ctx: Ctx) {
     skin: 0.005,
     outerLook: 'paint',
     innerLook: 'alu',
-    inner: 'always',
+    // frames and stringers only in the cutaway: edge-on faces a few millimetres behind the skin
+    // bleed through it as hairlines with MSAA + the logarithmic depth buffer (the fragment depth
+    // is extrapolated to the pixel centre on sliver triangles)
+    inner: 'cut',
     frames: [{ y: 45.3, depth: 0.06 }],
     stringers: { count: 36, depth: 0.028 },
     endLands: { bottom: [0.1, 0.06], top: [0.08, 0.03] },
   });
+  // plain inner face of the open skirt, always drawn (seen from below once the stages are apart):
+  // 2 mm inside the detailed inner surface so the cutaway's frames and stringers stand in front
+  {
+    const ri = R - 0.005 - 0.002;
+    const y0 = S.interstageTop + 0.001;
+    const plain: P2[] = [
+      [ri, S.s2AftSkirtTop - 0.08],
+      [ri, y0],
+      [R - 0.0005, y0],
+    ];
+    kit.add(s.group, lathe(plain, { seg: kit.seg.mid, smooth: 40, uR: R }), { part: 's2-tanks', mat: 'al-2219', look: 'alu', cut: true });
+  }
   // aft ring lip the separation collets grip
   solidRing(kit, s, 1.72, R - 0.02, S.interstageTop + 0.02, S.interstageTop + 0.07, 'aluMilled', 'stage-separation', 'al-2219');
   jointBand(kit, s, S.interstageTop + 0.03, 'paint', 's2-tanks', 'al-2219', { bolts: kit.hangar ? 144 : 0 });

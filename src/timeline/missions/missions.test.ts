@@ -14,7 +14,7 @@ import { BODY_SIZE } from '../../director/shots';
 import { PART_IDS, type BodyId } from '../../vehicle/parts';
 import { ABORT_TOWER, CAPSULE, E1, E1V, S1, SERVICE_MODULE } from '../../vehicle/spec';
 import { FACTS, factKeys } from './facts';
-import { MU_EARTH, R_EARTH, R_MOON, latLonOf, moonPosition } from '../../world/frames';
+import { EARTH_AXIS, MU_EARTH, R_EARTH, R_MOON, latLonOf, moonPosition } from '../../world/frames';
 import { LANDING_ZONE } from '../../world/site';
 import { kepler } from '../physics/kepler';
 import { padLocal, lzMiss } from '../physics/landing';
@@ -401,6 +401,65 @@ describe('mission targets', () => {
     expect(tl('gto').facts['gto.periKm']).toBeGreaterThan(150);
   });
 
+  it('GTO: three apogee burns centred on successive apogees end in a near-circular geostationary orbit', () => {
+    const m = tl('gto');
+    const f = m.facts;
+    const sat = m.bodies.satellite!;
+    // the satellite coasts through the first apogee, then burns
+    expect(ev(m, 'apogee')).toBeLessThan(ev(m, 'apogee-burn-start'));
+    // burn windows from the throttle channel: burn, coast, burn, coast, burn
+    const ch = m.channels['sat.apogee.throttle']!;
+    const wins: [number, number][] = [];
+    for (let i = 1; i < ch.t.length; i++) {
+      if (ch.v[i - 1] === 0 && ch.v[i] > 0) wins.push([ch.t[i - 1], NaN]);
+      if (ch.v[i - 1] > 0 && ch.v[i] === 0) wins[wins.length - 1][1] = ch.t[i];
+    }
+    expect(wins.length).toBe(3);
+    expect(f['apogeeBurn.count']).toBe(3);
+    expect(wins[0][0]).toBe(ev(m, 'apogee-burn-start'));
+    expect(wins[2][1]).toBe(ev(m, 'apogee-burn-end'));
+    const mins = [f['apogeeBurn.burn1Min'], f['apogeeBurn.burn2Min'], f['apogeeBurn.burn3Min']];
+    let prevOrbitH = 0;
+    wins.forEach(([a, b], k) => {
+      // shorter burns (under 1.5 h each, each shorter than the one before), the ramps included
+      expect(Math.abs(b - a - 1 - mins[k] * 60)).toBeLessThan(1e-6);
+      expect(mins[k]).toBeLessThan(90);
+      if (k) expect(mins[k]).toBeLessThan(mins[k - 1]);
+      // centred on an apogee: climbing at ignition, at the top of the orbit halfway through
+      const vr = (t: number) => telemetryAt(m, 'satellite', t)!.verticalSpeed;
+      expect(vr(a + 1), `burn ${k + 1} ignition`).toBeGreaterThan(20);
+      expect(Math.abs(vr((a + b) / 2)), `burn ${k + 1} middle`).toBeLessThan(0.1 * vr(a + 1));
+      bodyAt(sat, (a + b) / 2, S);
+      expect(S.pos.length() / 1000 - R_EARTH / 1000 - 35_786, `burn ${k + 1} height`).toBeLessThan(100);
+      // a coast of at least one orbit (hours) between burns
+      if (k) {
+        expect(a - wins[k - 1][1]).toBeGreaterThan(prevOrbitH * 3600 * 0.8);
+        expect(a - wins[k - 1][1]).toBeGreaterThan(8 * 3600);
+      }
+      bodyAt(sat, b + 1, S);
+      prevOrbitH = (2 * Math.PI * Math.sqrt((1 / (2 / S.pos.length() - S.vel.lengthSq() / MU_EARTH)) ** 3 / MU_EARTH)) / 3600;
+    });
+    // the final orbit, from the track: near-circular at geostationary height, over the equator
+    bodyAt(sat, m.end, S);
+    const r = S.pos.clone();
+    const v = S.vel.clone();
+    const a = 1 / (2 / r.length() - v.lengthSq() / MU_EARTH);
+    const h = r.clone().cross(v);
+    const e = v.clone().cross(h).divideScalar(MU_EARTH).sub(r.clone().normalize()).length();
+    expect(Math.abs(a / 1000 - R_EARTH / 1000 - 35_786)).toBeLessThan(30);
+    expect(e).toBeLessThan(0.001);
+    expect((h.angleTo(EARTH_AXIS) * 180) / Math.PI).toBeLessThan(0.3);
+    expect(Math.abs(f['final.periKm'] - 35_786)).toBeLessThan(50);
+    expect(Math.abs(f['final.apoKm'] - 35_786)).toBeLessThan(50);
+    expect(f['final.incDeg']).toBeLessThan(0.3);
+    expect(Math.abs(f['final.periodH'] - 23.9345)).toBeLessThan(0.02);
+    // the plane change is paid for: close to the ideal impulsive change, propellant to spare
+    expect(f['apogeeBurn.dvIdeal']).toBeGreaterThan(1800);
+    expect(f['apogeeBurn.dv'] / f['apogeeBurn.dvIdeal']).toBeGreaterThan(1);
+    expect(f['apogeeBurn.dv'] / f['apogeeBurn.dvIdeal']).toBeLessThan(1.02);
+    expect(f['apogeeBurn.propLeftKg']).toBeGreaterThan(20);
+  });
+
   it('boosters land on the landing zone within 10 m at under 2.5 m/s with propellant left', () => {
     for (const id of MISSION_ORDER) expect(OUTLINES[id].recovery, id).toBe(id === 'leo' || id === 'suborbital');
     for (const id of ['leo', 'suborbital'] as MissionId[]) {
@@ -543,7 +602,7 @@ describe('mission targets', () => {
     }
   }, 60_000);
 
-  it('lunar: far-side closest approach within 1,000 to 3,000 km, not captured', () => {
+  it('lunar: trailing-side closest approach within 1,000 to 3,000 km, not captured, leaving the Earth-Moon system', () => {
     const m = tl('lunar');
     const tc = ev(m, 'closest-approach');
     bodyAt(m.bodies.satellite!, tc, S);
@@ -552,8 +611,20 @@ describe('mission targets', () => {
     const alt = rel.length() - R_MOON;
     expect(alt).toBeGreaterThan(1000e3);
     expect(alt).toBeLessThan(3000e3);
-    expect(rel.dot(moon)).toBeGreaterThan(0); // beyond the Moon as seen from the Earth
-    expect(m.facts['closestApproach.farSide']).toBe(1);
+    // behind the Moon with respect to its orbital motion (the trailing side), where it gains energy
+    const moonVel = moonPosition(tc + 1, m.moonPhase0).sub(moonPosition(tc - 1, m.moonPhase0));
+    expect(rel.dot(moonVel)).toBeLessThan(0);
+    expect(m.facts['closestApproach.trailingSide']).toBe(1);
+    expect(m.facts['closestApproach.farSide']).toBe(0);
+    // near the edge of the disc as seen from the Earth (the label says so)
+    expect(m.facts['closestApproach.angleFromEarthDeg']).toBeGreaterThan(70);
+    expect(m.facts['closestApproach.angleFromEarthDeg']).toBeLessThan(110);
+    expect(m.events.find((e) => e.id === 'closest-approach')!.label).toMatch(/trailing side/);
+    // the flyby adds energy: unbound (hyperbolic) relative to the Earth after it
+    expect(m.facts['outbound.energy']).toBeGreaterThan(0);
+    expect(m.facts['outbound.ecc']).toBeGreaterThan(1);
+    expect(m.facts['soiExit.speed']).toBeGreaterThan(m.facts['soiExit.escapeSpeed']);
+    expect(m.facts['outbound.earthReturnDays']).toBe(0);
     // hyperbolic relative to the Moon: faster than lunar escape speed at closest approach
     expect(m.facts['closestApproach.speedRelMoon']).toBeGreaterThan(Math.sqrt((2 * 4.9048695e12) / rel.length()));
     expect(ev(m, 'soi-exit')).toBeGreaterThan(tc);

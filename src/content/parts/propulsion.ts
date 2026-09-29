@@ -327,11 +327,11 @@ export const PROPULSION: (PartLesson | PartNote)[] = [
 
   note({
     id: 'apogee-engine',
-    summary: 'The geostationary satellite\'s own small liquid engine, fired at the far point of the transfer orbit to raise the low point and turn the orbit into a circle.',
-    function: `A storable bipropellant engine (a hypergolic pair that ignites on contact) with a radiatively cooled niobium chamber and nozzle. Circularizing at apogee takes about ${F.circularizeDv} as an ideal, instantaneous burn, or about ${F.circularizePlaneDv} if it also removes the ${F.inclination} inclination (computed, two-body). The single long burn shown here needs more, because a small engine firing for hours spreads its push over a large arc of the orbit: in the playback it uses about ${F.gtoBurnDv} over about ${F.gtoBurnHours} and still ends in a nearly circular orbit about ${F.gtoFinalAlt} up, short of geostationary height.`,
-    why: 'The launch vehicle leaves the satellite on a transfer orbit; the last large velocity change is made where it is cheapest, at apogee, where the satellite moves slowly. Real satellites split this into several burns over several apogees; one long burn is shown here for clarity.',
+    summary: 'The geostationary satellite\'s own small liquid engine, fired at the high point of its orbit in several burns to raise the low point and turn the orbit into a circle over the equator.',
+    function: `A storable bipropellant engine (a hypergolic pair that ignites on contact) with a radiatively cooled niobium chamber and nozzle; in this simulator ${F.apogeeThrust} of thrust at an Isp of ${F.apogeeIsp} (illustrative values, typical of such engines). Circularizing at apogee takes about ${F.circularizeDv} as an ideal, instantaneous burn, or about ${F.circularizePlaneDv} if it also removes the ${F.inclination} inclination (computed, two-body). For the ${F.gtoSatMass} satellite that means about ${F.apogeePropIdeal} of propellant and about ${F.apogeeBurnHoursIdeal} of firing, made as ${F.gtoBurnCount} burns of ${F.gtoBurnMins} centred on successive apogees.`,
+    why: 'The launch vehicle leaves the satellite on a transfer orbit; the last large velocity change is made where it is cheapest, at apogee, where the satellite moves slowly, and the same burns remove the tilt of the orbit. A small engine is enough in orbit, where nothing has to be held up against gravity as at launch, and it keeps mass off a spacecraft that carries it for its whole life. With so little thrust one burn would last hours and spread its push over a wide arc of the orbit, wasting part of it, so the job is split into shorter burns centred on apogee that raise the perigee in steps.',
     materials: mats('apogee-engine'),
-    phases: [at('gto', 'circularize', 'Fires at apogee to raise perigee and circularize (explanatory burn).')],
+    phases: [at('gto', 'circularize', 'Fires at three successive apogees to raise the perigee and remove the tilt (explanatory, accelerated).')],
     sources: ['sutton-rpe', 'nasa-bsf-4'],
   }),
 
@@ -355,7 +355,7 @@ export const PROPULSION: (PartLesson | PartNote)[] = [
       { label: 'Diameter / length', value: `${F.smDiameter} / ${F.smLength}` },
       { label: 'Mass', value: F.smMass },
       { label: 'Main engine thrust / Isp', value: `${F.smThrust} / ${F.smIsp}` },
-      { label: 'Deorbit burn', value: `about ${F.deorbitDv}`, note: `Uses about ${F.smDeorbitProp} of propellant in about ${F.smDeorbitBurn} (computed for the ${F.capsuleStackMass} launch mass of capsule and module; a little less after the phasing burns)` },
+      { label: 'Deorbit burn', value: `about ${F.deorbitDv}`, note: `Uses about ${F.smDeorbitProp} of propellant in about ${F.smDeorbitBurn} (computed for the ${F.smStackAtUndock} capsule and module at undocking, which still hold the ${F.smPropAtUndock} of propellant left after the climb to the station); about ${F.smPropAfterDeorbit} remains afterwards, a margin of about ${F.smMarginDv}` },
     ],
     materials: mats('service-module'),
     materialsWhy: 'Primary structure is welded aluminium alloy 2219, light and well understood. Propellant tanks are titanium: strong for their weight and compatible with the storable propellants. MLI blankets control the temperature of tanks and lines so the propellants neither freeze nor overheat.',
@@ -365,7 +365,7 @@ export const PROPULSION: (PartLesson | PartNote)[] = [
     ifAbsent: 'The capsule would need its own large engine, tanks, arrays and radiators behind its heat shield: a much larger and heavier entry vehicle.',
     depth: {
       quick: 'A service module is the capsule\'s toolbox: engine, fuel, power and cooling. It is thrown away before the capsule comes home.',
-      engineering: `Propellant for a burn: Δm = m0·(1 − e^(−Δv/(Isp·g0))). For the deorbit, m0 = ${F.capsuleStackMass}, Δv = ${F.deorbitDv}, Isp = ${F.smIsp}: about ${F.smDeorbitProp}. Hypergolic propellants trade some performance for storability over months and reliable restarts.`,
+      engineering: `Propellant for a burn: Δm = m0·(1 − e^(−Δv/(Isp·g0))). For the deorbit, m0 = ${F.smStackAtUndock} (capsule and module at undocking), Δv = ${F.deorbitDv}, Isp = ${F.smIsp}: about ${F.smDeorbitProp}. Hypergolic propellants trade some performance for storability over months and reliable restarts.`,
       materials: 'Aluminium where mass and simplicity rule, titanium where propellant compatibility and pressure matter, MLI where temperature must be held in vacuum.',
     },
     sources: ['sutton-rpe', 'nasa-bsf-3', 'nasa-sst-soa'],

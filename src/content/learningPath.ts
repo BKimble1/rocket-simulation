@@ -117,7 +117,7 @@ export const LEARNING_PATH: LearningStep[] = [
     topic: 'orbit',
     title: 'Orbit and payload: going sideways fast enough',
     blurb:
-      'Why orbit is a speed rather than a height, how the upper stage finishes the climb, and how a satellite separates, unfolds its arrays and keeps its temperature. Then transfer orbits, and how a capsule catches up with a station.',
+      'Why orbit is a speed rather than a height, how the upper stage finishes the climb, and how a satellite separates, unfolds its arrays and keeps its temperature. Then transfer orbits, the satellite’s own climb to geostationary orbit in several apogee burns, and how a capsule catches up with a station.',
     items: [
       { mission: 'leo', phase: 'upper-burn' },
       { mission: 'leo', phase: 'seco' },
@@ -131,6 +131,7 @@ export const LEARNING_PATH: LearningStep[] = [
       { material: 'mli' },
       { demo: 'spacecraft-ops' },
       { mission: 'gto', phase: 'transfer-coast' },
+      { mission: 'gto', phase: 'circularize' },
       { mission: 'station', phase: 'phasing' },
       { mission: 'station', phase: 'approach' },
     ],
@@ -166,7 +167,7 @@ export const LEARNING_PATH: LearningStep[] = [
     topic: 'missions',
     title: 'Mission comparisons: one vehicle, six jobs',
     blurb:
-      'Compare what changes from mission to mission: a suborbital hop that reaches space but not orbit, a direct climb to low orbit with the booster flying home, a transfer toward geostationary altitude, a station rendezvous with a crew stack heavy enough that the booster is expended, a capsule return, and a lunar flyby that is not an orbit insertion.',
+      'Compare what changes from mission to mission: a suborbital hop that reaches space but not orbit, a direct climb to low orbit with the booster flying home, a transfer to geostationary orbit that the satellite finishes with its own engine in three apogee burns, a station rendezvous with a crew stack heavy enough that the booster is expended, a capsule return, and a lunar flyby that is not an orbit insertion but a gravity assist out of the Earth-Moon system.',
     items: [{ mission: 'suborbital' }, { mission: 'leo' }, { mission: 'gto' }, { mission: 'station' }, { mission: 'return' }, { mission: 'lunar' }],
   },
 ];

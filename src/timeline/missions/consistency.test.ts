@@ -438,8 +438,15 @@ describe('headline facts recomputed independently', () => {
     expect(Math.abs(f['apogeeBurn.dvToGainAtStart'] - (Math.sqrt(MU_EARTH / ra) - visViva(ra, (rp + ra) / 2)))).toBeLessThan(3);
     const m0 = 3600;
     expect(f['apogeeBurn.dv']).toBeCloseTo(320 * G0 * Math.log(m0 / (m0 - f['apogeeBurn.propUsedKg'])), 0);
-    // a 450 N engine takes hours: burn time = propellant / flow
+    // a 450 N engine runs for hours in all: engine-on time = propellant / flow
     expect(f['apogeeBurn.durationH']).toBeCloseTo(f['apogeeBurn.propUsedKg'] / (450 / (320 * G0)) / 3600, 1);
+    expect((f['apogeeBurn.burn1Min'] + f['apogeeBurn.burn2Min'] + f['apogeeBurn.burn3Min']) / 60).toBeCloseTo(f['apogeeBurn.durationH'], 6);
+    // the ideal change with the plane change: law of cosines between the apogee and geostationary velocities
+    const rA = R_EARTH + f['gto.apoKm'] * 1000;
+    const va = visViva(rA, (rp + rA) / 2);
+    const vc = visViva(rA, ra);
+    const inc = (f['parking.incDeg'] * Math.PI) / 180;
+    expect(Math.abs(f['apogeeBurn.dvIdeal'] - Math.sqrt(va * va + vc * vc - 2 * va * vc * Math.cos(inc)))).toBeLessThan(3);
     expect(f['gto.periodH']).toBeCloseTo((2 * Math.PI * Math.sqrt(((R_EARTH * 2 + (f['gto.periKm'] + f['gto.apoKm']) * 1000) / 2) ** 3 / MU_EARTH)) / 3600, 2);
   });
 

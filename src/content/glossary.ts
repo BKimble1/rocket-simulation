@@ -401,27 +401,27 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'transfer-orbit',
     term: 'Transfer orbit',
     definition:
-      'An elliptical orbit connecting two others: one burn enters it, and a second burn at its far point completes the change. A geostationary transfer orbit reaches from a low parking orbit up to 35,786 km.',
+      'An elliptical orbit connecting two others: one burn enters it, and a burn at its far point completes the change. A geostationary transfer orbit reaches from a low parking orbit up to 35,786 km; a satellite with a small engine completes it in several burns at successive far points.',
     see: [{ mission: 'gto', phase: 'gto-injection' }, { mission: 'gto', phase: 'transfer-coast' }],
     aliases: ['GTO', 'geostationary transfer orbit', 'Hohmann transfer'],
   },
   {
     id: 'geostationary-orbit',
     term: 'Geostationary orbit',
-    definition: 'A circular orbit 35,786 km above the equator whose period equals one rotation of the Earth (a special case of a geosynchronous orbit), so a satellite there appears fixed in the sky. Communications satellites use it.',
+    definition: 'A circular orbit 35,786 km above the equator whose period equals one rotation of the Earth relative to the stars (one sidereal day, 23.93 h), so a satellite there appears fixed in the sky. It is a special case of a geosynchronous orbit. Communications satellites use it.',
     see: [{ mission: 'gto', phase: 'circularize' }],
     aliases: ['GEO', 'geosynchronous'],
   },
   {
     id: 'circularization',
     term: 'Circularization',
-    definition: 'A burn at apoapsis that raises periapsis until the orbit is round. On the LEO mission the upper stage makes a short one at 400 km; in the GTO mission the satellite’s own apogee engine does it (shown explanatorily as one long burn).',
+    definition: 'A burn at apoapsis that raises periapsis until the orbit is round. On the LEO mission the upper stage makes a short one at 400 km. In the GTO mission the satellite’s small apogee engine does it in three burns centred on successive apogees, raising the perigee in steps and removing the orbit’s tilt at the same time.',
     see: [{ mission: 'gto', phase: 'circularize' }, { mission: 'leo', phase: 'coast' }, { part: 'apogee-engine' }],
   },
   {
     id: 'inclination',
     term: 'Inclination',
-    definition: 'The tilt of an orbit’s plane relative to the equator. A launch due east from 28.5° N gives an inclination of 28.5°; changing it later costs a lot of delta-v.',
+    definition: 'The tilt of an orbit’s plane relative to the equator. A launch due east from 28.5° N gives an inclination of 28.5°. Changing it later costs a lot of delta-v, least where the spacecraft moves slowest: removing 28.5° alone would take about 3.83 km/s in the 200 km parking orbit but about 1.51 km/s at geostationary height, and less still combined with the apogee burns.',
     see: [{ mission: 'station', phase: 'liftoff' }, { mission: 'gto', phase: 'circularize' }],
   },
   {
@@ -443,9 +443,25 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'flyby',
     term: 'Flyby',
     definition:
-      'Passing close to a body without stopping. Its gravity bends the spacecraft’s path and changes its direction and speed relative to the Earth, but without a braking burn the spacecraft leaves again: a flyby is not an orbit insertion.',
+      'Passing close to a body without stopping. Its gravity bends the spacecraft’s path, but without a braking burn the spacecraft leaves again as fast as it came, relative to that body: a flyby is not an orbit insertion. The lunar probe passes about 1,500 km above the Moon.',
+    see: [{ mission: 'lunar', phase: 'flyby' }, { mission: 'lunar', phase: 'soi' }],
+    aliases: ['swing-by'],
+  },
+  {
+    id: 'gravity-assist',
+    term: 'Gravity assist',
+    definition:
+      'A flyby that changes a spacecraft’s speed relative to a third body, here the Earth. Relative to the Moon the probe leaves at the speed it arrived with, only turned; relative to the Earth its velocity is the Moon’s velocity plus that relative velocity. Passing behind the Moon (its trailing side) turns the relative velocity toward the Moon’s motion, so the probe gains energy: about 1.0 km/s relative to Earth on arrival, about 1.74 km/s on leaving.',
     see: [{ mission: 'lunar', phase: 'flyby' }, { mission: 'lunar', phase: 'outbound' }],
-    aliases: ['gravity assist', 'swing-by'],
+    aliases: ['slingshot'],
+  },
+  {
+    id: 'escape-speed',
+    term: 'Escape speed',
+    definition:
+      'The speed at which a coasting body has just enough energy to climb away from a planet for good: √(2μ/r), so it falls with distance. At 200 km above the Earth it is about 11.0 km/s; at 450,000 km, where the lunar probe leaves the Moon’s sphere of influence, about 1.33 km/s, and the probe is moving at about 1.74 km/s.',
+    see: [{ mission: 'lunar', phase: 'tli' }, { mission: 'lunar', phase: 'outbound' }],
+    aliases: ['escape velocity'],
   },
   {
     id: 'rendezvous',

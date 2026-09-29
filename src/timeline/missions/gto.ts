@@ -2,13 +2,15 @@
  * Geostationary transfer: expendable booster, upper-stage burn to a 200 km parking orbit
  * (inclination 28.5 deg, the site's latitude), a coast to the descending node (the equator
  * crossing, so the transfer orbit's apogee lies on the equatorial plane), settling thrusters and
- * a restart that raises the apogee to 35,786 km, satellite separation, the five-hour climb to
- * apogee, then an EXPLANATORY apogee-engine burn by the satellite: one long constant-thrust
- * (450 N, about 3 h) burn from apogee, shown accelerated. The satellite falls while it burns,
- * so the orbit ends circular near 32,000 km, below geostationary height, after spending more
- * velocity change than the ideal impulsive step: why real missions split circularization into
- * several apogee burns, which also remove the 28.5 deg inclination on the way (not modelled:
- * stated on screen).
+ * a restart that raises the apogee to 35,786 km, satellite separation and the five-hour climb to
+ * apogee. Then the satellite's own campaign (EXPLANATORY, shown accelerated, the orbits between
+ * burns omitted): it coasts through the first apogee (checkout), then fires its 450 N apogee
+ * engine three times, each burn centred on a later apogee (about 87, 58 and 40 minutes). Each
+ * burn raises the perigee and turns the orbit plane toward the equator; after the third the
+ * orbit is near-circular at geostationary height with an inclination below 0.1 deg, about 30 h
+ * after the first ignition. Centring shorter burns on apogee keeps the finite-burn loss small
+ * (the whole campaign costs within 1 % of the ideal impulsive change), which is why real
+ * satellites split the job this way instead of one long burn.
  *
  * Reference trajectory from the simplified point-mass model, computed once.
  */
@@ -18,10 +20,10 @@ import type { MissionTimeline, Shot } from '../types';
 import { cdFreeMolecular } from '../physics/aero';
 import { comFrom } from '../physics/ascent';
 import { Ctx } from '../physics/context';
-import { elements, kepler } from '../physics/kepler';
+import { elements, kepler, timeToAnomaly } from '../physics/kepler';
 import { apsidesKm, coastKepler, incToEquator, progradeAttitude } from '../physics/orbit';
 import { ENG_SAT, sumMass } from '../physics/vehicle';
-import { DEG, qaxisY, qlook, v3, vadd, vcross, vdot, vlen, vnorm, vscale, vsub, type Q, type V3 } from '../physics/vec';
+import { DEG, qaxisY, qlook, v3, vadd, vcross, vdot, vlen, vnorm, vscale, vsub, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
 import { Pres, contiguous, num, phasesFrom, rateNote, shot, tidyShots } from './common';
 import { ascentFacts, coastSettleBurn, flyOrbitalAscent, s2Channels } from './flight';
@@ -30,6 +32,42 @@ const START = -60;
 const GEO_ALT = 35_786e3;
 /** Satellite propellant (kg) inside its 3,600 kg launch mass (bipropellant for the apogee engine). */
 const SAT_PROP = 1700;
+
+/**
+ * Share of the velocity still to be gained that each apogee burn delivers (the last one: all of
+ * it). Three burns, the first the longest, as for real geostationary satellites.
+ */
+const BURN_SHARE = [0.4, 0.55, 1];
+/**
+ * Share of the radial velocity the first burns take out. Thrust purely in the local horizontal
+ * plane over a burn arc of an hour or more raises the apogee (by about 50 km per burn here);
+ * steering entirely against the radial velocity lowers it by more. This share, set once by
+ * trial, holds the apogee within about 20 km of geostationary height (a test checks the
+ * final orbit).
+ */
+const RADIAL_TRIM = 0.35;
+/** Turn to the burn attitude before each ignition, and back to prograde after each cutoff (s). */
+const SLEW = 300;
+const SLEW_BACK = 240;
+/** Coast shown in the final orbit after the last burn (s). */
+const FINAL_COAST = 600;
+
+interface ApogeeBurn {
+  /** Apogee the burn is centred on; turn start, ignition, cutoff command, end of the shutdown ramp (s). */
+  apogee: number;
+  slew: number;
+  start: number;
+  cut: number;
+  end: number;
+  /** Velocity change (rocket equation, m/s) and propellant used (kg). */
+  dv: number;
+  prop: number;
+  /** Orbit after the burn. */
+  periKm: number;
+  apoKm: number;
+  incDeg: number;
+  periodH: number;
+}
 
 const AXIS: V3 = { x: EARTH_AXIS.x, y: EARTH_AXIS.y, z: EARTH_AXIS.z };
 /** Upper-stage acceleration ceiling for the injection burn (m/s^2). */
@@ -207,58 +245,140 @@ export function buildGto(): MissionTimeline {
   }
   const tApo = sat.t + (lo + hi) / 2;
   coastKepler(ctx, sat, tApo, 300, (r, v) => progradeAttitude(r, v));
-  ctx.ev('apogee', tApo, `Apogee: ${num((vlen(sat.r) - R_EARTH) / 1000)} km, the transfer orbit's highest point`, 'milestone', ['satellite']);
+  ctx.ev('apogee', tApo, `Apogee: ${num((vlen(sat.r) - R_EARTH) / 1000)} km, the transfer orbit's highest point; the satellite coasts through this first one while it is checked out`, 'milestone', ['satellite']);
 
-  // ── explanatory apogee-engine burn: 450 N, one long burn starting just after apogee,
-  // steered along the velocity still to be gained (circular velocity at the current radius,
-  // in the orbit plane, minus the current velocity), cut when it is gained or the tank is dry.
-  // The satellite falls while it burns, so the orbit ends circular well below geostationary
-  // height: the reason real satellites use several shorter burns at successive apogees.
+  // ── apogee-engine campaign (explanatory): the satellite coasts through the first apogee
+  // (checkout and attitude acquisition, as real satellites do), then fires its 450 N engine in
+  // BURNS short burns, each centred on a later apogee and steered along the velocity still to be
+  // gained: the velocity of a circular orbit over the equator at the current radius, minus the
+  // current velocity. Each burn raises the perigee and turns the orbit plane toward the equator
+  // (the apogee lies on the equator: the injection was centred on the node); the last one is cut
+  // when the velocity to be gained is used up: a near-circular, near-equatorial orbit at
+  // geostationary height. Burns centred on apogee lose little to gravity, unlike one long burn.
+  // The target has the horizontal, due-east speed of an orbit whose semi-major axis is the
+  // geostationary radius (period: one sidereal day) and keeps part of the current radial
+  // velocity: the first burns steer mostly in the local horizontal plane, trimming a share
+  // (RADIAL_TRIM) of the small climb or descent around apogee so the apogee stays at
+  // geostationary height; the last burn takes it all out, which circularizes the orbit.
+  const R_GEO = R_EARTH + GEO_ALT;
+  let radialTrim = RADIAL_TRIM;
+  const toGain = (r: V3, v: V3): V3 => {
+    const rn = vlen(r);
+    const up = vscale(r, 1 / rn);
+    const vr = vdot(v, up) * (1 - radialTrim);
+    const vh = Math.sqrt(Math.max(0, MU_EARTH * (2 / rn - 1 / R_GEO) - vr * vr));
+    return vsub(vadd(vscale(up, vr), vscale(vnorm(vcross(AXIS, r)), vh)), v);
+  };
   const vgStart = Math.sqrt(MU_EARTH / vlen(sat.r)) - vlen(sat.v);
-  const tBurn0 = tApo + 60;
-  coastKepler(ctx, sat, tBurn0, 60, (r, v) => progradeAttitude(r, v));
-  const hN = vnorm(vcross(sat.r, sat.v));
+  const dvIdeal = vlen(toGain(sat.r, sat.v));
   sat.groups = [{ id: 'lae', eng: ENG_SAT, n: 1, tank: 'sat', thr: 0, next: 0 }];
   const g = sat.groups[0];
   const ch = ctx.ch;
   ch.key('sat.apogee.throttle', START, 0);
-  ch.key('sat.apogee.throttle', tBurn0, 0);
-  let tCut = NaN;
+  const ve = ENG_SAT.ispVac * G0;
   const massBefore = sat.mass;
-  const toGain = (r: V3, v: V3): V3 => vsub(vscale(vnorm(vcross(hN, r)), Math.sqrt(MU_EARTH / vlen(r))), v);
-  const burnAtt = (): { q: Q; wMax: number; aMax: number; tau: number } => {
-    const d = vnorm(toGain(sat.r, sat.v));
-    return { q: qlook(d, vscale(hN, -1)), wMax: 0.5 * DEG, aMax: 0.2 * DEG, tau: 5 };
+  let dirHold: V3 | null = null;
+  // burn direction: along the velocity to be gained, held once little is left (its direction then wanders)
+  const burnDir = (): V3 => {
+    const vg = toGain(sat.r, sat.v);
+    if (!dirHold || vlen(vg) > 15) dirHold = vnorm(vg);
+    return dirHold;
   };
-  for (let guard = 0; guard < 5000; guard++) {
-    // the 2 s ignition ramp in 0.5 s steps, each recorded (as the throttle channel has it), then 10 s steps
-    const ramp = sat.t < tBurn0 + 2 - 1e-9;
-    const dt = ramp ? 0.5 : 10;
-    g.next = clamp01((sat.t + dt - tBurn0) / 2);
-    sat.step(dt, burnAtt());
-    ctx.rec(sat, ramp ? 0 : 60);
-    if (vlen(toGain(sat.r, sat.v)) < 3 || (sat.tanks.sat ?? 0) < 20) {
-      tCut = sat.t;
-      // a sample at the cutoff command: the shutdown is a knee in the thrust
-      ctx.rec(sat, 0, true);
-      break;
+  const slow = { wMax: 0.5 * DEG, aMax: 0.2 * DEG, tau: 5 };
+  const burnAtt = () => ({ q: qlook(burnDir(), vscale(vnorm(vcross(sat.r, sat.v)), -1)), ...slow });
+  const progAtt = () => ({ q: progradeAttitude(sat.r, sat.v), ...slow });
+  const rcsPulse = (t0: number) => {
+    ch.key('sat.rcs', t0, 0);
+    ch.key('sat.rcs', t0 + 0.3, 0.5);
+    ch.key('sat.rcs', t0 + 1.2, 0.5);
+    ch.key('sat.rcs', t0 + 1.5, 0);
+  };
+  const burns: ApogeeBurn[] = [];
+  for (let k = 0; k < BURN_SHARE.length; k++) {
+    const last = k === BURN_SHARE.length - 1;
+    radialTrim = last ? 1 : RADIAL_TRIM;
+    // the next apogee (the satellite is at, or a little past, the previous one)
+    const el = elements(sat.r, sat.v, MU_EARTH);
+    let dtA = timeToAnomaly(sat.r, sat.v, MU_EARTH, Math.PI);
+    if (dtA < 0.25 * el.period) dtA += el.period;
+    const tA = sat.t + dtA;
+    const kA = kepler(sat.r, sat.v, dtA, MU_EARTH);
+    const dvPlan = BURN_SHARE[k] * vlen(toGain(kA.r, kA.v));
+    const dur = (sat.mass * (1 - Math.exp(-dvPlan / ve))) / ENG_SAT.mdot;
+    const tIgn = Math.round(tA - dur / 2);
+    // coast, then turn to the burn attitude (thruster pulses start and stop the turn)
+    coastKepler(ctx, sat, tIgn - SLEW, 300, (r, v) => progradeAttitude(r, v));
+    rcsPulse(sat.t + 2);
+    rcsPulse(sat.t + 150);
+    while (sat.t < tIgn - 1e-9) {
+      sat.step(Math.min(5, tIgn - sat.t), burnAtt());
+      ctx.rec(sat, 30);
     }
+    ctx.rec(sat, 0, true);
+    const mStart = sat.mass;
+    let tCut = NaN;
+    let prevRem = Infinity;
+    for (let guard = 0; guard < 5000; guard++) {
+      const rem = last ? vlen(toGain(sat.r, sat.v)) : dvPlan - ve * Math.log(mStart / sat.mass);
+      if (rem < 0.3 || (last && rem > prevRem) || (sat.tanks.sat ?? 0) < 5) {
+        tCut = sat.t;
+        // a sample at the cutoff command: the shutdown is a knee in the thrust
+        ctx.rec(sat, 0, true);
+        break;
+      }
+      prevRem = rem;
+      // the 2 s ignition ramp in 0.5 s steps, each recorded (as the throttle channel has it),
+      // then steps of up to 10 s, shortened near the cutoff
+      const ramp = sat.t < tIgn + 2 - 1e-9;
+      const dt = ramp ? 0.5 : Math.max(0.5, Math.min(10, rem / (ENG_SAT.thrustVac / sat.mass)));
+      g.next = clamp01((sat.t + dt - tIgn) / 2);
+      sat.step(dt, burnAtt());
+      ctx.rec(sat, ramp ? 0 : 60);
+    }
+    if (!(tCut > tIgn + 2)) throw new Error(`gto: apogee burn ${k + 1} did not run`);
+    ch.key('sat.apogee.throttle', tIgn, 0);
+    ch.key('sat.apogee.throttle', tIgn + 2, 1);
+    ch.key('sat.apogee.throttle', tCut, 1);
+    g.next = 0;
+    sat.step(1, burnAtt());
+    ctx.rec(sat, 0, true);
+    ch.key('sat.apogee.throttle', sat.t, 0);
+    const o = apsidesKm(sat.r, sat.v);
+    burns.push({ apogee: tA, slew: tIgn - SLEW, start: tIgn, cut: tCut, end: sat.t, dv: ve * Math.log(mStart / sat.mass), prop: mStart - sat.mass, periKm: o.peri, apoKm: o.apo, incDeg: incToEquator(sat.r, sat.v), periodH: elements(sat.r, sat.v, MU_EARTH).period / 3600 });
+    // turn back to the prograde attitude
+    rcsPulse(sat.t + 5);
+    const tBack = sat.t + SLEW_BACK;
+    while (sat.t < tBack - 1e-9) {
+      sat.step(Math.min(5, tBack - sat.t), progAtt());
+      ctx.rec(sat, 30);
+    }
+    ctx.rec(sat, 0, true);
+    rcsPulse(sat.t - 30);
+    dirHold = null;
   }
-  ch.key('sat.apogee.throttle', tBurn0 + 2, 1);
-  ch.key('sat.apogee.throttle', tCut, 1);
-  g.next = 0;
-  sat.step(1, burnAtt());
-  ctx.rec(sat, 0, true);
-  ch.key('sat.apogee.throttle', sat.t, 0);
-  ctx.ev('apogee-burn-start', tBurn0, 'Satellite apogee engine: 450 N, one long burn (explanatory, shown accelerated)', 'burn', ['satellite'], 'ignition');
-  ctx.ev('apogee-burn-end', sat.t, 'Apogee-engine cutoff: circular, but below geostationary height (one long burn; real satellites use several)', 'burn', ['satellite'], 'cutoff');
+  const b0 = burns[0];
+  const bN = burns[burns.length - 1];
+  const nB = burns.length;
+  const mins = burns.map((b) => Math.round((b.cut - b.start) / 60));
+  const onTime = burns.reduce((s, b) => s + b.cut - b.start, 0);
   const fin = apsidesKm(sat.r, sat.v);
-  // velocity change the burn delivered (rocket equation): more than the ideal impulsive step,
-  // the finite-burn loss of one long low-thrust burn
+  const finInc = incToEquator(sat.r, sat.v);
+  const finPeriodH = elements(sat.r, sat.v, MU_EARTH).period / 3600;
+  ctx.ev('apogee-burn-start', b0.start, `Apogee engine, burn 1 of ${nB}: 450 N for ${mins[0]} min, centred on the second apogee (explanatory, shown accelerated)`, 'burn', ['satellite'], 'ignition');
+  ctx.ev(
+    'apogee-burn-end',
+    bN.end,
+    `Cutoff after burn ${nB} of ${nB} (${mins.join(', ').replace(/, (\d+)$/, ' and $1')} min): near-circular orbit ${num(fin.peri)} by ${num(fin.apo)} km over the equator, inclination ${finInc.toFixed(2)}°: geostationary`,
+    'burn',
+    ['satellite'],
+    'cutoff',
+  );
+  // velocity change the burns delivered (rocket equation): a little above the ideal impulsive
+  // change (plane change included), the small finite-burn loss of burns centred on apogee
   const satDv = ENG_SAT.ispVac * G0 * Math.log(massBefore / sat.mass);
-  const end = sat.t + 900;
+  const end = sat.t + FINAL_COAST;
   coastKepler(ctx, sat, end, 120, (r, v) => progradeAttitude(r, v));
-  // arrays stay stowed until the final orbit (most satellites fly the transfer folded)
+  // arrays stay stowed (most satellites fly the transfer folded)
   ch.key('sat.arrays', START, 0);
   ch.key('sat.antenna', START, 0);
   ctx.exists.upper = [START, upEnd];
@@ -289,29 +409,45 @@ export function buildGto(): MissionTimeline {
       shot('orbit', burn.end + 20, tSep - 12, 'upper', 'earth', { d: 60 }),
       shot('deploy', tSep - 12, tSep + 60, 'satellite', 'upper', { d: 24, az: 60, el: 15 }),
       shot('orbit', tSep + 60, tApo - 600, 'satellite', 'earth', { d: 40, az: 30, el: 25 }),
-      shot('orbit', tApo - 600, tApo + 60, 'satellite', 'earth', { d: 50, az: 160, el: 30 }),
-      shot('chase', tApo + 60, tCut, 'satellite', undefined, { d: 30, az: 150, el: 12 }),
-      shot('orbit', tCut, end, 'satellite', 'earth', { d: 40 }),
+      shot('orbit', tApo - 600, b0.slew, 'satellite', 'earth', { d: 50, az: 160, el: 30 }),
+      // each burn and the turns before and after it held on the satellite; the orbit between
+      ...burns.flatMap((b, k) => [
+        shot('chase', b.slew, b.end + SLEW_BACK, 'satellite', undefined, { d: 30, az: 150, el: 12 }),
+        shot('orbit', b.end + SLEW_BACK, k + 1 < nB ? burns[k + 1].slew : end, 'satellite', 'earth', { d: 40, az: 30 + 60 * k, el: 20 }),
+      ]),
     ],
     START,
     end,
   );
 
-  // ── presentation
+  // ── presentation: the climb and the first apogee accelerated, the checkout orbit and the
+  // orbits between burns omitted (with their lengths), every burn and turn shown accelerated at
+  // one rate so the burns' relative lengths stay visible
   const coastRate = 20;
-  const climbRate = 600;
+  const climbRate = 900;
   const burnRate = 300;
-  const pres = new Pres(START)
+  const turnRate = 60;
+  const climbEnd = tApo - 150;
+  const hours = (a0: number, a1: number) => Math.max(1, Math.round((a1 - a0) / 3600));
+  const P = new Pres(START)
     .to(tSeco1 + 20)
     .to(burn.settleStart - 20, coastRate, rateNote('Coast in the parking orbit', coastRate))
     .to(burn.end + 15)
     .to(tSep - 15, 5, rateNote('Coast', 5))
     .to(tSep + 45)
     .to(tSep + 645, 60, rateNote('Coast', 60))
-    .to(tApo - 300, climbRate, `5 h climb to apogee shown at ×${climbRate}`)
-    .to(tBurn0 + 300, 60, rateNote('Coast over apogee', 60))
-    .to(tCut, burnRate, `Explanatory: one long 450 N burn shown at ×${burnRate}; real satellites use several apogee burns and also remove the 28.5° inclination`)
-    .to(end, 60, rateNote('Coast', 60)).segs;
+    .to(climbEnd, climbRate, `${hours(tSep + 645, climbEnd)} h climb to apogee shown at ×${climbRate}`)
+    .to(tApo + 150, 60, rateNote('Coast over the first apogee', 60))
+    .omit(b0.slew, `Checkout orbit omitted: about ${hours(tApo + 150, b0.slew)} hours, one full transfer orbit while the satellite is checked out; its engine fires at the next ${nB} apogees`);
+  burns.forEach((b, k) => {
+    P.to(b.start, turnRate, rateNote('Turning to the burn attitude', turnRate));
+    P.to(b.end, burnRate, `Explanatory: apogee burn ${k + 1} of ${nB}, ${mins[k]} min of 450 N thrust, shown at ×${burnRate}`);
+    if (k + 1 < nB) {
+      P.to(b.end + SLEW_BACK, turnRate, rateNote('Turning back', turnRate));
+      P.omit(burns[k + 1].slew, `Coast omitted: about ${hours(b.end + SLEW_BACK, burns[k + 1].slew)} hours, once around the orbit to the next apogee (perigee now ${num(b.periKm)} km, inclination ${b.incDeg.toFixed(1)}°)`);
+    }
+  });
+  const pres = P.to(end, 60, rateNote('Coast in the geostationary orbit', 60)).segs;
 
   // ── facts
   ascentFacts(ctx, a);
@@ -334,12 +470,19 @@ export function buildGto(): MissionTimeline {
   ctx.fact('payloadSep.t', tSep);
   ctx.fact('apogee.t', tApo);
   ctx.fact('apogee.climbH', (tApo - tSep) / 3600);
-  ctx.fact('apogeeBurn.t', tBurn0);
-  ctx.fact('apogeeBurn.durationH', (tCut - tBurn0) / 3600);
+  ctx.fact('apogeeBurn.dvIdeal', dvIdeal);
+  ctx.fact('apogeeBurn.count', nB);
+  ctx.fact('apogeeBurn.t', b0.start);
+  burns.forEach((b, k) => ctx.fact(`apogeeBurn.burn${k + 1}Min`, (b.cut - b.start) / 60));
+  ctx.fact('apogeeBurn.durationH', onTime / 3600);
+  ctx.fact('apogeeBurn.spanH', (bN.end - b0.start) / 3600);
   ctx.fact('apogeeBurn.dv', satDv);
   ctx.fact('apogeeBurn.propUsedKg', SAT_PROP - (sat.tanks.sat ?? 0));
+  ctx.fact('apogeeBurn.propLeftKg', sat.tanks.sat ?? 0);
   ctx.fact('final.periKm', fin.peri);
   ctx.fact('final.apoKm', fin.apo);
+  ctx.fact('final.incDeg', finInc);
+  ctx.fact('final.periodH', finPeriodH);
 
   return {
     id: 'gto',

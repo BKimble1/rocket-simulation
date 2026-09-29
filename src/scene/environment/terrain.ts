@@ -165,7 +165,9 @@ vec3 landAlbedo( vec2 p, float sdf, vec3 cov, float px, out float rough ) {
     float clump = vnoise( p / 2.1, 51 ) * 0.6 + vnoise( p / 0.8, 52 ) * 0.4;
     float gap = smoothstep( 0.66, 0.86, vnoise( p / 4.5, 53 ) * 0.6 + vnoise( p / 1.3, 54 ) * 0.4 );
     c = mix( c, c * ( 0.55 + 0.75 * clump ), fine );
-    c = mix( c, srgbC( 128.0, 118.0, 94.0 ) * ( 0.9 + 0.2 * clump ), gap * 0.35 * fine * ( 1.0 - cov.g ) );
+    // open sand between the clumps only in drier stretches, not as an even speckle
+    float gapZone = smoothstep( -0.1, 0.5, fbmS( p, 120.0, 2, 55, px ) );
+    c = mix( c, srgbC( 118.0, 110.0, 90.0 ) * ( 0.9 + 0.2 * clump ), gap * 0.24 * gapZone * fine * ( 1.0 - cov.g ) );
   }
   rough = 0.95;
   // marsh and wet prairie
@@ -203,7 +205,7 @@ vec3 landAlbedo( vec2 p, float sdf, vec3 cov, float px, out float rough ) {
 vec2 waveSlope( vec2 p, float t, float px, float ocean, out float var ) {
   vec2 s = vec2( 0.0 );
   var = 0.0;
-  float ampK = mix( 0.22, 1.0, ocean );
+  float ampK = mix( 0.32, 1.0, ocean );
   float wl = mix( 16.0, 110.0, ocean );
   float base = atan( 0.38, -0.92 );
   // wind slicks and cat's paws: streaks of calmer and rougher water drawn out along the wind,
@@ -339,10 +341,17 @@ const CLASSIFY = /* glsl */ `
     grass *= ( 0.92 + 0.12 * n ) * ( 1.0 + 0.035 * stripe * ( 1.0 - smoothstep( 0.3, 1.2, px ) ) );
     vec3 gravel = srgbC( 176.0, 170.0, 154.0 ) * ( 0.9 + 0.12 * n );
     vec3 sand = srgbC( 196.0, 184.0, 156.0 ) * ( 0.92 + 0.1 * n );
-    albedo = mix( albedo, grass, o.r );
-    albedo = mix( albedo, mix( sand, gravel, smoothstep( 0.4, 0.8, o.g ) ), o.g );
+    // close up, the painted (1 m, blurred) masks become crisp, ragged edges: grass meets gravel
+    // along a broken line instead of a soft halo; from afar the painted gradient stays
+    float nearK = 1.0 - smoothstep( 0.6, 3.0, px );
+    float rag = fbmS( sp, 2.2, 2, 25, px ) * 0.16 + fbmS( sp, 0.5, 1, 26, px ) * 0.05;
+    float gEdge = 0.02 + px * 0.03;
+    float gMask = mix( o.g, smoothstep( 0.26 - gEdge, 0.26 + gEdge, o.g + rag ), nearK );
+    float rMask = mix( o.r, smoothstep( 0.45 - gEdge, 0.45 + gEdge, o.r + rag ), nearK );
+    albedo = mix( albedo, grass, rMask );
+    albedo = mix( albedo, mix( sand, gravel, smoothstep( 0.4, 0.8, o.g ) ), gMask );
     albedo = mix( albedo, srgbC( 66.0, 62.0, 56.0 ) * ( 0.85 + 0.2 * n ), o.b * 0.85 );
-    rough = mix( rough, 0.88, o.g );
+    rough = mix( rough, 0.88, gMask );
   }
   float lzD = length( sp - uLz.xy );
   if ( lzD < uLz.z + 40.0 ) {
@@ -354,7 +363,7 @@ const CLASSIFY = /* glsl */ `
   }
 
   // the Earth imagery toward the edge, so the disk meets the globe
-  float edgeW = smoothstep( 22000.0, uGlobeBlend.y, dist );
+  float edgeW = smoothstep( uGlobeBlend.x - 2000.0, uGlobeBlend.y, dist );
   vec3 img = edgeW > 0.0 ? dayImagery( sp ) : vec3( 0.0 );
   siteImg = img;
   siteGW = edgeW > 0.0 ? texture2D( uGlobeWater, globeUv( sp ) ).r : 0.0;
@@ -435,7 +444,9 @@ export function makeTerrainMaterial(maps: SiteMaps, overlay: Overlay, ring: bool
     uCover: { value: maps.coverTex },
     uDay: shared.uDay,
     uGlobeWater: shared.uGlobeWater,
-    uGlobeBlend: { value: new THREE.Vector2(30000, LOCAL_TERRAIN.innerKm * 1000 - 500) },
+    // from 20 km out the shading eases into the globe's own (fully by the inner radius), so the
+    // site's brighter near-shore water does not leave a band ahead of the disk's edge
+    uGlobeBlend: { value: new THREE.Vector2(20000, LOCAL_TERRAIN.innerKm * 1000 - 500) },
     uOverlay: { value: overlay.tex },
     uMap: { value: new THREE.Vector4(SITE_MAP.ext, SITE_MAP.sdfSize, SITE_MAP.sdfRange, SITE_MAP.sdfStep) },
     uOverExt: { value: OVERLAY.ext },
@@ -493,7 +504,10 @@ export function buildTerrain(maps: SiteMaps, overlay: Overlay): Terrain {
   ringMesh.name = 'terrain-fade-ring';
   ringMesh.receiveShadow = false;
   ringMesh.frustumCulled = false;
-  ringMesh.renderOrder = -20; // first among transparent objects (before smoke and plumes)
+  // first among the transparent objects: after the sky and globe pass (-1000), before the cloud
+  // composites (-500) so the clouds lie over the fading edge exactly as over the opaque disk
+  // (drawn after them it would thin the clouds out in a ring), and before smoke and plumes
+  ringMesh.renderOrder = -600;
   const group = new THREE.Group();
   group.add(inside, ringMesh);
   return {

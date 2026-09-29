@@ -2,7 +2,8 @@
  * Dev harness for the launch site: the sky (SpaceWorld), the site and a stand-in vehicle
  * (radius 1.85 m, 67 m tall) on the mount. URL: hold=0..1, arms=0..1, deluge=0..1,
  * cfg=capsule, novehicle=1, clouds=0 (hide the cloud layer), hole=1 (tint the globe where the
- * terrain replaces it), hide=name,name (hide named objects, e.g. terrain-fade-ring), plus the flight camera (?t=&cam=e,n,u,heading,pitch,fov).
+ * terrain replaces it), hide=name,name (hide named objects, e.g. terrain-fade-ring), a2c=0 (alpha to coverage off),
+ * hzsteps=n / hzmarch=0..1 (site haze march steps and weight), plus the flight camera (?t=&cam=e,n,u,heading,pitch,fov).
  * While the sky module is still a stub (its Sun light casts no shadows) the harness makes that
  * light cast shadows over a box around the pad so structures can be judged; it leaves a real
  * shadow-casting sun alone.
@@ -17,6 +18,7 @@ import { director } from '../director/director';
 import { sitePosition, siteFrameQuaternion } from '../world/frames';
 import { PAD } from '../world/site';
 import { skyState } from '../scene/space/skyState';
+import { hazeUniforms } from '../scene/environment/haze';
 
 const q = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
 const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d);
@@ -117,6 +119,9 @@ function DevShadows() {
         scene.add(light.target);
       }
     }
+    // haze diagnosis: ?hzsteps=<n> overrides the marched model's step count, ?hzmarch=0..1 its weight
+    if (q.has('hzsteps')) hazeUniforms.uHazeSteps.value = num('hzsteps', 8);
+    if (q.has('hzmarch')) hazeUniforms.uHazeMarch.value = num('hzmarch', 1);
     if (!state.managed || !state.light) return;
     const t = frame.missionTime;
     const target = director.flightPose.target;

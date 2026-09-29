@@ -12,7 +12,7 @@ export const RETURN_CARDS: PhaseCard[] = [
     next: 'Well clear of the station, the capsule turns so the service-module engine nozzle points forward along its path; its thrust then acts against the direction of motion for the deorbit burn.',
   }),
   card('return', 'deorbit', {
-    what: `The service module's engine fires against the direction of motion (retrograde), removing about ${F.deorbitDv}: about ${F.smDeorbitProp} of propellant in about ${F.smDeorbitBurn} (computed).`,
+    what: `The service module's engine fires against the direction of motion (retrograde), removing about ${F.deorbitDv}: about ${F.smDeorbitProp} of the ${F.smPropAtUndock} of propellant the module still carries from the climb to the station, in about ${F.smDeorbitBurn} (computed for the ${F.smStackAtUndock} capsule and module).`,
     whyNow: `The burn is timed so the new orbit dips into the atmosphere over the planned splashdown zone. From a ${F.leoAlt} circular orbit, exactly ${F.deorbitDv} lowers the far side of the orbit to about ${F.deorbitPerigee}, deep enough that the atmosphere will certainly capture the capsule, and each extra metre per second lowers it by about ${F.deorbitSensitivity} more (two-body estimates; the burn flown here is a few metres per second larger and reaches lower, as the telemetry shows). That sensitivity is why the burn is sized and timed precisely for the splashdown zone.`,
     parts: ['service-module', 'attitude-thrusters', 'capsule'],
     forces: `The burn removes only about ${F.deorbitFraction} of the capsule's ${F.leoSpeed}: deorbiting does not mean stopping. The atmosphere will do the rest of the braking.`,
@@ -23,7 +23,7 @@ export const RETURN_CARDS: PhaseCard[] = [
     what: 'The service module separates from the base of the capsule and drifts away; it will break up and burn in the atmosphere. The capsule turns to face its heat shield forward.',
     whyNow: `The service module covers the heat shield and has no protection of its own. It must go before the capsule reaches the entry interface, the top of the sensible atmosphere, taken as ${F.entryInterface} in this mission.`,
     parts: ['service-module', 'capsule', 'heat-shield', 'attitude-thrusters'],
-    forces: 'Still essentially in vacuum; a small separation push and attitude control to turn the capsule base-first.',
+    forces: `Still essentially in vacuum; a small separation push and attitude control to turn the capsule base-first. The module leaves with about ${F.smPropAfterDeorbit} of propellant still in its tanks (computed), enough for about ${F.smMarginDv} more: the reserve that would have covered a longer or repeated deorbit burn.`,
     next: 'The capsule descends into the thin upper atmosphere: entry interface.',
   }),
   card('return', 'entry', {

@@ -41,6 +41,10 @@ function noise1(x: number): number {
 }
 
 const STEPS = { high: 18, medium: 13, low: 9 } as const;
+/** Entry plasma volumes drawn at most (with MAX_VOLUMES plumes and 2 sprite batches: <= 25 draws). */
+export const MAX_PLASMA = 3;
+const PLASMA_BOOSTER = new THREE.Color(1.0, 0.55, 0.3);
+const PLASMA_CAPSULE = new THREE.Color(1.0, 0.55, 0.45);
 
 export class EffectsSystem {
   readonly root = new THREE.Group();
@@ -69,10 +73,12 @@ export class EffectsSystem {
     ],
   };
   private camFwd = new THREE.Vector3();
+  private rel = new THREE.Vector3();
+  private auxPos = new THREE.Vector3();
   private tv = new THREE.Vector3();
   private tq = new THREE.Quaternion();
   /** Diagnostics (sprites drawn, particles live, volumes). */
-  stats = { particles: 0, sprites: 0, spawned: 0 };
+  stats = { particles: 0, sprites: 0, spawned: 0, fill: 0, volumes: 0 };
 
   constructor() {
     this.budget = tierSpec().particles;
@@ -101,6 +107,7 @@ export class EffectsSystem {
       this.sprites.resize(this.particles.capacity);
     }
     const tier = spec.particles >= 1 ? 'high' : spec.particles >= 0.6 ? 'medium' : 'low';
+    this.sprites.fillBudget = 12 + 36 * Math.min(1.5, spec.particles);
     const t = frame.missionTime;
     const origin = frame.origin;
     const decor = frame.decor;
@@ -156,23 +163,24 @@ export class EffectsSystem {
     let auxI = f1.intensity;
     let auxPos = this.tv.subVectors(f1.pos, origin);
     let auxCol = f1.col;
-    for (let i = 0; i < pl.length; i++) {
+    const np = Math.min(pl.length, MAX_PLASMA);
+    for (let i = 0; i < np; i++) {
       const s = pl[i];
       let v = this.plasma[i];
       if (!v) {
         v = this.plasma[i] = new PlasmaVolume();
         this.root.add(v.mesh);
       }
-      const rel = new THREE.Vector3().subVectors(s.pos, origin);
+      const rel = this.rel.subVectors(s.pos, origin);
       v.place(s, rel, decor, this.camFwd);
       const I = Math.pow(Math.max(0, s.intensity), 1.3) * s.radius * s.radius * (v.booster ? 60 : 110);
       if (I > auxI) {
         auxI = I;
-        auxPos = rel.addScaledVector(s.dir, s.radius * 0.4);
-        auxCol = v.booster ? new THREE.Color(1.0, 0.55, 0.3) : new THREE.Color(1.0, 0.55, 0.45);
+        auxPos = this.auxPos.copy(rel).addScaledVector(s.dir, s.radius * 0.4);
+        auxCol = v.booster ? PLASMA_BOOSTER : PLASMA_CAPSULE;
       }
     }
-    for (let i = pl.length; i < this.plasma.length; i++) this.plasma[i].hide();
+    for (let i = np; i < this.plasma.length; i++) this.plasma[i].hide();
     this.auxLight.position.copy(auxPos);
     this.auxLight.color.copy(auxCol);
     this.auxLight.intensity = auxI;
@@ -184,6 +192,8 @@ export class EffectsSystem {
     this.stats.particles = this.particles.count;
     this.stats.sprites = n;
     this.stats.spawned = this.particles.spawned;
+    this.stats.fill = Math.round(this.sprites.fill * 10) / 10;
+    this.stats.volumes = this.plumes.count + np;
   }
 
   dispose() {

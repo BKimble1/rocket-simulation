@@ -142,25 +142,30 @@ float skinFade = 1.0 - smoothstep(0.01, 0.06, length(fwidth(vVeh.xyz)));
   float fb = max(skinBand(sp.y, uFrostBands.x, uFrostBands.y), skinBand(sp.y, uFrostBands.z, uFrostBands.w));
   float fm = uFrost * fb;
   if (fm > 0.001) {
-    float patchN = vfbm(sp * vec3(1.1, 0.42, 1.1));
-    float streak = vnoise(vec3(sp.x * 8.0, sp.y * 0.55, sp.z * 8.0));
+    // patches of about 30 cm with fairly crisp edges, in vertical runs (condensate runs down),
+    // a granular crust inside them; thin frost is a matte blue-grey, thick frost near white, so
+    // it reads on the white paint and breaks up the livery instead of tinting it evenly
+    float patchN = vfbm(sp * vec3(2.6, 0.9, 2.6));
+    float streak = vnoise(vec3(sp.x * 9.0, sp.y * 0.8, sp.z * 9.0));
     float fine = vnoise(sp * 70.0) * skinFade;
-    // patchy, thin frost in vertical streaks: bare paint (and the livery) shows between patches
-    float cover = smoothstep(0.42, 0.8, patchN * 0.8 + streak * 0.45 + (fm - 1.0) * 0.7);
-    skinFrostM = clamp(cover * (0.3 + 0.4 * fm) + fine * 0.06 * fm, 0.0, 0.72);
-    vec3 frostCol = mix(vec3(0.76, 0.83, 0.9), vec3(0.985, 0.99, 1.0), clamp(fine * 0.7 + streak * 0.45, 0.0, 1.0));
+    float cover = smoothstep(0.47, 0.6, patchN * 0.75 + streak * 0.4 + (fm - 1.0) * 0.7);
+    skinFrostM = clamp(cover * (0.45 + 0.35 * fm) + fine * 0.08 * fm * cover, 0.0, 0.82);
+    vec3 frostCol = mix(vec3(0.78, 0.84, 0.9), vec3(0.975, 0.985, 1.0), clamp(fine * 0.8 + (patchN - 0.45) * 1.6, 0.0, 1.0));
     diffuseColor.rgb = mix(diffuseColor.rgb, frostCol, skinFrostM);
   }
 #endif
 #ifdef SKIN_SOOT
   float sw = vVeh.w * uScorch;
   if (sw > 0.001) {
-    float h = clamp(1.0 - (sp.y - 0.8) / 40.0, 0.0, 1.0);
+    // entry-burn soot: heavy on the lower two thirds, darkest toward the base, in vertical
+    // streaks (broad and fine) with blotches; the forward skirt stays mostly clean
+    float h = clamp(1.0 - (sp.y - 1.0) / 36.0, 0.0, 1.0);
     float streak = vnoise(vec3(sp.x * 4.5, sp.y * 0.16, sp.z * 4.5));
+    float fineStreak = vnoise(vec3(sp.x * 14.0, sp.y * 0.35, sp.z * 14.0));
     float blot = vfbm(sp * vec3(0.9, 0.3, 0.9));
-    float s = pow(h, 1.35) * (0.5 + 0.65 * streak) + blot * 0.35 * h;
-    skinSootM = clamp(sw * (s * 1.25 - 0.06), 0.0, 1.0);
-    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.062, 0.052, 0.043), skinSootM * 0.94);
+    float s = h * (0.5 + 0.6 * streak + 0.3 * (fineStreak - 0.5) * skinFade) + blot * 0.35 * h + 0.25 * h * h * h;
+    skinSootM = clamp(sw * smoothstep(0.14, 0.78, s), 0.0, 1.0);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05, 0.042, 0.034), skinSootM * 0.96);
   }
 #endif
 #ifdef SKIN_SEAMS
@@ -398,8 +403,9 @@ export class VehicleMats {
         return m;
       }
       case 'boot': {
+        // double-sided: the boots are also seen from inside the engine bay (thrust-section cutaway)
         const t = fabricTexture();
-        return this.own(new THREE.MeshStandardMaterial({ color: '#ffffff', map: t, roughness: 0.95, metalness: 0 }));
+        return this.own(new THREE.MeshStandardMaterial({ color: '#ffffff', map: t, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, shadowSide: THREE.BackSide }));
       }
       case 'rubber':
         return std('rubber');

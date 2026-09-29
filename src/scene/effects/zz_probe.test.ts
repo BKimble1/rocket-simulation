@@ -1,15 +1,16 @@
 import { it } from 'vitest';
-import { buildMission } from '../../timeline/build';
+import * as THREE from 'three';
+import { ParticleSystem } from './particles';
+import { SyntheticSource } from './synthetic';
+import { R_EARTH } from '../../world/frames';
 it('probe', () => {
-  for (const id of ['leo', 'station', 'suborbital'] as const) {
-    const tl = buildMission(id);
-    for (const c of ['s1.rcs', 's2.rcs', 'cap.rcs', 'sm.rcs', 'sat.rcs'] as const) {
-      const ch = tl.channels[c];
-      if (!ch) continue;
-      const on: string[] = [];
-      for (let i = 0; i < ch.t.length && on.length < 8; i++) if (ch.v[i] > 0.05) on.push(`${ch.t[i].toFixed(1)}:${ch.v[i].toFixed(2)}`);
-      console.log(id, c, 'first', ch.t[0].toFixed(1), ch.v[0].toFixed(2), 'n', ch.t.length, 'on', on.join(' '));
-    }
-    console.log(id, tl.events.map((e) => `${e.id}@${e.t.toFixed(1)}`).join(' '));
-  }
+  const src = new SyntheticSource({ scenario: 'ascent' });
+  const sys = new ParticleSystem(0.35);
+  sys.setSource(src);
+  sys.update(30, 1);
+  type R = { k: number; ts: number; active: boolean; p0: THREE.Vector3; u0: THREE.Vector3; tau: number; up: THREE.Vector3 };
+  const pool = (sys as unknown as { pools: { sp: { name: string }; recs: R[] }[] }).pools.find((p) => p.sp.name === 'tail')!;
+  const recs = pool.recs.filter((r) => r.active).sort((a, b) => b.ts - a.ts);
+  const rows = recs.slice(0, 24).map((r) => `ts ${r.ts.toFixed(3)} h0 ${(r.p0.length() - R_EARTH).toFixed(1)} u0up ${r.u0.dot(r.up).toFixed(0)} tau ${r.tau.toFixed(2)}`);
+  console.log('RECS\n' + rows.join('\n'));
 });

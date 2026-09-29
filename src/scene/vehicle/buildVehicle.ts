@@ -406,7 +406,9 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
   // ── enclosed hardware: the E-1V inside the interstage and a satellite inside the closed fairing
   // cannot be seen in the plain intact view, so they are not drawn then (large draw-call saving)
   const s2Mount = s2Engine?.mount ?? null;
-  const payloadGroups = satellite ? payloadSections.map((s) => s.group) : [];
+  // the payload adapter sits wholly inside the closed fairing too (and its cone top, seen edge-on
+  // right behind the fairing base, would bleed through as a hairline with MSAA + log depth)
+  const payloadGroups = satellite ? [...payloadSections.map((s) => s.group), ...(kit.sections.has('adapter') ? [kit.sections.get('adapter')!.group] : [])] : [];
   const attached = (a: THREE.Object3D | undefined, b: THREE.Object3D | undefined) =>
     !!a && !!b && a.visible && b.visible && a.position.distanceToSquared(b.position) < 1e-4 && Math.abs(a.quaternion.dot(b.quaternion)) > 0.999999;
   const updateEnclosure = () => {

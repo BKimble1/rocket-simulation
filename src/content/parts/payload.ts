@@ -19,8 +19,8 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
       at('leo', 'deploy', 'Released from the adapter to fly on its own.'),
       at('leo', 'arrays', 'Unfolds its arrays and makes first contact.'),
       at('gto', 'transfer-coast', 'Coasts for hours up to apogee.'),
-      at('gto', 'circularize', 'Fires its own engine to circularize.'),
-      at('lunar', 'flyby', 'The probe\'s bus carries it past the Moon.'),
+      at('gto', 'circularize', 'Fires its apogee engine at three apogees to reach geostationary orbit.'),
+      at('lunar', 'flyby', 'The probe\'s bus carries it past the Moon\'s trailing side.'),
     ],
     environment: `Launch loads, vibration and noise inside the fairing, then vacuum, sunlight and shadow every ${F.leoPeriod} in low orbit, radiation, and in low orbit the erosion of atomic oxygen.`,
     figures: [
@@ -120,7 +120,7 @@ export const PAYLOAD: (PartLesson | PartNote)[] = [
     phases: [
       at('leo', 'deploy', 'Stabilizes the satellite after separation.'),
       at('leo', 'arrays', 'Turns the satellite so the arrays can find the Sun.'),
-      at('gto', 'circularize', 'Holds the pointing during the apogee-engine burn.'),
+      at('gto', 'circularize', 'Holds the pointing during each apogee-engine burn and turns the satellite between them.'),
       at('station', 'approach', 'The capsule\'s thrusters fly the final approach.'),
       at('return', 'undock', 'Small burns back the capsule away from the station.'),
       at('return', 'entry', 'Roll the capsule to steer its lift during entry.'),

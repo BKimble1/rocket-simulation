@@ -1,28 +1,35 @@
 /**
  * Pad-local points the ground effects come from (x east, y up, z south; origin at ground level
- * on the vehicle axis). Derived from PAD in src/world/site.ts and the K-1 stations, because the
- * effects source reports only the pad state (venting, deluge), not where the hardware is.
+ * on the vehicle axis). The flame trench, the deluge spray heads and the ground LOX vents come
+ * from the launch site's published anchors (SITE_ANCHORS), so the cloud leaves the trench the
+ * site actually draws; the vehicle's own LOX vents from the K-1 stations.
  */
 import { PAD } from '../../world/site';
 import { BODY_RADIUS, STATIONS } from '../../vehicle/spec';
+import { SITE_ANCHORS } from '../environment/state';
 
 const H = PAD.nozzleExitHeight;
-const tl = Math.hypot(PAD.trenchDir.x, PAD.trenchDir.z);
+const A = SITE_ANCHORS;
+const tl = Math.hypot(A.trenchDir.x, A.trenchDir.z) || 1;
 
-/** Unit direction of the flame trench (pad-local, horizontal). */
-export const TRENCH_DIR = { x: PAD.trenchDir.x / tl, z: PAD.trenchDir.z / tl };
+/** Unit direction of the flame trench (pad-local, horizontal), from the mount toward the mouth. */
+export const TRENCH_DIR = { x: A.trenchDir.x / tl, z: A.trenchDir.z / tl };
 
-/** Where the flame trench opens to the air (brief: about 60 m along the trench). */
-export const TRENCH_EXIT = { x: TRENCH_DIR.x * 60, y: 1.5, z: TRENCH_DIR.z * 60 };
+/** Centre of the trench mouth, where the exhaust, steam and smoke leave the trench. */
+export const TRENCH_EXIT = { x: A.trenchExit.x, y: A.trenchExit.y, z: A.trenchExit.z };
 
-/** Flame hole under the vehicle in the launch mount (top of the opening). */
-export const MOUNT_HOLE = { x: 0, y: PAD.deckHeight - 0.5, z: 0, radius: 5.5 };
+/** Flame hole in the launch mount deck (deck top height and hole radius). */
+export const MOUNT_HOLE = { x: 0, y: A.mountDeck.y, z: 0, radius: A.flameHoleRadius };
 
 export interface PadJet {
   pos: [number, number, number];
   /** Outward direction (unit, pad-local) and nominal speed (m/s). */
   dir: [number, number, number];
   speed: number;
+  /** Share of the spawns (relative water or gas flow). */
+  weight: number;
+  /** Water cannon (long arcs) rather than a spray head. */
+  cannon?: boolean;
 }
 
 const norm = (x: number, y: number, z: number): [number, number, number] => {
@@ -31,32 +38,45 @@ const norm = (x: number, y: number, z: number): [number, number, number] => {
 };
 
 /**
- * LOX boil-off vents on the vehicle skin (first-stage LOX tank forward dome, upper-stage LOX
- * tank), facing away from the service tower (which stands on the -X side).
+ * LOX boil-off: vents on the vehicle skin (first-stage LOX tank forward dome, upper-stage LOX
+ * tank) facing away from the service tower (which stands on the -X side).
  */
 export const VENTS: PadJet[] = [
-  { pos: [BODY_RADIUS + 0.05, H + STATIONS.s1LoxFwdEquator + 0.3, 0.35], dir: norm(1, 0.05, 0.25), speed: 3.2 },
-  { pos: [BODY_RADIUS * 0.7, H + STATIONS.s1LoxFwdEquator + 0.1, -BODY_RADIUS * 0.72], dir: norm(0.6, 0.05, -0.8), speed: 2.6 },
-  { pos: [BODY_RADIUS + 0.05, H + STATIONS.s2LoxFwdEquator - 0.4, -0.3], dir: norm(1, 0.1, -0.15), speed: 2.8 },
+  { pos: [BODY_RADIUS + 0.05, H + STATIONS.s1LoxFwdEquator + 0.3, 0.35], dir: norm(1, 0.05, 0.25), speed: 3.2, weight: 1 },
+  { pos: [BODY_RADIUS * 0.7, H + STATIONS.s1LoxFwdEquator + 0.1, -BODY_RADIUS * 0.72], dir: norm(0.6, 0.05, -0.8), speed: 2.6, weight: 1 },
+  { pos: [BODY_RADIUS + 0.05, H + STATIONS.s2LoxFwdEquator - 0.4, -0.3], dir: norm(1, 0.1, -0.15), speed: 2.8, weight: 1 },
 ];
 
+/** Ground LOX storage vent stacks: a slow, continuous boil-off plume. */
+export const GROUND_VENTS: PadJet[] = A.loxVents.map((p) => ({ pos: [p.x, p.y, p.z] as [number, number, number], dir: norm(0, 1, 0), speed: 1.6, weight: 1 }));
+
 /**
- * Sound-suppression water: four water cannons around the mount deck throwing arcs across it,
- * and a ring of nozzles around the flame hole spraying into the exhaust.
+ * Sound-suppression water from the site's spray heads that are above ground: the rainbird
+ * cannons on the deck corners (most of the water, long arcs) and the ring of heads under the
+ * deck aimed into the plume. The heads inside the trench are out of sight.
  */
-export const DELUGE: PadJet[] = [
-  ...[0, 1, 2, 3].map((i): PadJet => {
-    const a = Math.PI / 4 + (i * Math.PI) / 2;
-    const r = 21;
-    const x = Math.cos(a) * r;
-    const z = Math.sin(a) * r;
-    return { pos: [x, 2.6, z], dir: norm(-x / r, 0.72, -z / r), speed: 16.5 };
-  }),
-  ...Array.from({ length: 8 }, (_, i): PadJet => {
-    const a = (i * Math.PI) / 4 + Math.PI / 8;
-    const r = MOUNT_HOLE.radius + 1.2;
-    const x = Math.cos(a) * r;
-    const z = Math.sin(a) * r;
-    return { pos: [x, PAD.deckHeight + 0.4, z], dir: norm(-x / r, -0.55, -z / r), speed: 9 };
-  }),
-];
+export const DELUGE: PadJet[] = A.delugeNozzles
+  .filter((n) => n.pos.y > 0.5)
+  .map((n) => {
+    const cannon = n.flow >= 1;
+    return {
+      pos: [n.pos.x, n.pos.y, n.pos.z] as [number, number, number],
+      // cannons loft their water: aim a little above the line to the target
+      dir: cannon ? norm(n.dir.x, n.dir.y + 0.45, n.dir.z) : norm(n.dir.x, n.dir.y, n.dir.z),
+      speed: cannon ? 15 : 9,
+      weight: n.flow,
+      cannon,
+    };
+  });
+
+/** Pick a jet by weight with a uniform random number in [0, 1). */
+export function pickJet(list: PadJet[], u: number): PadJet {
+  let total = 0;
+  for (const j of list) total += j.weight;
+  let x = u * total;
+  for (const j of list) {
+    x -= j.weight;
+    if (x < 0) return j;
+  }
+  return list[list.length - 1];
+}

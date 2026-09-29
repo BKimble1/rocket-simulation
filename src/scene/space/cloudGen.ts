@@ -4,7 +4,8 @@
  *   - the global weather coverage cube map (Earth-fixed): R = cloud fraction, G = cloud-top
  *     factor. Built from domain-warped fBm with `cloudOctaves` octaves, a latitude climatology
  *     (tropical convergence band, clear subtropical highs, mid-latitude storm tracks), a few
- *     cyclone swirls turning the right way in each hemisphere, and fewer clouds over deserts.
+ *     cyclone swirls turning the right way in each hemisphere, and fewer clouds over deserts;
+ *     B = a smooth noise that frays the edge of the pad's local weather.
  */
 import * as THREE from 'three';
 
@@ -210,7 +211,9 @@ void main() {
   // convective towers in the tropics, flatter decks elsewhere
   float tropic = exp(-pow(latD / 18.0, 2.0));
   float top = clamp(0.25 + 0.55 * cov * (0.5 + 0.5 * tropic) + 0.25 * meso, 0.0, 1.0);
-  gl_FragColor = vec4(cov, top, 0.0, 1.0);
+  // B: smooth noise (a few hundred km) that frays the edge of the pad's local weather
+  float wob = clamp(0.5 + 1.1 * fbm(n * 5.0 + vec3(11.0, 3.0, 7.0), 3), 0.0, 1.0);
+  gl_FragColor = vec4(cov, top, wob, 1.0);
 }
 `;
 

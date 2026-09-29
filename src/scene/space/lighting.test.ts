@@ -48,6 +48,22 @@ describe('lighting state (skyState)', () => {
     expect(skyState.hazeDensity).toBe(0);
   });
 
+  it('fills the Earth-facing side of a distant spacecraft with earthshine that follows the Earth phase', () => {
+    const full = at(SUN_DIRECTION, 35_786_000);
+    updateLighting(full, full);
+    const gFull = skyState.groundIntensity;
+    // (2/3) * 0.3 * (R/r)^2 * E_sun: about 0.0046 x 4.4 at the geostationary distance
+    expect(gFull).toBeGreaterThan(0.015);
+    expect(gFull).toBeLessThan(0.05);
+    expect(skyState.ambientIntensity).toBeLessThan(1e-3);
+    // a quarter Earth (Sun at 90 degrees) gives about a third of it
+    const side = new THREE.Vector3().crossVectors(SUN_DIRECTION, new THREE.Vector3(0, 0, 1)).normalize();
+    const quarter = at(side, 35_786_000);
+    updateLighting(quarter, quarter);
+    expect(skyState.groundIntensity / gFull).toBeGreaterThan(0.25);
+    expect(skyState.groundIntensity / gFull).toBeLessThan(0.4);
+  });
+
   it('eclipses a spacecraft behind the Earth at the geostationary distance', () => {
     const g = at(SUN_DIRECTION.clone().negate(), 35_786_000);
     updateLighting(g, g);

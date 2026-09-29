@@ -76,11 +76,13 @@ and in your report. Physical time vs presentation time mapping is explicit (`pre
 * **GTO**: parking orbit ~200 km, coast to the proper point (the transfer apogee must lie on
   the equatorial plane crossing: burn at a node), settling thrusters (`s2.rcs`) then restart,
   injection to ~200 x 35,786 km, SECO-2, satellite separation, accelerated coast to apogee
-  (~5 h), then an **explanatory** apogee-engine burn by the satellite (constant thrust ~450 N
-  representative; show it as one long burn, accelerated, with a note that real circularization
-  uses several burns and also removes the 28.5 deg inclination). No booster recovery.
+  (~5 h), a checkout orbit, then three apogee-engine burns by the satellite (450 N, centred on
+  successive apogees) that raise perigee in steps and remove the 28.5 deg inclination, ending in
+  a near-circular geostationary orbit; the coasts between burns are omitted with notes. No
+  booster recovery (the booster is expended and tracked to the sea).
 * **Station**: a station in a 400 km circular orbit in the launch plane (28.5 deg; the launch
-  is timed so the pad is in the station's plane: state it). Capsule inserted ~200 x 250 km
+  is timed so the pad is in the station's plane: state it). The crew stack (capsule, service
+  module, abort tower from the dataset) needs the whole booster, which is expended. Capsule inserted ~200 x 250 km
   behind the station by a phase angle that makes phasing take several orbits; phasing burns
   (Hohmann-like) raise it to just below/behind the station; final approach along the radial
   line from below (R-bar) using Clohessy-Wiltshire relative motion with hold points (e.g. 400 m,
@@ -97,8 +99,9 @@ and in your report. Physical time vs presentation time mapping is explicit (`pre
 * **Lunar**: parking orbit ~200 km, coast, settle, restart for trans-lunar injection (TLI),
   probe separation, integrate Earth + Moon gravity (restricted three-body with the Moon on
   `moonPosition(t, moonPhase0)`; RK4 or RK45 with adaptive/limited steps) ~3 days, closest
-  approach ~1,000-3,000 km above the lunar surface on the far side, continuing outbound
-  (flyby, no capture). Choose `moonPhase0` and TLI parameters by a deterministic search.
+  approach ~1,000-3,000 km above the lunar surface, passing the Moon's trailing side so the
+  flyby adds energy (a gravity assist) and the probe leaves the Earth-Moon system on a
+  hyperbolic path (no capture, no return). Choose `moonPhase0` and TLI parameters by a deterministic search.
   Events `soi-enter`/`soi-exit` at the Moon's sphere of influence (~66,000 km).
 * **Presentation maps (`pres`)**: 1x through powered flight; coasts accelerated with notes
   ("Coast accelerated x20"); multi-hour waits compressed hard or `omitted` with a note

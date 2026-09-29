@@ -269,6 +269,7 @@ export function createSpace(opts: SpaceOptions) {
     const haveClouds = opts.clouds && !!coverRT;
     uniforms.uCloudsOn.value = haveClouds ? 1 : 0;
     cloudU.uFade.value = haveClouds ? 1 : 0;
+    cloudU.uLimbKeep.value = 1 - THREE.MathUtils.smoothstep(alt, 20_000, 60_000);
     cloudU.uSteps.value = spec.cloudOctaves >= 6 ? 64 : spec.cloudOctaves >= 5 ? 48 : 32;
     cloudU.uLightSteps.value = spec.atmoSamples[1] >= 6 ? 5 : spec.atmoSamples[1] >= 4 ? 4 : 3;
     subject.copy(director.flightPose.target);

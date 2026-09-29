@@ -630,11 +630,11 @@
    "cues": [
     {
      "id": "a",
-     "text": "At the high point the satellite fires its apogee engine, sideways, to raise the low point and to remove the tilt of the orbit."
+     "text": "Near each high point the satellite fires its small apogee engine, partly forward and partly sideways, raising the low point and removing the tilt of the orbit."
     },
     {
      "id": "b",
-     "text": "In reality this takes several burns over days. It is shown here as one, as an explanation."
+     "text": "It takes three burns, the first nearly an hour and a half long, spread over about thirty hours. The long coasts between them are skipped here."
     }
    ]
   },
@@ -690,7 +690,7 @@
    "cues": [
     {
      "id": "a",
-     "text": "Stage separation."
+     "text": "Stage separation. The booster has used all of its propellant: with a crew capsule and its abort tower on top, there was none to spare for flying home."
     }
    ]
   },
@@ -954,7 +954,7 @@
    "cues": [
     {
      "id": "a",
-     "text": "Splashdown in the Atlantic. The mission ends where it began: on Earth, a short way from the launch site."
+     "text": "Splashdown in the Atlantic, about two hundred and seventy kilometers east of the launch site. The mission ends where it began: on Earth."
     }
    ]
   },
@@ -982,7 +982,7 @@
    "cues": [
     {
      "id": "a",
-     "text": "Liftoff."
+     "text": "Liftoff, on the way to the Moon."
     }
    ]
   },
@@ -1038,7 +1038,7 @@
    "cues": [
     {
      "id": "a",
-     "text": "Trans-lunar injection. The engine burns for several minutes, raising the speed to nearly eleven kilometers per second."
+     "text": "Trans-lunar injection. The engine burns for about a minute, raising the speed to nearly eleven kilometers per second."
     }
    ]
   },
@@ -1080,7 +1080,7 @@
    "cues": [
     {
      "id": "a",
-     "text": "Three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away."
+     "text": "Nearly three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away."
     }
    ]
   },
@@ -1108,7 +1108,7 @@
    "cues": [
     {
      "id": "a",
-     "text": "Closest approach, over the far side. The Moon bends the probe's path and swings it onward."
+     "text": "Closest approach, fifteen hundred kilometers up, passing behind the Moon as it moves along its orbit. The Moon's pull bends the probe's path and swings it onward."
     }
    ]
   },
@@ -1122,7 +1122,7 @@
    "cues": [
     {
      "id": "a",
-     "text": "Leaving the Moon's sphere of influence on an outbound trajectory. A flyby changes direction and speed without an engine burn, but to stay in lunar orbit the probe would have had to brake."
+     "text": "Leaving the Moon's sphere of influence. Seen from the Moon, the probe leaves as fast as it arrived, only turned. Seen from Earth, it now moves faster than escape speed and will not come back. That is a gravity assist."
     }
    ]
   }

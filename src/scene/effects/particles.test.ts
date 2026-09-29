@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import { ParticleSystem, type Particle } from './particles';
+import { copyEmitter, buildClusters, SnapshotCache, type ClusterSnap, type EmitterSnap, type Snapshot } from './snapshot';
+import { MAX_VOLUMES, PlumeSet } from './plumes';
+import { TRENCH_DIR } from './pad';
+import { siteFrameQuaternion, sitePosition } from '../../world/frames';
+import type { Emitter } from './input';
 import { SyntheticSource } from './synthetic';
 import { EXIT_PRESSURE, columnShape, makeColumnShape, pressureRatioAmb } from './physics';
 import { stdPressure } from './synthetic';
@@ -107,5 +113,69 @@ describe('plume physics', () => {
     expect(r20).toBeGreaterThan(r0 * 1.5);
     expect(r45).toBeGreaterThan(r20 * 3);
     expect(r80).toBeGreaterThan(r45 * 5);
+  });
+});
+
+const emptySnap = (): Snapshot => ({ t: 0, emitters: [], clusters: [], pad: { venting: 0, deluge: 0, holddown: 0, arms: 0 } });
+const light = { sunDir: new THREE.Vector3(0, 1, 0), sunCol: new THREE.Color(1, 1, 1), amb: new THREE.Color(0.1, 0.1, 0.1) };
+const fwd = new THREE.Vector3(0, 0, -1);
+
+describe('ground cloud', () => {
+  it('rolls out of the flame trench along its direction', () => {
+    const sys = new ParticleSystem(1);
+    sys.setSource(new SyntheticSource({ scenario: 'ascent' }));
+    sys.update(4, 0);
+    const q = siteFrameQuaternion(4, new THREE.Quaternion()).invert();
+    const o = sitePosition(4, 0, new THREE.Vector3());
+    const mean = new THREE.Vector3();
+    let n = 0;
+    for (let i = 0; i < sys.count; i++) {
+      const p = sys.out[i];
+      if (p.group !== 0) continue;
+      mean.add(p.pos.clone().sub(o).applyQuaternion(q));
+      n++;
+    }
+    expect(n).toBeGreaterThan(50);
+    mean.multiplyScalar(1 / n);
+    const along = (mean.x * TRENCH_DIR.x + mean.z * TRENCH_DIR.z) / Math.hypot(mean.x, mean.z);
+    expect(along).toBeGreaterThan(0.7);
+  });
+});
+
+describe('plume volumes (draw budget)', () => {
+  it('draws cold-gas thrusters as puffs only', () => {
+    const cache = new SnapshotCache(4);
+    cache.setSource(new SyntheticSource({ scenario: 'rcs' }));
+    const snap = cache.compute(0.3, emptySnap())!;
+    expect(snap.emitters.length).toBeGreaterThan(0);
+    const set = new PlumeSet();
+    set.update(snap.emitters, snap.clusters, new THREE.Vector3(), light, 0, fwd, 12, () => 1);
+    expect(set.count).toBe(0);
+    set.dispose();
+  });
+
+  it('never draws more than MAX_VOLUMES plume volumes', () => {
+    const em: EmitterSnap[] = [];
+    for (let i = 0; i < 30; i++) {
+      const e: Emitter = {
+        id: `e${i}`,
+        kind: 'kerolox-sl',
+        pos: new THREE.Vector3((i % 6) * 1.4, 6.4e6, Math.floor(i / 6) * 1.4),
+        dir: new THREE.Vector3(0, -1, 0),
+        exitRadius: 0.5,
+        throttle: 1,
+        ambientPressure: 101325,
+        altitude: 0,
+        airVel: new THREE.Vector3(),
+        ggExhaust: { pos: new THREE.Vector3((i % 6) * 1.4 + 0.7, 6.4e6, 0), dir: new THREE.Vector3(0, -1, 0) },
+        sinceIgnition: 5,
+      };
+      em.push(copyEmitter(e, { id: '', kind: 'kerolox-sl', pos: new THREE.Vector3(), dir: new THREE.Vector3(), exitRadius: 1, throttle: 0, ambientPressure: 0, altitude: 0, airVel: new THREE.Vector3(), gg: null, sinceIgnition: 0 }));
+    }
+    const clusters = buildClusters(em, [], [] as ClusterSnap[]);
+    const set = new PlumeSet();
+    set.update(em, clusters, new THREE.Vector3(0, 6.4e6, 0), light, 0, fwd, 12, () => 1);
+    expect(set.count).toBe(MAX_VOLUMES);
+    set.dispose();
   });
 });

@@ -195,7 +195,9 @@ vec2 cloudWeather(vec3 pEF, out float padDist) {
   float cov = cv.r;
   float top = cv.g;
   padDist = length(n - uPadEF) * A_RB;
-  float wPad = 1.0 - smoothstep(60000.0, 180000.0, padDist);
+  // the local weather blends into the global field over hundreds of kilometres, along an
+  // irregular edge (cv.b), so from orbit it reads as a cumulus field over the coast, not a disk
+  float wPad = 1.0 - smoothstep(50000.0, 420000.0, padDist * (0.65 + 0.7 * cv.b));
   cov = mix(cov, 0.44, wPad);
   top = mix(top, 0.5, wPad);
   // keep the column over the pad and the first kilometres of the ascent mostly clear
