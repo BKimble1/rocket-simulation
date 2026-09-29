@@ -1,0 +1,1277 @@
+{
+  "version": "film-1",
+  "voice": "bm_george",
+  "speed": 1.0,
+  "model": {
+    "package": "expo-kokoro",
+    "version": "1.1.9",
+    "sha256": "fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478",
+    "name": "Kokoro-82M v1.0",
+    "license": "Apache-2.0",
+    "engine": "float-conv",
+    "engineSha256": "2e83328bed32c73a02614d7405cc78a8f9e5ad9588c5f179e34569c99cdc949d"
+  },
+  "generatedAt": "2026-09-29T07:40:19Z",
+  "audio": {
+    "codec": "mp3",
+    "sampleRate": 24000,
+    "channels": 1,
+    "bitrateKbps": 64,
+    "loudnessLufs": -18.0,
+    "truePeakCeilingDb": -1.5,
+    "fileBase": "segment file names are relative to this manifest",
+    "timing": "startMs/endMs are sample positions of each cue clip in the segment (clip = speech plus 40 ms before and ~80 ms after); durationMs is the decoded length of the MP3. Measured with ffmpeg decoding, which honours the LAME gapless header (encoder delay and padding removed)."
+  },
+  "segments": [
+    {
+      "id": "leo-intro",
+      "file": "leo-intro.mp3",
+      "bytes": 139392,
+      "sha256": "b01c3a08f6ddebf2a4e215df6103765f217676a411d3e2f53dfca008cd3eaad6",
+      "durationMs": 17330,
+      "cues": [
+        {
+          "id": "a",
+          "text": "This is the K-1, a two-stage rocket, standing on its launch pad.",
+          "startMs": 0,
+          "endMs": 4750
+        },
+        {
+          "id": "b",
+          "text": "Its tanks hold liquid oxygen and RP-1, a refined kerosene. A rocket carries its oxidizer as well as its fuel, because there is no air to burn where it is going.",
+          "startMs": 5100,
+          "endMs": 16730
+        }
+      ]
+    },
+    {
+      "id": "leo-venting",
+      "file": "leo-venting.mp3",
+      "bytes": 98112,
+      "sha256": "2e1d543215a6c0ff6b6fdc0d2ba1a4fcce271ac778a8429163de3b673bd097c6",
+      "durationMs": 12180,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The access arms swing back. The white vapor is liquid oxygen boiling at minus one hundred and eighty-three degrees Celsius. It is vented, and topped up, until the final minutes.",
+          "startMs": 0,
+          "endMs": 11580
+        }
+      ]
+    },
+    {
+      "id": "leo-ignition",
+      "file": "leo-ignition.mp3",
+      "bytes": 132672,
+      "sha256": "8cc0e360557dfdabd3ab51ddcab04696bb6008ecc86d97206675c2c8cf2f2f21",
+      "durationMs": 16510,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Engine start. A self-igniting fluid called T E A, T E B flashes green, the turbopumps spin up, and seven engines build thrust.",
+          "startMs": 0,
+          "endMs": 9530
+        },
+        {
+          "id": "b",
+          "text": "Clamps still hold the rocket down while the flight computers confirm that every engine is healthy.",
+          "startMs": 9880,
+          "endMs": 15910
+        }
+      ]
+    },
+    {
+      "id": "leo-liftoff",
+      "file": "leo-liftoff.mp3",
+      "bytes": 82176,
+      "sha256": "a416cbae866954081cb6eca42d60fccf6ad67fb46b0f8c0287c9cc0ae53bdcdc",
+      "durationMs": 10180,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Release, and liftoff. Five point three meganewtons of thrust lift about four hundred and forty tonnes, so the rocket accelerates slowly at first.",
+          "startMs": 0,
+          "endMs": 9580
+        }
+      ]
+    },
+    {
+      "id": "leo-tower",
+      "file": "leo-tower.mp3",
+      "bytes": 42432,
+      "sha256": "257abc861f047711093d9d802d652fc9d7d8374814c26833d8c2c6a7a1d69e63",
+      "durationMs": 5230,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Tower cleared. The rocket now tips over, just slightly, toward the east.",
+          "startMs": 0,
+          "endMs": 4630
+        }
+      ]
+    },
+    {
+      "id": "leo-gravityturn",
+      "file": "leo-gravityturn.mp3",
+      "bytes": 132864,
+      "sha256": "e534c781a73e8e597c8026a5792459085235efbcab7ef97e471d57eeaa36a09a",
+      "durationMs": 16530,
+      "cues": [
+        {
+          "id": "a",
+          "text": "From here it does not fight the air. It keeps its nose along the airflow and lets gravity bend its path into a curve: a gravity turn.",
+          "startMs": 0,
+          "endMs": 8800
+        },
+        {
+          "id": "b",
+          "text": "Heading east also borrows the Earth's own spin, about four hundred meters per second at this latitude.",
+          "startMs": 9150,
+          "endMs": 15930
+        }
+      ]
+    },
+    {
+      "id": "leo-maxq",
+      "file": "leo-maxq.mp3",
+      "bytes": 128832,
+      "sha256": "643ebbe2f6c8970d344b0cb8570443e78c6961b1d7c1e505321eb883ec7c8498",
+      "durationMs": 16010,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The air is thinning, but the rocket is going faster. Dynamic pressure, half the air density times the speed squared, is at its peak.",
+          "startMs": 0,
+          "endMs": 8630
+        },
+        {
+          "id": "b",
+          "text": "This is the moment of greatest aerodynamic load, and the engines throttle back to ease through it.",
+          "startMs": 8980,
+          "endMs": 15410
+        }
+      ]
+    },
+    {
+      "id": "leo-meco",
+      "file": "leo-meco.mp3",
+      "bytes": 63360,
+      "sha256": "678339e2ac604db303ca478a79fd6130f8df7f227abbda66020fc1419b66d516",
+      "durationMs": 7840,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Main engine cutoff. The first stage has used most of its propellant, keeping a reserve to fly itself home.",
+          "startMs": 0,
+          "endMs": 7240
+        }
+      ]
+    },
+    {
+      "id": "leo-sep",
+      "file": "leo-sep.mp3",
+      "bytes": 71424,
+      "sha256": "4c6580d1e40a2c3bc5aa2209b19946ba1a416e95fb0ae9840699f485464b1e3f",
+      "durationMs": 8850,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Stage separation. Pneumatic pushers ease the stages apart. Both are still climbing at the same speed; they drift apart gently.",
+          "startMs": 0,
+          "endMs": 8250
+        }
+      ]
+    },
+    {
+      "id": "leo-ses1",
+      "file": "leo-ses1.mp3",
+      "bytes": 90432,
+      "sha256": "01b817cc42e643ab4bf79746f6cdac74ac2b5ecc94b2ddd61f7f4fb37406fe14",
+      "durationMs": 11230,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The upper-stage engine lights once it is clear of the interstage. Its huge nozzle extension would not work at sea level. It is shaped for the near-vacuum up here.",
+          "startMs": 0,
+          "endMs": 10630
+        }
+      ]
+    },
+    {
+      "id": "leo-booster",
+      "file": "leo-booster.mp3",
+      "bytes": 87168,
+      "sha256": "56cfea59b0af1961c8da365c80fe593375c97b63b7f998374b2a8b62d87a3949",
+      "durationMs": 10810,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Meanwhile, the booster has flipped around with small nitrogen thrusters, and relights three engines to head back toward the coast. You can follow it in the mission explorer.",
+          "startMs": 0,
+          "endMs": 10210
+        }
+      ]
+    },
+    {
+      "id": "leo-fairing",
+      "file": "leo-fairing.mp3",
+      "bytes": 97536,
+      "sha256": "26eebc89a498437d3e0033390e640bc502ccd824aa2e7ebb605d0d10a7865a96",
+      "durationMs": 12120,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Above about a hundred and ten kilometers, the air is too thin to heat or batter the satellite. The fairing halves swing open and fall away: carrying them higher would only waste propellant.",
+          "startMs": 0,
+          "endMs": 11520
+        }
+      ]
+    },
+    {
+      "id": "leo-upperburn",
+      "file": "leo-upperburn.mp3",
+      "bytes": 137280,
+      "sha256": "d0521c5ee8d858c3d2184c029134b02abfe685eeceda9797d275ec260a44a07e",
+      "durationMs": 17080,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The upper stage now burns for several minutes, pointing more and more horizontally.",
+          "startMs": 0,
+          "endMs": 5180
+        },
+        {
+          "id": "b",
+          "text": "Orbit is not about height. It is about going sideways so fast, about seven point seven kilometers per second here, that the ground curves away as quickly as you fall.",
+          "startMs": 5530,
+          "endMs": 16480
+        }
+      ]
+    },
+    {
+      "id": "leo-seco",
+      "file": "leo-seco.mp3",
+      "bytes": 70656,
+      "sha256": "be0ca3137664071eb591b6cc8cefa45a6ce5c11ea0424995e90a202ff30860cb",
+      "durationMs": 8760,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Engine cutoff. The vehicle is in orbit. Nothing pushes it now, and it does not slow down. It is falling around the Earth.",
+          "startMs": 0,
+          "endMs": 8160
+        }
+      ]
+    },
+    {
+      "id": "leo-coast",
+      "file": "leo-coast.mp3",
+      "bytes": 79296,
+      "sha256": "518471a28d6577ca968eb165e9c26430dcdd50cf448879100a24b736be92b231",
+      "durationMs": 9830,
+      "cues": [
+        {
+          "id": "a",
+          "text": "This coast is shown sped up. The stage and its satellite keep moving at nearly eight kilometers per second, on a path set by gravity alone.",
+          "startMs": 0,
+          "endMs": 9230
+        }
+      ]
+    },
+    {
+      "id": "leo-deploy",
+      "file": "leo-deploy.mp3",
+      "bytes": 58176,
+      "sha256": "1853927dbcdd2818470d20e517b47055988021ed4535c12669d4587bcba6b98a",
+      "durationMs": 7190,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Payload separation. A clamp band lets go, and springs push the satellite gently away from the stage.",
+          "startMs": 0,
+          "endMs": 6590
+        }
+      ]
+    },
+    {
+      "id": "leo-arrays",
+      "file": "leo-arrays.mp3",
+      "bytes": 79296,
+      "sha256": "49f2fd517b6e9bd380d3892f1bfeedbc89a4dc5da94b47c0efed0ea744684b3d",
+      "durationMs": 9840,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The satellite unfolds its solar arrays, turns them toward the Sun, and raises its antenna to contact the ground. The rocket's job is done.",
+          "startMs": 0,
+          "endMs": 9240
+        }
+      ]
+    },
+    {
+      "id": "suborbital-intro",
+      "file": "suborbital-intro.mp3",
+      "bytes": 104064,
+      "sha256": "65e1f1a0fcf68bf1cd9b0c561aae453808348d6541ffce4221c08fc2579cf263",
+      "durationMs": 12920,
+      "cues": [
+        {
+          "id": "a",
+          "text": "A suborbital research flight uses the booster alone, with a capsule on top instead of an upper stage.",
+          "startMs": 0,
+          "endMs": 6980
+        },
+        {
+          "id": "b",
+          "text": "It carries a reduced propellant load: the goal is height, not orbital speed.",
+          "startMs": 7330,
+          "endMs": 12320
+        }
+      ]
+    },
+    {
+      "id": "suborbital-ignition",
+      "file": "suborbital-ignition.mp3",
+      "bytes": 43392,
+      "sha256": "cb5e22c53043d35164634c70ef7b7bc122e34857718ccc27fcdef25afd0ef908",
+      "durationMs": 5350,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Engine start, and the hold-down clamps release when thrust is confirmed.",
+          "startMs": 0,
+          "endMs": 4750
+        }
+      ]
+    },
+    {
+      "id": "suborbital-liftoff",
+      "file": "suborbital-liftoff.mp3",
+      "bytes": 64320,
+      "sha256": "a2612430f7e8e54030928b58e5cecf6bbadea1105caea823b5b18138ccc378cb",
+      "durationMs": 7960,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Liftoff. The rocket climbs almost straight up, tilted a little to the east so the capsule will come down over the ocean.",
+          "startMs": 0,
+          "endMs": 7360
+        }
+      ]
+    },
+    {
+      "id": "suborbital-meco",
+      "file": "suborbital-meco.mp3",
+      "bytes": 65280,
+      "sha256": "429ff2b09d1b8bc8336f6c348f31aebf997586a3bb22dd64b2a2dafc8550e178",
+      "durationMs": 8070,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Engine cutoff, early. The booster has enough speed to throw the capsule above one hundred kilometers, and no more.",
+          "startMs": 0,
+          "endMs": 7470
+        }
+      ]
+    },
+    {
+      "id": "suborbital-sep",
+      "file": "suborbital-sep.mp3",
+      "bytes": 58560,
+      "sha256": "e78a097c385ead3a9ffabc5f25ec3510937a3583388ce1134c7167cd05af3ef6",
+      "durationMs": 7230,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The capsule separates. From here both are simply coasting: rising, slowing, and about to fall back.",
+          "startMs": 0,
+          "endMs": 6630
+        }
+      ]
+    },
+    {
+      "id": "suborbital-space",
+      "file": "suborbital-space.mp3",
+      "bytes": 74112,
+      "sha256": "3867489a78355fc17bea8e53d206f067f86f1987a92ce5bfa68bb8152d326bce",
+      "durationMs": 9170,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The capsule crosses one hundred kilometers, a common definition of the edge of space. Inside, experiments are in free fall.",
+          "startMs": 0,
+          "endMs": 8570
+        }
+      ]
+    },
+    {
+      "id": "suborbital-apogee",
+      "file": "suborbital-apogee.mp3",
+      "bytes": 75648,
+      "sha256": "e6ae0a59a212a477a578814f1743d449876746b23fe857fa2736bad4296312e6",
+      "durationMs": 9370,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The top of the arc. The capsule is barely moving sideways, so it cannot stay up here. Reaching space is not the same as staying in orbit.",
+          "startMs": 0,
+          "endMs": 8770
+        }
+      ]
+    },
+    {
+      "id": "suborbital-descent",
+      "file": "suborbital-descent.mp3",
+      "bytes": 67968,
+      "sha256": "78705b3b68da711d9ac9a8f2c1300d38fc2a566f17ed0ac641bf1431c115fad2",
+      "durationMs": 8420,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Falling back, it gains speed again. With no sideways speed to spare, the path returns to Earth a few minutes after launch.",
+          "startMs": 0,
+          "endMs": 7820
+        }
+      ]
+    },
+    {
+      "id": "suborbital-entry",
+      "file": "suborbital-entry.mp3",
+      "bytes": 83712,
+      "sha256": "6321573c4847b7261c71a2213251c59beb545c7796943400b9b5148cf52264c7",
+      "durationMs": 10390,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The heat shield leads. Entry from a suborbital arc is gentler than from orbit, but the capsule still meets the air at several times the speed of sound.",
+          "startMs": 0,
+          "endMs": 9790
+        }
+      ]
+    },
+    {
+      "id": "suborbital-drogue",
+      "file": "suborbital-drogue.mp3",
+      "bytes": 37632,
+      "sha256": "5abcf244213d4b72975c13feeefc6fc1090516dafbff1a7a07eb3c5e088160b1",
+      "durationMs": 4630,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Drogue parachutes steady the capsule and slow it before the mains.",
+          "startMs": 0,
+          "endMs": 4030
+        }
+      ]
+    },
+    {
+      "id": "suborbital-mains",
+      "file": "suborbital-mains.mp3",
+      "bytes": 69312,
+      "sha256": "4d83bf369b6a6afcd477d965ec48dc1878d19aefb3193bcdd41d720bdf1312a5",
+      "durationMs": 8580,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Main parachutes open in stages. Reefing lines hold each canopy partly closed at first, limiting the opening shock.",
+          "startMs": 0,
+          "endMs": 7980
+        }
+      ]
+    },
+    {
+      "id": "suborbital-splash",
+      "file": "suborbital-splash.mp3",
+      "bytes": 42432,
+      "sha256": "141de5f6e502671a33ec3bc3aba29d35b056b40b389e1169c0bd71467cfcac49",
+      "durationMs": 5230,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Splashdown, at a few meters per second. Recovery crews are on the way.",
+          "startMs": 0,
+          "endMs": 4630
+        }
+      ]
+    },
+    {
+      "id": "suborbital-booster",
+      "file": "suborbital-booster.mp3",
+      "bytes": 44160,
+      "sha256": "21619db8b7d670296960501a30cf9cd85ead8e164737adbeb1a645e0960e33d2",
+      "durationMs": 5430,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The booster has flown its own path back and lights its center engine for landing.",
+          "startMs": 0,
+          "endMs": 4830
+        }
+      ]
+    },
+    {
+      "id": "gto-intro",
+      "file": "gto-intro.mp3",
+      "bytes": 125568,
+      "sha256": "030436b9bcaf01d047ada3c9d1be545a882eef099f4aaae07c791b8ed64258bb",
+      "durationMs": 15610,
+      "cues": [
+        {
+          "id": "a",
+          "text": "This mission carries a communications satellite toward geostationary orbit, thirty-five thousand seven hundred and eighty-six kilometers up.",
+          "startMs": 0,
+          "endMs": 9460
+        },
+        {
+          "id": "b",
+          "text": "The rocket will not take it all the way. Watch which vehicle performs each maneuver.",
+          "startMs": 9810,
+          "endMs": 15010
+        }
+      ]
+    },
+    {
+      "id": "gto-liftoff",
+      "file": "gto-liftoff.mp3",
+      "bytes": 71616,
+      "sha256": "5df5afdd263c312dfc9d8da35cdecc96bb2e2668733dcdce7919c18c4e7df66b",
+      "durationMs": 8870,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Liftoff. This time the booster is not recovered: the energy for a high orbit uses the propellant that would otherwise bring it home.",
+          "startMs": 0,
+          "endMs": 8270
+        }
+      ]
+    },
+    {
+      "id": "gto-maxq",
+      "file": "gto-maxq.mp3",
+      "bytes": 39744,
+      "sha256": "5c271fc91be011fd1f00f649b6a50b9f616ae1b047fadaf044010b099e5e24dd",
+      "durationMs": 4880,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Maximum dynamic pressure, then the climb out of the dense air.",
+          "startMs": 0,
+          "endMs": 4280
+        }
+      ]
+    },
+    {
+      "id": "gto-sep",
+      "file": "gto-sep.mp3",
+      "bytes": 32832,
+      "sha256": "ea16d71c2f03b6c53878ec702216f2be8e574e20d70de9604cadc4eba015a3a6",
+      "durationMs": 4030,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Stage separation, and the upper stage takes over.",
+          "startMs": 0,
+          "endMs": 3430
+        }
+      ]
+    },
+    {
+      "id": "gto-fairing",
+      "file": "gto-fairing.mp3",
+      "bytes": 29568,
+      "sha256": "63bccbb87228c235eaf4e2757af6cb1ca822f2ce728b4171a786a983f6251456",
+      "durationMs": 3620,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The fairing falls away above the atmosphere.",
+          "startMs": 0,
+          "endMs": 3020
+        }
+      ]
+    },
+    {
+      "id": "gto-parking",
+      "file": "gto-parking.mp3",
+      "bytes": 52992,
+      "sha256": "c80370f1ba2b9d2e6cc2cb2ebdb296cf14681626688ca97ad862be6f8b9eb90c",
+      "durationMs": 6540,
+      "cues": [
+        {
+          "id": "a",
+          "text": "First cutoff. The stage and satellite are in a low parking orbit, coasting around the Earth.",
+          "startMs": 0,
+          "endMs": 5940
+        }
+      ]
+    },
+    {
+      "id": "gto-coast",
+      "file": "gto-coast.mp3",
+      "bytes": 88512,
+      "sha256": "6f3001e13f3bbe19fd72de56a4c1004a443af56be3b9f67da04fb3009878b38b",
+      "durationMs": 10990,
+      "cues": [
+        {
+          "id": "a",
+          "text": "They coast until they reach the right point: the next burn must happen where the orbit crosses the equator, so the high point of the new orbit lies over the equator too.",
+          "startMs": 0,
+          "endMs": 10390
+        }
+      ]
+    },
+    {
+      "id": "gto-settle",
+      "file": "gto-settle.mp3",
+      "bytes": 78912,
+      "sha256": "1d6748da2d95b0b476775d250a5299e227eea2453d02440b4cd1c0808a3b32d0",
+      "durationMs": 9770,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Before the engine restarts, small thrusters nudge the stage forward. In free fall the propellant floats; this settles it over the tank outlets.",
+          "startMs": 0,
+          "endMs": 9170
+        }
+      ]
+    },
+    {
+      "id": "gto-restart",
+      "file": "gto-restart.mp3",
+      "bytes": 51072,
+      "sha256": "b278f1023a51e5a2a5ba31ce64eb209527cec5d6662d5f0b1debb279bc9d7974",
+      "durationMs": 6290,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Restart. The upper-stage engine burns again, adding speed at the low point of the orbit.",
+          "startMs": 0,
+          "endMs": 5690
+        }
+      ]
+    },
+    {
+      "id": "gto-injection",
+      "file": "gto-injection.mp3",
+      "bytes": 79488,
+      "sha256": "4a608dcacac813a93c5530a57cd6b6045eafa7c0c2f027d206b2747d11835441",
+      "durationMs": 9850,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Cutoff. The orbit now stretches from about two hundred kilometers to thirty-six thousand. This is a transfer orbit, not the final orbit.",
+          "startMs": 0,
+          "endMs": 9250
+        }
+      ]
+    },
+    {
+      "id": "gto-deploy",
+      "file": "gto-deploy.mp3",
+      "bytes": 44736,
+      "sha256": "67183206e711972169d3d3f14e00955275261e2ab9dd3def8f3a131f3e5a2a79",
+      "durationMs": 5500,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The satellite separates. From here, the satellite's own engine does the rest.",
+          "startMs": 0,
+          "endMs": 4900
+        }
+      ]
+    },
+    {
+      "id": "gto-climb",
+      "file": "gto-climb.mp3",
+      "bytes": 77376,
+      "sha256": "30d82574f176e01ba019f7476e03b779bf46f7de2dfd80ae80f7d3e1009957b3",
+      "durationMs": 9580,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The long climb to the high point takes about five hours, shown here greatly sped up. The satellite slows as it rises, trading speed for height.",
+          "startMs": 0,
+          "endMs": 8980
+        }
+      ]
+    },
+    {
+      "id": "gto-apogee",
+      "file": "gto-apogee.mp3",
+      "bytes": 125568,
+      "sha256": "0e678ba1215b8fe78b865b660bc6b7551bfab38b4a09d7cb7e7e95c709e4827a",
+      "durationMs": 15620,
+      "cues": [
+        {
+          "id": "a",
+          "text": "At the high point the satellite fires its apogee engine, sideways, to raise the low point and to remove the tilt of the orbit.",
+          "startMs": 0,
+          "endMs": 8450
+        },
+        {
+          "id": "b",
+          "text": "In reality this takes several burns over days. It is shown here as one, as an explanation.",
+          "startMs": 8800,
+          "endMs": 15020
+        }
+      ]
+    },
+    {
+      "id": "station-intro",
+      "file": "station-intro.mp3",
+      "bytes": 84288,
+      "sha256": "cb5bee63589e0535195eb86ac3274fbd2ddd8fc047d6c1937b0c27740f85bfad",
+      "durationMs": 10450,
+      "cues": [
+        {
+          "id": "a",
+          "text": "A crew capsule on the K-1. Above it, the abort tower: a solid rocket motor that can pull the capsule clear of a failing booster in seconds.",
+          "startMs": 0,
+          "endMs": 9850
+        }
+      ]
+    },
+    {
+      "id": "station-plane",
+      "file": "station-plane.mp3",
+      "bytes": 88896,
+      "sha256": "78c683760d355b1a87c3ec815fb42b3f56aa2fd2027180519c0cbc2f1e1b4273",
+      "durationMs": 11020,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Liftoff, timed for the moment the launch site passes under the station's orbital plane. Launching into the right plane saves an expensive change of direction later.",
+          "startMs": 0,
+          "endMs": 10420
+        }
+      ]
+    },
+    {
+      "id": "station-maxq",
+      "file": "station-maxq.mp3",
+      "bytes": 45696,
+      "sha256": "6e3272810c0458b1883ec449479918dbb759734e6826f2c8bfbcec406fc6c494",
+      "durationMs": 5620,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Maximum dynamic pressure. The abort tower is ready throughout this phase.",
+          "startMs": 0,
+          "endMs": 5020
+        }
+      ]
+    },
+    {
+      "id": "station-sep",
+      "file": "station-sep.mp3",
+      "bytes": 18240,
+      "sha256": "3345cf8d64fad0132a6dca39af69c82a8ad74b5431c293024ce08d7aa2851161",
+      "durationMs": 2190,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Stage separation.",
+          "startMs": 0,
+          "endMs": 1590
+        }
+      ]
+    },
+    {
+      "id": "station-tower",
+      "file": "station-tower.mp3",
+      "bytes": 58368,
+      "sha256": "675141139f94c143277f8799b1c50a510c6cb149835232f7a70b7586637f2cb2",
+      "durationMs": 7210,
+      "cues": [
+        {
+          "id": "a",
+          "text": "With the dense air behind, the abort tower is no longer needed. Its jettison motor carries it away.",
+          "startMs": 0,
+          "endMs": 6610
+        }
+      ]
+    },
+    {
+      "id": "station-insert",
+      "file": "station-insert.mp3",
+      "bytes": 49152,
+      "sha256": "f67acbf9a2c2e8f23079fe8182e40c7e7b978bd2e984a41e3072dd70067ff653",
+      "durationMs": 6060,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Cutoff. The capsule is in orbit, lower than the station and some distance behind it.",
+          "startMs": 0,
+          "endMs": 5460
+        }
+      ]
+    },
+    {
+      "id": "station-capsep",
+      "file": "station-capsep.mp3",
+      "bytes": 40320,
+      "sha256": "f6049873b091fa5e58f4ee8479b0921eb60483560738ac6225f2406e4f46269e",
+      "durationMs": 4950,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The capsule separates from the upper stage and opens its solar arrays.",
+          "startMs": 0,
+          "endMs": 4350
+        }
+      ]
+    },
+    {
+      "id": "station-phasing",
+      "file": "station-phasing.mp3",
+      "bytes": 158016,
+      "sha256": "138684d1c74cf9de22837937e4f6d43ae065aff9786e42e81660af17a179e6d5",
+      "durationMs": 19670,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Why not point at the station and fly straight to it? Because pushing forward raises your orbit, and a higher orbit is slower. You would climb and fall behind.",
+          "startMs": 0,
+          "endMs": 9640
+        },
+        {
+          "id": "b",
+          "text": "Instead, the capsule stays lower, where orbits are faster, and catches up gradually. This phase is shown with long quiet intervals omitted.",
+          "startMs": 9990,
+          "endMs": 19070
+        }
+      ]
+    },
+    {
+      "id": "station-raise",
+      "file": "station-raise.mp3",
+      "bytes": 43392,
+      "sha256": "fe65e355340fdd2c8a2188d8425aad112751708a084b3fa38d5a8c78edc2ca75",
+      "durationMs": 5330,
+      "cues": [
+        {
+          "id": "a",
+          "text": "A burn raises the high point of the orbit toward the station's altitude.",
+          "startMs": 0,
+          "endMs": 4730
+        }
+      ]
+    },
+    {
+      "id": "station-raise2",
+      "file": "station-raise2.mp3",
+      "bytes": 46656,
+      "sha256": "4500d0f253069acef1609d9b27723e9c7a87b9cf1cc26698e995e26de60892d1",
+      "durationMs": 5740,
+      "cues": [
+        {
+          "id": "a",
+          "text": "A second burn at the top rounds out the orbit just below and behind the station.",
+          "startMs": 0,
+          "endMs": 5140
+        }
+      ]
+    },
+    {
+      "id": "station-approach",
+      "file": "station-approach.mp3",
+      "bytes": 103296,
+      "sha256": "b41564fb99c300766cfaf0499f3df873a609c171367938851a2a6ed77b6c0da5",
+      "durationMs": 12820,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Final approach along the line toward the Earth's center, from below. Here orbital motion helps: small thrusts, holds at fixed distances, and a closing speed of a few centimeters per second.",
+          "startMs": 0,
+          "endMs": 12220
+        }
+      ]
+    },
+    {
+      "id": "station-soft",
+      "file": "station-soft.mp3",
+      "bytes": 49728,
+      "sha256": "8ad73d024590bb7ee981e6124deef3c708c8f406ad0aaedfd5faf48101e92911",
+      "durationMs": 6130,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Soft capture. Latches catch the docking ring, and springs absorb the remaining motion.",
+          "startMs": 0,
+          "endMs": 5530
+        }
+      ]
+    },
+    {
+      "id": "station-hard",
+      "file": "station-hard.mp3",
+      "bytes": 48192,
+      "sha256": "dd1c678297a085b7b59bb8208dfc91afedb2e89ff6270627abd69cb546f5f327",
+      "durationMs": 5930,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Hard capture. Hooks pull the two vehicles into an airtight seal. Delivery complete.",
+          "startMs": 0,
+          "endMs": 5330
+        }
+      ]
+    },
+    {
+      "id": "return-undock",
+      "file": "return-undock.mp3",
+      "bytes": 47424,
+      "sha256": "2b68cc398283d8bbec1f541bfbb738cff590c2d743cc38344c38118b7bdeb7ef",
+      "durationMs": 5850,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The capsule undocks and backs away from the station with small thruster firings.",
+          "startMs": 0,
+          "endMs": 5250
+        }
+      ]
+    },
+    {
+      "id": "return-deorbit",
+      "file": "return-deorbit.mp3",
+      "bytes": 109632,
+      "sha256": "2175267c46c62483e0c901fd43697d5820d1725fe808208ce96d72ac032c7c40",
+      "durationMs": 13630,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The deorbit burn. The service module's engine fires against the direction of travel.",
+          "startMs": 0,
+          "endMs": 5630
+        },
+        {
+          "id": "b",
+          "text": "Losing about a hundred meters per second is enough: the low point of the orbit now dips into the atmosphere.",
+          "startMs": 5980,
+          "endMs": 13030
+        }
+      ]
+    },
+    {
+      "id": "return-smsep",
+      "file": "return-smsep.mp3",
+      "bytes": 83136,
+      "sha256": "f3fcd76d85569d7befc3cc09047596df63095b52348e94557b6479fc8dd20561",
+      "durationMs": 10300,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The service module is no longer needed. It separates, and will burn up. Only the capsule, with its heat shield, is built to survive what comes next.",
+          "startMs": 0,
+          "endMs": 9700
+        }
+      ]
+    },
+    {
+      "id": "return-entry",
+      "file": "return-entry.mp3",
+      "bytes": 77568,
+      "sha256": "21cc64df92909042b938039a672afcd4d40cfab7257d0dd13cdfc2f722d72a67",
+      "durationMs": 9620,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Entry interface, about a hundred and twenty kilometers up. The capsule meets the air at nearly eight kilometers per second, heat shield first.",
+          "startMs": 0,
+          "endMs": 9020
+        }
+      ]
+    },
+    {
+      "id": "return-heating",
+      "file": "return-heating.mp3",
+      "bytes": 108096,
+      "sha256": "5b4bd045782263c5dcf5bf00f95ed92ed5c106a3af503529f429fe32dcd518ff",
+      "durationMs": 13430,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Peak heating. The shock layer in front of the shield glows at thousands of degrees.",
+          "startMs": 0,
+          "endMs": 4910
+        },
+        {
+          "id": "b",
+          "text": "The ablative shield chars and slowly erodes, carrying heat away as it does, while the structure behind it stays cool.",
+          "startMs": 5260,
+          "endMs": 12830
+        }
+      ]
+    },
+    {
+      "id": "return-g",
+      "file": "return-g.mp3",
+      "bytes": 49344,
+      "sha256": "50dae9fe5cb2a37d2763f9393c44902cac3ce9f4d7ec380c4f50057ac8d6a89f",
+      "durationMs": 6090,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The air takes away the orbital energy. The crew feel several times their normal weight.",
+          "startMs": 0,
+          "endMs": 5490
+        }
+      ]
+    },
+    {
+      "id": "return-drogue",
+      "file": "return-drogue.mp3",
+      "bytes": 32448,
+      "sha256": "2fe80ab15e17cb7ee55e197eb3eeaebd08a6a93db15a68757e0f209f79672c74",
+      "durationMs": 3970,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Drogue parachutes stabilize the capsule and slow it.",
+          "startMs": 0,
+          "endMs": 3370
+        }
+      ]
+    },
+    {
+      "id": "return-mains",
+      "file": "return-mains.mp3",
+      "bytes": 36480,
+      "sha256": "667e313fe919e0933c841fc283a9662b397723659d7dd930c664c8de765a8fdf",
+      "durationMs": 4470,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Three main parachutes open, reefed at first, then fully.",
+          "startMs": 0,
+          "endMs": 3870
+        }
+      ]
+    },
+    {
+      "id": "return-splash",
+      "file": "return-splash.mp3",
+      "bytes": 58752,
+      "sha256": "da7816e1c5603957c099b3631ff6fdd976fd8d3002cc48ea8558818255ec1abf",
+      "durationMs": 7250,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Splashdown in the Atlantic. The mission ends where it began: on Earth, a short way from the launch site.",
+          "startMs": 0,
+          "endMs": 6650
+        }
+      ]
+    },
+    {
+      "id": "lunar-intro",
+      "file": "lunar-intro.mp3",
+      "bytes": 60096,
+      "sha256": "c43f9b2abe250f00b0f4bc8ac9f5efaa5284b5a33de225e615169d6b71355cdb",
+      "durationMs": 7430,
+      "cues": [
+        {
+          "id": "a",
+          "text": "This rocket carries a small probe to fly past the Moon. It will not stop there: a flyby, not an orbit.",
+          "startMs": 0,
+          "endMs": 6830
+        }
+      ]
+    },
+    {
+      "id": "lunar-liftoff",
+      "file": "lunar-liftoff.mp3",
+      "bytes": 13248,
+      "sha256": "297d2b85186f204fbb1a6532e17a4a14e2ede6d12cb541407496774271fef82c",
+      "durationMs": 1580,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Liftoff.",
+          "startMs": 0,
+          "endMs": 980
+        }
+      ]
+    },
+    {
+      "id": "lunar-sep",
+      "file": "lunar-sep.mp3",
+      "bytes": 37440,
+      "sha256": "3b34a7956e7c57dfbb65348ae0981c73570b9beb91cd79dd5f8b173fd098c211",
+      "durationMs": 4600,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Stage separation. The booster is expended on this mission.",
+          "startMs": 0,
+          "endMs": 4000
+        }
+      ]
+    },
+    {
+      "id": "lunar-parking",
+      "file": "lunar-parking.mp3",
+      "bytes": 51840,
+      "sha256": "3d6fd75cdedfa0f59df5c1ea573ccc8a7e3ecbb3a6febd3d4a2a0973093aa930",
+      "durationMs": 6390,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The upper stage reaches a parking orbit and coasts, waiting for the right moment to leave.",
+          "startMs": 0,
+          "endMs": 5790
+        }
+      ]
+    },
+    {
+      "id": "lunar-settle",
+      "file": "lunar-settle.mp3",
+      "bytes": 46080,
+      "sha256": "ad2800c25271b63ba9ab5c97c790a5014a02776a0a4723fe322f5d817c27b9c8",
+      "durationMs": 5670,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Settling thrusters push the propellant to the back of the tanks before the restart.",
+          "startMs": 0,
+          "endMs": 5070
+        }
+      ]
+    },
+    {
+      "id": "lunar-tli",
+      "file": "lunar-tli.mp3",
+      "bytes": 67968,
+      "sha256": "ff4e8b9f40d3ec80eeafe06507803d651e45523e9d720d3a27120f854f7ad414",
+      "durationMs": 8410,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Trans-lunar injection. The engine burns for several minutes, raising the speed to nearly eleven kilometers per second.",
+          "startMs": 0,
+          "endMs": 7810
+        }
+      ]
+    },
+    {
+      "id": "lunar-cutoff",
+      "file": "lunar-cutoff.mp3",
+      "bytes": 50688,
+      "sha256": "2fa6fa7754bc311fded13a7cd4d411a069e1f1cd5e25a0a0d0a723dcbb84c0e8",
+      "durationMs": 6260,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Cutoff. The probe is now on a long, stretched path that reaches out to the Moon's distance.",
+          "startMs": 0,
+          "endMs": 5660
+        }
+      ]
+    },
+    {
+      "id": "lunar-sep2",
+      "file": "lunar-sep2.mp3",
+      "bytes": 55296,
+      "sha256": "60f125035fe7c53046a52709c075efbdfd4b3ce68d1ba920df4eefbe36d45df3",
+      "durationMs": 6820,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The probe separates. From here it coasts: no engine is running, yet it is moving the whole time.",
+          "startMs": 0,
+          "endMs": 6220
+        }
+      ]
+    },
+    {
+      "id": "lunar-cruise",
+      "file": "lunar-cruise.mp3",
+      "bytes": 57024,
+      "sha256": "863a68bdb6c7a5eab8bcd94c84d11384d6079c402a99aa16645c26907c9a956a",
+      "durationMs": 7040,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Three days of coasting, shown greatly sped up. Earth's gravity slows the probe as it climbs away.",
+          "startMs": 0,
+          "endMs": 6440
+        }
+      ]
+    },
+    {
+      "id": "lunar-soi",
+      "file": "lunar-soi.mp3",
+      "bytes": 64704,
+      "sha256": "19c7bebcb9d6c3367e07f1d721face9dc2f2203c8d016d01ee1104a20160f3c9",
+      "durationMs": 8010,
+      "cues": [
+        {
+          "id": "a",
+          "text": "The probe crosses into the region where the Moon's gravity dominates. Seen from the Moon, it is now falling toward it.",
+          "startMs": 0,
+          "endMs": 7410
+        }
+      ]
+    },
+    {
+      "id": "lunar-flyby",
+      "file": "lunar-flyby.mp3",
+      "bytes": 52032,
+      "sha256": "f87fadd48332e2b29e3fddfba24cb60842020c8051089ff688b71c1077bca0e0",
+      "durationMs": 6430,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Closest approach, over the far side. The Moon bends the probe's path and swings it onward.",
+          "startMs": 0,
+          "endMs": 5830
+        }
+      ]
+    },
+    {
+      "id": "lunar-outbound",
+      "file": "lunar-outbound.mp3",
+      "bytes": 102528,
+      "sha256": "cafab2f215608e1df9ad535276f36dc65fe0f9432aea47642e4b309513de2c90",
+      "durationMs": 12730,
+      "cues": [
+        {
+          "id": "a",
+          "text": "Leaving the Moon's sphere of influence on an outbound trajectory. A flyby changes direction and speed without an engine burn, but to stay in lunar orbit the probe would have had to brake.",
+          "startMs": 0,
+          "endMs": 12130
+        }
+      ]
+    }
+  ],
+  "licenses": [
+    {
+      "component": "Kokoro-82M v1.0 model weights and voice styles (generated this audio)",
+      "author": "hexgrad",
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/hexgrad/Kokoro-82M (ONNX export bundled in the npm package expo-kokoro@1.1.9)",
+      "text": "tools/narration/LICENSES/Kokoro-82M-Apache-2.0.txt"
+    },
+    {
+      "component": "expo-kokoro 1.1.9 (npm package that ships the ONNX export)",
+      "author": "Dane Madsen",
+      "license": "MIT",
+      "text": "tools/narration/LICENSES/expo-kokoro-MIT.txt"
+    },
+    {
+      "component": "misaki 0.9.4 (English G2P rules and British lexicon; build time only)",
+      "author": "hexgrad",
+      "license": "Apache-2.0",
+      "text": "tools/narration/LICENSES/misaki-Apache-2.0.txt"
+    },
+    {
+      "component": "espeak-ng 1.52.0 via espeakng-loader and phonemizer-fork (fallback G2P; build time only, not distributed)",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "component": "FFmpeg with LAME (MP3 encoding; build time only, not distributed)",
+      "license": "GPL (static build from imageio-ffmpeg); LAME is LGPL-2.0"
+    }
+  ]
+}

@@ -13,6 +13,7 @@
  */
 import * as THREE from 'three';
 import { ATMOSPHERE_GLSL, NOISE_GLSL, CLOUD_GLSL, CLOUD_BASE, CLOUD_TOP } from './glsl';
+import { SKYVIEW_GLSL } from './skyView';
 import { atmosphereTextures, ATMO } from './atmosphere';
 
 const VERT = /* glsl */ `
@@ -31,6 +32,7 @@ const FRAG = /* glsl */ `
 ${ATMOSPHERE_GLSL}
 ${NOISE_GLSL}
 ${CLOUD_GLSL}
+${SKYVIEW_GLSL}
 
 #if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
 uniform float logDepthBufFC;
@@ -56,6 +58,7 @@ uniform float uStarGain;
 uniform float uStarVis;     // 0..1 overall star visibility (exposure adaptation)
 uniform float uAirglow;
 uniform float uCloudsOn;
+uniform vec3 uSunViewT;     // transmittance from the camera toward the Sun
 uniform sampler2D uDay;
 uniform sampler2D uNight;
 uniform sampler2D uWater;
@@ -169,24 +172,20 @@ void main() {
   if (hitM) hitG = false;
 
   bool inside = uCamR < A_RT;
-  float tStart = max(0.0, iA.x);
-  float tEnd = hitG ? tG : (hitM ? max(iM.x, 0.0) : iA.y);
-  vec3 T = vec3(1.0);
-  vec3 L = vec3(0.0);
-  if (iA.y > 0.0 && tEnd > tStart) {
-    int warp = inside ? (hitG ? 0 : 1) : (hitG ? 2 : 0);
-    L = integrateScattering(uCamPos, d, uSun, tStart, tEnd, uSteps, 0.5, warp, T) * SUN_E;
-  }
-
-  vec3 col = L;
+  vec3 col;
   float alpha = 1.0;
   float depth = 1.0;
   if (hitG) {
+    // ground: aerial perspective marched per pixel
+    vec3 T = vec3(1.0);
+    vec3 L = vec3(0.0);
+    float tStart = max(0.0, iA.x);
+    if (iA.y > 0.0 && tG > tStart) L = integrateScattering(uCamPos, d, uSun, tStart, tG, uSteps, 0.5, inside ? 0 : 2, T) * SUN_E;
     vec3 p = d * tG;
     vec3 n = normalize(uCamPos + p);
     float padDist;
     vec3 surf = earthSurface(p, n, d, padDist);
-    col += T * surf;
+    col = L + T * surf;
     float w = tG * (-dvn.z);
     if (padDist < uHole.x) {
       depth = 1.0;
@@ -201,41 +200,43 @@ void main() {
       depth = clamp(0.5 * clip.z / clip.w + 0.5, 0.0, 1.0);
 #endif
     }
-  } else if (hitM) {
-    alpha = 1.0 - dot(T, vec3(0.3333));
-    float w = max(iM.x, 0.0) * (-dvn.z);
-#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
-    depth = log2(1.0 + w) * logDepthBufFC * 0.5;
-#else
-    depth = 1.0;
-#endif
   } else {
-    // space behind the air: stars and the Sun
-    float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    // sky: the precomputed sky-view table (the whole path through the air)
+    vec4 sv = texture2D(uSkyView, skyViewUV(d));
+    col = sv.rgb;
+    float Tavg = sv.a;
+    if (hitM) {
+      alpha = 1.0 - Tavg;
+      float w = max(iM.x, 0.0) * (-dvn.z);
+#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
+      depth = log2(1.0 + w) * logDepthBufFC * 0.5;
+#endif
+    } else {
+      float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
 #ifndef ENV_MODE
-    vec3 st = starsAt(d) * uStarVis * exp(-lum * 60.0);
-    col += T * st;
+      col += Tavg * starsAt(d) * uStarVis * exp(-lum * 60.0);
 #endif
-    float sinA = length(cross(d, uSun));
-    float cosA = dot(d, uSun);
-    if (cosA > 0.0) {
+      float sinA = length(cross(d, uSun));
+      float cosA = dot(d, uSun);
+      if (cosA > 0.0) {
 #ifdef ENV_MODE
-      // a soft sun spot for reflections (the directional light carries the sharp highlight)
-      col += T * SUN_E * 0.25 * exp(-sinA / 0.02) / (2.0 * PI * 0.0004);
+        // a soft sun spot for reflections (the directional light carries the sharp highlight)
+        col += uSunViewT * SUN_E * 0.25 * exp(-sinA / 0.02) / (2.0 * PI * 0.0004);
 #else
-      float edge = max(uPixel * 0.75, 1e-5);
-      float disk = smoothstep(A_SUN_R + edge, A_SUN_R - edge, sinA);
-      float rr = clamp(sinA / A_SUN_R, 0.0, 1.0);
-      float limb = 1.0 - 0.6 * (1.0 - sqrt(1.0 - rr * rr));
-      vec3 sunRad = vec3(SUN_E / (PI * A_SUN_R * A_SUN_R)) * limb;
-      col += T * min(sunRad * disk, vec3(90.0));
-      // restrained glare of the optics around the disk
-      float g = 0.0018 * exp(-sinA / 0.006) + 0.00035 * exp(-sinA / 0.05);
-      col += T * SUN_E * g * 4.0;
+        float edge = max(uPixel * 0.75, 1e-5);
+        float disk = smoothstep(A_SUN_R + edge, A_SUN_R - edge, sinA);
+        float rr = clamp(sinA / A_SUN_R, 0.0, 1.0);
+        float limb = 1.0 - 0.6 * (1.0 - sqrt(1.0 - rr * rr));
+        vec3 sunRad = SUN_E / (PI * A_SUN_R * A_SUN_R) * limb;
+        col += min(uSunViewT * sunRad * disk, vec3(90.0));
+        // restrained glare of the optics around the disk
+        float g = 0.0018 * exp(-sinA / 0.006) + 0.00035 * exp(-sinA / 0.05);
+        col += uSunViewT * SUN_E * g * 4.0;
 #endif
+      }
     }
   }
-  // night-side airglow: a thin shell at 85-100 km, seen edge-on at the limb
+  // night-side airglow: a thin shell at 86-100 km, seen edge-on at the limb
   if (uAirglow > 0.0 && !hitM) {
     float r1 = A_RB + 100000.0, r0 = A_RB + 86000.0;
     vec2 a1 = raySphere(b, uC.y + (A_RT - r1) * (A_RT + r1));
@@ -247,7 +248,6 @@ void main() {
       len = max(0.0, s1 - s0);
       if (a0.y > 0.0) len -= max(0.0, min(a0.y, lim) - max(a0.x, 0.0));
     }
-    // only on the night side of the limb
     vec3 pm = uCamPos + d * max(0.0, (a1.x + a1.y) * 0.5);
     float night = 1.0 - smoothstep(-0.25, 0.05, dot(normalize(pm), uSun));
     col += vec3(0.35, 1.0, 0.45) * 2.2e-9 * max(len, 0.0) * night * uAirglow;
@@ -299,6 +299,14 @@ export function makeSkyUniforms(): SkyUniforms {
     uNoise: { value: null },
     uPadEF: { value: new THREE.Vector3(0, 1, 0) },
     uCloudTime: { value: 0 },
+    uSunE: { value: new THREE.Vector3(4.4, 4.4, 4.4) },
+    uSunViewT: { value: new THREE.Vector3(1, 1, 1) },
+    uSkyView: { value: null },
+    uUp: { value: new THREE.Vector3(0, 1, 0) },
+    uSunH: { value: new THREE.Vector3(1, 0, 0) },
+    uSideH: { value: new THREE.Vector3(0, 0, 1) },
+    uZh: { value: Math.PI / 2 },
+    uSkyViewSize: { value: new THREE.Vector2(192, 108) },
   };
 }
 

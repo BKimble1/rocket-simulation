@@ -397,11 +397,23 @@ export function skyIrradianceGround(muS: number, out: THREE.Vector3): THREE.Vect
 
 // ───────────────────────────── build + GPU textures ─────────────────────────────
 
+/**
+ * Camera white balance: the documentary camera is balanced part of the way toward sunlight at
+ * the ground (Sun 45 deg up), so sunlit white paint reads nearly white on the pad and slightly
+ * cool in space, instead of the strong yellow of an unbalanced linear render.
+ */
+export const SUN_WB = new THREE.Vector3(1, 1, 1);
+/** Sun irradiance at the top of the atmosphere per channel, white balance applied. */
+export const SUN_RGB = new THREE.Vector3(SUN_IRRADIANCE, SUN_IRRADIANCE, SUN_IRRADIANCE);
+
 let built = false;
 export function buildTables() {
   if (built) return;
   built = true;
   buildTransmittance();
+  const t = transmittanceSun(Rb + 2, Math.SQRT1_2, new THREE.Vector3());
+  SUN_WB.set(Math.pow(t.y / t.x, 0.6), 1, Math.pow(t.y / t.z, 0.6));
+  SUN_RGB.copy(SUN_WB).multiplyScalar(SUN_IRRADIANCE);
   buildMultipleScattering();
   buildIrradiance();
 }

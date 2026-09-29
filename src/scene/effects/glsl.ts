@@ -27,9 +27,11 @@ float fxFbm(vec3 p) {
   a += 0.125 * fxNoise(p * 4.07 + vec3(31.7, 11.9, 5.1));
   return a / 0.875;
 }
-/** Interleaved gradient noise (per-pixel jitter for ray marching). */
+/** Per-pixel jitter for ray marching (white noise: grain instead of streaks). */
 float fxIGN(vec2 px) {
-  return fract(52.9829189 * fract(dot(px, vec2(0.06711056, 0.00583715))));
+  vec3 p3 = fract(vec3(px.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
 }
 float fxErf(float x) {
   float s = sign(x);

@@ -87,119 +87,69 @@ interface Crumple {
 }
 
 /**
- * Crumpled foil: several octaves of Voronoi facets, each tilted at random, with sharp creases
- * along the facet boundaries (how a many-layer aluminised polyimide blanket catches light).
+ * Crumpled foil: a height field of fine wrinkles (elongated creases a few centimetres long,
+ * mostly along two preferred directions, as blankets wrinkle between their stitch lines) over
+ * a gentle billow, turned into normals. Between creases the film stays nearly flat, so it
+ * reflects coherently and flashes at the folds, the way aluminised polyimide does.
+ * One repeat covers MLI_REPEAT (0.6 m).
  */
 export function crumple(): Crumple {
   const key = 'crumple';
   if (cache.has(key + 'n')) return { normal: cache.get(key + 'n')!, lum: cache.get(key + 'l')!, rough: cache.get(key + 'r')! };
   const S = texEdge(512);
-  const nx = new Float32Array(S * S);
-  const ny = new Float32Array(S * S);
-  const lum = new Float32Array(S * S).fill(1);
-  const rough = new Float32Array(S * S).fill(0.3);
+  const h = new Float32Array(S * S);
+  const crease = new Float32Array(S * S);
   const r = rng(41);
-  const octaves = [
-    { g: 6, tilt: 0.42, crease: 0.55, w: 1 },
-    { g: 15, tilt: 0.3, crease: 0.45, w: 0.75 },
-    { g: 38, tilt: 0.18, crease: 0.3, w: 0.5 },
-  ];
-  for (const o of octaves) {
-    const g = o.g;
-    const n = g * g;
-    const px = new Float32Array(n);
-    const py = new Float32Array(n);
-    const tx = new Float32Array(n);
-    const ty = new Float32Array(n);
-    const br = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      px[i] = (i % g) + 0.1 + r() * 0.8;
-      py[i] = Math.floor(i / g) + 0.1 + r() * 0.8;
-      // elongated wrinkles: bias tilt along one direction per cell
-      const a = r() * Math.PI * 2;
-      const m = o.tilt * (0.3 + r() * 0.7);
-      tx[i] = Math.cos(a) * m;
-      ty[i] = Math.sin(a) * m;
-      br[i] = r();
+  // gentle billow: a few low-frequency waves (periodic over the tile)
+  const waves = Array.from({ length: 6 }, () => ({ kx: 1 + Math.floor(r() * 3), ky: 1 + Math.floor(r() * 3), p: r() * 6.28, a: 0.5 + r() * 0.5 }));
+  for (let y = 0; y < S; y++)
+    for (let x = 0; x < S; x++) {
+      let v = 0;
+      for (const w of waves) v += w.a * Math.sin(((x * w.kx + y * w.ky) / S) * Math.PI * 2 + w.p);
+      h[y * S + x] = v * 0.9;
     }
-    for (let y = 0; y < S; y++) {
-      const fy = (y / S) * g;
-      const cy = Math.floor(fy);
-      for (let x = 0; x < S; x++) {
-        const fx = (x / S) * g;
-        const cx = Math.floor(fx);
-        let d1 = 1e9;
-        let d2 = 1e9;
-        let i1 = 0;
-        let i2 = 0;
-        let ox1 = 0;
-        let oy1 = 0;
-        let ox2 = 0;
-        let oy2 = 0;
-        for (let j = -1; j <= 1; j++)
-          for (let k = -1; k <= 1; k++) {
-            const gx = cx + k;
-            const gy = cy + j;
-            const wx = ((gx % g) + g) % g;
-            const wy = ((gy % g) + g) % g;
-            const idx = wy * g + wx;
-            const qx = px[idx] + (gx - wx);
-            const qy = py[idx] + (gy - wy);
-            const dx = qx - fx;
-            const dy = qy - fy;
-            const d = dx * dx + dy * dy;
-            if (d < d1) {
-              d2 = d1;
-              i2 = i1;
-              ox2 = ox1;
-              oy2 = oy1;
-              d1 = d;
-              i1 = idx;
-              ox1 = qx;
-              oy1 = qy;
-            } else if (d < d2) {
-              d2 = d;
-              i2 = idx;
-              ox2 = qx;
-              oy2 = qy;
-            }
-          }
-        const e = Math.sqrt(d2) - Math.sqrt(d1);
-        const crease = Math.max(0, 1 - e / 0.09);
-        let bx = ox2 - ox1;
-        let by = oy2 - oy1;
-        const bl = Math.hypot(bx, by) || 1;
-        bx /= bl;
-        by /= bl;
-        const sign = ((i1 * 7 + i2 * 13) % 3) - 1; // ridge, valley or flat fold
-        const p = y * S + x;
-        nx[p] += o.w * (tx[i1] + crease * crease * sign * bx * o.crease);
-        ny[p] += o.w * (ty[i1] + crease * crease * sign * by * o.crease);
-        lum[p] *= 1 - o.w * (0.07 * (br[i1] - 0.5) + 0.1 * crease * crease);
-        rough[p] += o.w * (0.08 * br[i1] + 0.05 * crease);
+  // wrinkles: ridges/valleys with a sharp crest, length 2-9 cm, two preferred orientations
+  const n = 2600;
+  const px = S / 0.6; // pixels per metre
+  for (let k = 0; k < n; k++) {
+    const cx = r() * S;
+    const cy = r() * S;
+    const pref = r() < 0.5 ? 0.35 : 1.9;
+    const ang = pref + (r() - 0.5) * 1.1;
+    const len = (0.02 + r() * r() * 0.08) * px;
+    const wid = (0.002 + r() * 0.005) * px;
+    const amp = (r() < 0.5 ? -1 : 1) * (0.6 + r() * 1.4);
+    const ca = Math.cos(ang);
+    const sa = Math.sin(ang);
+    const ext = len / 2 + wid * 3;
+    for (let yy = -ext; yy <= ext; yy++)
+      for (let xx = -ext; xx <= ext; xx++) {
+        const u = xx * ca + yy * sa; // along
+        const w = -xx * sa + yy * ca; // across
+        if (Math.abs(u) > len / 2 || Math.abs(w) > wid * 3) continue;
+        const taper = 1 - Math.pow((2 * u) / len, 2);
+        const prof = Math.max(0, 1 - Math.abs(w) / (wid * 3)); // sharp crest
+        const x = (((Math.round(cx + xx) % S) + S) % S) | 0;
+        const y = (((Math.round(cy + yy) % S) + S) % S) | 0;
+        const i = y * S + x;
+        h[i] += amp * taper * prof * prof;
+        crease[i] = Math.max(crease[i], taper * Math.pow(prof, 4));
       }
-    }
   }
   const [cn, gn] = mkCanvas(S, S);
+  gn.putImageData(heightToNormal(gn, h, S, S, 0.55), 0, 0);
   const [cl, gl] = mkCanvas(S, S);
   const [cr, gr] = mkCanvas(S, S);
-  const dn = gn.createImageData(S, S);
   const dl = gl.createImageData(S, S);
   const dr = gr.createImageData(S, S);
   for (let p = 0; p < S * S; p++) {
-    const l = Math.hypot(nx[p], ny[p], 1);
-    dn.data[p * 4] = 128 + (nx[p] / l) * 127;
-    dn.data[p * 4 + 1] = 128 + (ny[p] / l) * 127;
-    dn.data[p * 4 + 2] = 128 + (1 / l) * 127;
-    dn.data[p * 4 + 3] = 255;
-    const v = Math.max(0, Math.min(255, lum[p] * 235));
-    dl.data[p * 4] = dl.data[p * 4 + 1] = dl.data[p * 4 + 2] = v;
+    const l = 238 - crease[p] * 26 + (h[p] > 0 ? 4 : -4);
+    dl.data[p * 4] = dl.data[p * 4 + 1] = dl.data[p * 4 + 2] = l;
     dl.data[p * 4 + 3] = 255;
-    const rv = Math.max(0, Math.min(255, rough[p] * 255));
+    const rv = 185 + crease[p] * 50;
     dr.data[p * 4] = dr.data[p * 4 + 1] = dr.data[p * 4 + 2] = rv;
     dr.data[p * 4 + 3] = 255;
   }
-  gn.putImageData(dn, 0, 0);
   gl.putImageData(dl, 0, 0);
   gr.putImageData(dr, 0, 0);
   const normal = cached(key + 'n', () => tex(cn, false));
@@ -403,7 +353,7 @@ export function quiltTex(): { map: THREE.Texture; normal: THREE.Texture } {
   return { map: cached(key + 'm', () => tex(cm, true)), normal: cached(key + 'n', () => tex(cn, false)) };
 }
 
-export type HatchKind = 'metal' | 'composite' | 'honeycomb' | 'ablatorCells' | 'insulation' | 'fabric';
+export type HatchKind = 'metal' | 'composite' | 'honeycomb' | 'ablatorCells' | 'insulation' | 'fabric' | 'ceramic';
 
 /**
  * Section (cut-face) patterns in the language of engineering drawings: 45 degree hatching for
@@ -423,6 +373,7 @@ export function hatchTex(kind: HatchKind): THREE.Texture {
       ablatorCells: '#6b5240',
       insulation: '#eadfb8',
       fabric: '#e6e1d4',
+      ceramic: '#efeeea',
     };
     g.fillStyle = bg[kind];
     g.fillRect(0, 0, S, S);
@@ -471,6 +422,14 @@ export function hatchTex(kind: HatchKind): THREE.Texture {
         for (let x = 0; x <= S; x += 8) g.lineTo(x, y + Math.sin(x * 0.08 + y) * 3);
         g.stroke();
       }
+    } else if (kind === 'ceramic') {
+      // porous silica tile: stipple, with a dense glassy coating line on one edge of each repeat
+      for (let k = 0; k < 3000; k++) {
+        g.fillStyle = `rgba(120,120,125,${0.15 + r() * 0.3})`;
+        g.fillRect(r() * S, r() * S, 1.5, 1.5);
+      }
+      g.fillStyle = 'rgba(40,40,44,0.8)';
+      g.fillRect(0, 0, S, 6);
     } else {
       g.strokeStyle = 'rgba(150,140,120,0.5)';
       g.lineWidth = 1;
@@ -534,8 +493,10 @@ export function backshellTiles(spec: ConeSpec, small: boolean): { map: THREE.Tex
       const x0 = ((j + off) / n) * W;
       const x1 = ((j + 1 + off) / n) * W;
       const sMid = (s0 + s1) / 2;
-      const edge = spec.blackTo + (r() - 0.5) * 0.3;
-      const black = sMid < edge;
+      // crisp stepped boundary: every other tile of the boundary row stays black
+      const edgeRow = Math.round(spec.blackTo / (spec.L / rows));
+      const black = k < edgeRow || (k === edgeRow && j % 2 === 0);
+      void sMid;
       const v = black ? 26 + r() * 9 : 222 + r() * 16;
       const col = black ? `rgb(${v},${v},${v + 1})` : `rgb(${v},${v - 2},${v - 7})`;
       const rv = black ? 205 + r() * 30 : 215 + r() * 30;
@@ -812,20 +773,15 @@ export function panelBackTex(): THREE.Texture {
     const S = 256;
     const [c, g] = mkCanvas(S, S);
     const r = rng(3);
-    g.fillStyle = '#26282c';
+    g.fillStyle = '#1f2124';
     g.fillRect(0, 0, S, S);
     for (let k = 0; k < 300; k++) {
-      g.fillStyle = `rgba(255,255,255,${r() * 0.03})`;
+      g.fillStyle = `rgba(255,255,255,${r() * 0.025})`;
       g.fillRect(r() * S, r() * S, 1 + r() * 20, 1 + r() * 20);
     }
-    g.strokeStyle = 'rgba(210,190,140,0.35)';
-    g.lineWidth = 2;
-    for (let k = 0; k < 4; k++) {
-      g.beginPath();
-      g.moveTo(0, (k + 0.5) * (S / 4));
-      g.lineTo(S, (k + 0.5) * (S / 4));
-      g.stroke();
-    }
+    // one bonded harness run per repeat (thin amber polyimide tape)
+    g.fillStyle = 'rgba(170,120,50,0.22)';
+    g.fillRect(0, S * 0.62, S, 3);
     return tex(c, true);
   });
 }

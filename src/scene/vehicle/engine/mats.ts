@@ -117,10 +117,9 @@ function tubeNormal(): THREE.Texture {
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       const t = ((x % per) + 0.5) / per; // 0..1 across one tube
-      const s = t * 2 - 1; // -1..1
-      // round crown with a narrow braze fillet groove between tubes
-      let nx = s * 0.85;
-      if (Math.abs(s) > 0.88) nx = s > 0 ? 0.95 : -0.95;
+      // round crown: slope of a circular arc, softened near the braze line between tubes
+      const s = t * 2 - 1;
+      const nx = Math.sin(s * Math.PI * 0.42) * 0.8;
       const nz = Math.sqrt(Math.max(0.05, 1 - nx * nx));
       const i = (y * W + x) * 4;
       img.data[i] = Math.round((nx * 0.5 + 0.5) * 255);
@@ -158,13 +157,14 @@ function tubeColor(): THREE.Texture {
   // faint per-tube variation (streaks along V)
   const r = rng(9);
   for (let x = 0; x < W; x++) {
-    g.fillStyle = `rgba(${r() < 0.5 ? '255,240,220' : '40,30,25'},${0.03 + r() * 0.05})`;
+    g.fillStyle = `rgba(${r() < 0.5 ? '255,240,220' : '40,30,25'},${0.015 + r() * 0.025})`;
     g.fillRect(x, 0, 1, H);
   }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.ClampToEdgeWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
+  t.flipY = false; // canvas row 0 = v 0 = top of the bell
   tubeColorTex = t;
   return t;
 }
@@ -316,10 +316,12 @@ function faceplate(): { map: THREE.Texture; normal: THREE.Texture } {
   map.wrapT = THREE.ClampToEdgeWrapping;
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 8;
+  map.flipY = false; // canvas row 0 = v 0 = centre of the face
   const normal = new THREE.CanvasTexture(cn);
   normal.wrapS = THREE.RepeatWrapping;
   normal.wrapT = THREE.ClampToEdgeWrapping;
   normal.colorSpace = THREE.NoColorSpace;
+  normal.flipY = false;
   faceTex = { map, normal };
   return faceTex;
 }
@@ -376,7 +378,7 @@ export function baseMaterial(k: EMat): THREE.Material {
     case 'machined':
       return once(k, () => std({ color: '#b3ab9f', roughness: 0.24, metalness: 1, normalMap: brushedNormal(), normalScale: new THREE.Vector2(0.15, 0.15) }));
     case 'tubes':
-      return once(k, () => std({ color: '#ffffff', map: tubeColor(), roughness: 0.42, metalness: 1, normalMap: tubeNormal(), normalScale: new THREE.Vector2(0.9, 0.9), roughnessMap: roughnessNoise(37, 0.25) }));
+      return once(k, () => std({ color: '#ffffff', map: tubeColor(), roughness: 0.42, metalness: 1, normalMap: tubeNormal(), normalScale: new THREE.Vector2(0.7, 0.7), roughnessMap: roughnessNoise(37, 0.25) }));
     case 'stainless':
       return M('stainless');
     case 'steel':

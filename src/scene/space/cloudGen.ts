@@ -69,8 +69,9 @@ void main() {
   float w4 = worleyFbm(p, 4.0);
   // Perlin-Worley: billowy cells with Perlin's continuity
   float pw = clamp((pf - (1.0 - w4) * 0.55) / 0.72 + 0.12, 0.0, 1.0);
-  float hi = uSize >= 100.0 ? 1.0 : 0.5;
-  gl_FragColor = vec4(pw, worleyFbm(p, 4.0), worleyFbm(p, 8.0), worleyFbm(p, 16.0 * hi));
+  // stretch each channel to use 0..1 (measured 5th-95th percentiles of the raw noise)
+  vec4 raw = vec4(pw, worleyFbm(p, 4.0), worleyFbm(p, 8.0), worleyFbm(p, 16.0));
+  gl_FragColor = clamp((raw - vec4(0.22, 0.28, 0.26, 0.27)) / vec4(0.42, 0.43, 0.44, 0.42), 0.0, 1.0);
 }
 `;
 

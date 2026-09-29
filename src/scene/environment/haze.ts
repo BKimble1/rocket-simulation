@@ -1,0 +1,114 @@
+/**
+ * Aerial perspective for everything the site draws, consistent with the sky module's
+ * atmosphere (src/scene/space/atmosphere.ts): per-channel extinction by the same Rayleigh and
+ * Mie layers (sea-level coefficients and scale heights from ATMO), integrated analytically
+ * along each straight view ray from the camera to the fragment (the camera sits at the render
+ * origin, so a fragment's world position is its offset from the eye), and the in-scattered
+ * radiance skyState.hazeColor (the sky module's L / (1 - T) along its reference ray at the
+ * camera: horizontal near the ground, a slant path down when high). A distant hill therefore
+ * turns bluer and paler from the pad, and the ground seen straight down from 35 km keeps its
+ * colour, the way the globe around it is drawn.
+ */
+import * as THREE from 'three';
+import { skyState } from '../space/skyState';
+import { ATMO } from '../space/atmosphere';
+import { frame } from '../frame';
+import { SUN_DIRECTION } from '../../world/frames';
+
+export const hazeUniforms = {
+  uHazeColor: { value: new THREE.Color('#b8c6d6') },
+  uHazeSun: { value: new THREE.Color('#fff1dc') },
+  uSunW: { value: SUN_DIRECTION.clone() },
+  uCamUpW: { value: new THREE.Vector3(0, 1, 0) },
+  uCamAlt: { value: 0 },
+  /** Sea-level extinction (1/m): Rayleigh per channel, Mie. */
+  uRayleigh: { value: new THREE.Vector3(...ATMO.rayleigh) },
+  uMieExt: { value: ATMO.mieExt },
+  /** Scale heights (m): Rayleigh, Mie. */
+  uHazeH: { value: new THREE.Vector2(ATMO.rayleighH, ATMO.mieH) },
+};
+
+/** Called once per frame by the site (before its objects are drawn). */
+export function updateHaze() {
+  const u = hazeUniforms;
+  u.uCamAlt.value = frame.camAlt;
+  u.uCamUpW.value.copy(frame.camUp);
+  u.uSunW.value.copy(skyState.sunDir);
+  u.uHazeColor.value.copy(skyState.hazeColor);
+  // forward (Mie) scattering toward the Sun on top of the reference-ray colour
+  u.uHazeSun.value.copy(skyState.sunColor).multiplyScalar(0.06 * skyState.sunIntensity);
+}
+
+/** GLSL: declarations shared by vertex/fragment patches. */
+export const HAZE_PARS_VERTEX = /* glsl */ `
+varying vec3 vHazePos;
+`;
+
+export const HAZE_VERTEX = /* glsl */ `
+{
+  vec4 hazeWP = vec4( transformed, 1.0 );
+  #ifdef USE_INSTANCING
+    hazeWP = instanceMatrix * hazeWP;
+  #endif
+  vHazePos = ( modelMatrix * hazeWP ).xyz;
+}
+`;
+
+export const HAZE_PARS_FRAGMENT = /* glsl */ `
+varying vec3 vHazePos;
+uniform vec3 uHazeColor;
+uniform vec3 uHazeSun;
+uniform vec3 uSunW;
+uniform vec3 uCamUpW;
+uniform float uCamAlt;
+uniform vec3 uRayleigh;
+uniform float uMieExt;
+uniform vec2 uHazeH;
+// mean relative density of an exponential layer (scale height H) along a straight path h0 -> h1
+float hazeAvg( float H, float h0, float h1 ) {
+  float dh = h1 - h0;
+  float e0 = exp( -h0 / H );
+  float e1 = exp( -h1 / H );
+  return abs( dh ) > 0.5 ? ( e0 - e1 ) * H / dh : e0;
+}
+vec3 siteHaze( vec3 col, vec3 wp ) {
+  float L = length( wp );
+  vec3 v = wp / max( L, 1e-3 );
+  float h0 = max( uCamAlt, 0.0 );
+  float h1 = max( h0 + dot( wp, uCamUpW ), 0.0 );
+  vec3 tau = L * ( uRayleigh * hazeAvg( uHazeH.x, h0, h1 ) + uMieExt * hazeAvg( uHazeH.y, h0, h1 ) );
+  vec3 T = exp( -tau );
+  float mu = max( dot( v, uSunW ), 0.0 );
+  vec3 hc = uHazeColor + uHazeSun * ( pow( mu, 12.0 ) * 2.0 + pow( mu, 3.0 ) * 0.3 );
+  return col * T + hc * ( 1.0 - T );
+}
+`;
+
+export const HAZE_FRAGMENT = /* glsl */ `
+gl_FragColor.rgb = siteHaze( gl_FragColor.rgb, vHazePos );
+`;
+
+type Shader = THREE.WebGLProgramParametersWithUniforms;
+
+/** Inject the haze into a built-in material's shader (vertex world position + final mix). */
+export function injectHaze(shader: Shader) {
+  Object.assign(shader.uniforms, hazeUniforms);
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', `#include <common>\n${HAZE_PARS_VERTEX}`)
+    .replace('#include <project_vertex>', `#include <project_vertex>\n${HAZE_VERTEX}`);
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', `#include <common>\n${HAZE_PARS_FRAGMENT}`)
+    .replace('#include <opaque_fragment>', `#include <opaque_fragment>\n${HAZE_FRAGMENT}`);
+}
+
+/** Give a material the site haze (keeps any previous onBeforeCompile). */
+export function withHaze<T extends THREE.Material>(m: T, key = 'site-haze'): T {
+  const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (shader, renderer) => {
+    prev?.call(m, shader, renderer);
+    injectHaze(shader);
+  };
+  const prevKey = m.customProgramCacheKey?.bind(m);
+  m.customProgramCacheKey = () => `${prevKey ? prevKey() : ''}|${key}`;
+  return m;
+}

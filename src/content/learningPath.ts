@@ -1,2 +1,166 @@
+/**
+ * The suggested learning path: eight steps from anatomy to mission comparisons. Each step names
+ * what to open (parts, demos, mission phases, materials); every item exists (checked by
+ * src/content/content.test.ts). Knowledge checks for a step share its `topic`.
+ */
 import type { LearningStep } from './types';
-export const LEARNING_PATH: LearningStep[] = [];
+
+export const LEARNING_PATH: LearningStep[] = [
+  {
+    topic: 'anatomy',
+    title: 'Anatomy: what is in the stack',
+    blurb:
+      'Start from the outside and work inward. The booster holds two tanks and seven engines; the interstage links it to the upper stage with its single vacuum engine; the payload adapter and fairing sit on top. Learn what each section is and what it connects to before learning how it works.',
+    items: [
+      { mission: 'leo', phase: 'pad' },
+      { part: 's1-engine-cluster' },
+      { part: 'thrust-structure' },
+      { part: 's1-fuel-tank' },
+      { part: 'lox-downcomer' },
+      { part: 's1-intertank' },
+      { part: 's1-lox-tank' },
+      { part: 'interstage' },
+      { part: 's2-tanks' },
+      { part: 'avionics' },
+      { part: 'payload-adapter' },
+      { part: 'fairing' },
+      { part: 'satellite-bus' },
+    ],
+  },
+  {
+    topic: 'propulsion',
+    title: 'Propulsion: how a liquid engine makes thrust',
+    blurb:
+      'Follow the propellant from the tanks through the turbopump, the cooling channels and the injector into the chamber, then out through the throat and nozzle. Then see why the chamber has to be cooled, why the engine needs pumps at all, and why the upper stage carries a much bigger nozzle.',
+    items: [
+      { demo: 'feed-flow' },
+      { part: 'engine' },
+      { part: 'turbopump' },
+      { demo: 'turbopump' },
+      { part: 'gas-generator' },
+      { part: 'injector' },
+      { demo: 'combustion' },
+      { part: 'combustion-chamber' },
+      { demo: 'regen-cooling' },
+      { part: 'nozzle' },
+      { demo: 'nozzle-pressure' },
+      { part: 'igniter' },
+      { part: 'vacuum-engine' },
+      { part: 'nozzle-extension' },
+      { material: 'grcop' },
+      { material: 'nickel-superalloy' },
+      { material: 'niobium-c103' },
+    ],
+  },
+  {
+    topic: 'structures',
+    title: 'Structures and materials: light, stiff and tough enough',
+    blurb:
+      'Why tank walls are machined into ribs and flown pressurized, why the fairing is a sandwich, which alloys stay tough at 90 K or strong while glowing, and how parts are joined and inspected. Each material is shown where the vehicle uses it, with the reasons and the limits.',
+    items: [
+      { part: 's1-lox-tank' },
+      { demo: 'tank-pressure' },
+      { material: 'al-li' },
+      { material: 'al-2219' },
+      { part: 'common-bulkhead' },
+      { material: 'honeycomb-core' },
+      { part: 'pressurization' },
+      { material: 'cfrp-copv' },
+      { material: 'titanium' },
+      { part: 'fairing' },
+      { demo: 'sandwich-panel' },
+      { material: 'cfrp-sandwich' },
+      { material: 'stainless' },
+      { material: 'cryo-foam' },
+    ],
+  },
+  {
+    topic: 'guidance',
+    title: 'Guidance and separation: steering and letting go',
+    blurb:
+      'How the flight computers know where the vehicle is and which way it points, how gimbaled engines steer it, and how the stages, the fairing halves and the payload separate cleanly without striking each other.',
+    items: [
+      { part: 'avionics' },
+      { demo: 'gnc-loop' },
+      { part: 'tvc-actuators' },
+      { demo: 'tvc' },
+      { part: 'stage-separation' },
+      { demo: 'staging-sequence' },
+      { demo: 'fairing-sep' },
+      { part: 'payload-adapter' },
+    ],
+  },
+  {
+    topic: 'launch',
+    title: 'Launch: from the pad through max-q',
+    blurb:
+      'Countdown and propellant loading, ignition with the vehicle held down, liftoff and tower clearance, the pitch kick and gravity turn, and max-q, when the air pushes hardest. Then booster cutoff and stage separation.',
+    items: [
+      { part: 'launch-mount' },
+      { part: 'service-tower' },
+      { part: 'flame-deflector' },
+      { part: 'sound-suppression' },
+      { mission: 'leo', phase: 'pad' },
+      { mission: 'leo', phase: 'ignition' },
+      { mission: 'leo', phase: 'liftoff' },
+      { mission: 'leo', phase: 'pitchover' },
+      { mission: 'leo', phase: 'maxq' },
+      { mission: 'leo', phase: 'meco' },
+      { mission: 'leo', phase: 'staging' },
+    ],
+  },
+  {
+    topic: 'orbit',
+    title: 'Orbit and payload: going sideways fast enough',
+    blurb:
+      'Why orbit is a speed rather than a height, how the upper stage finishes the climb, and how a satellite separates, unfolds its arrays and keeps its temperature. Then transfer orbits, and how a capsule catches up with a station.',
+    items: [
+      { mission: 'leo', phase: 'upper-burn' },
+      { mission: 'leo', phase: 'seco' },
+      { mission: 'leo', phase: 'deploy' },
+      { mission: 'leo', phase: 'arrays' },
+      { part: 'satellite-bus' },
+      { part: 'solar-arrays' },
+      { part: 'antenna' },
+      { part: 'attitude-thrusters' },
+      { part: 'mli-blankets' },
+      { material: 'mli' },
+      { demo: 'spacecraft-ops' },
+      { mission: 'gto', phase: 'transfer-coast' },
+      { mission: 'station', phase: 'phasing' },
+      { mission: 'station', phase: 'approach' },
+    ],
+  },
+  {
+    topic: 'return',
+    title: 'Return and reuse: bringing hardware back',
+    blurb:
+      'How the booster flies back and lands on its centre engine, and how a capsule sheds orbital speed behind an ablative heat shield and comes down under reefed parachutes. Reuse is not free: see what has to be inspected and replaced.',
+    items: [
+      { demo: 'booster-recovery' },
+      { mission: 'leo', phase: 'boostback' },
+      { part: 'grid-fins' },
+      { material: 'titanium' },
+      { part: 'cold-gas-rcs' },
+      { part: 'landing-legs' },
+      { mission: 'leo', phase: 'landing-burn' },
+      { demo: 'capsule-return' },
+      { mission: 'return', phase: 'entry' },
+      { part: 'heat-shield' },
+      { demo: 'heat-shield-stack' },
+      { material: 'ablator' },
+      { part: 'backshell-tps' },
+      { material: 'ceramic-tiles' },
+      { part: 'parachutes' },
+      { material: 'textiles' },
+      { mission: 'return', phase: 'mains' },
+    ],
+  },
+  {
+    topic: 'missions',
+    title: 'Mission comparisons: one vehicle, six jobs',
+    blurb:
+      'Compare what changes from mission to mission: a suborbital hop that reaches space but not orbit, a direct climb to low orbit, a transfer toward geostationary altitude, a station rendezvous, a capsule return, and a lunar flyby that is not an orbit insertion.',
+    items: [{ mission: 'suborbital' }, { mission: 'leo' }, { mission: 'gto' }, { mission: 'station' }, { mission: 'return' }, { mission: 'lunar' }],
+  },
+];

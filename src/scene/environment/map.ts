@@ -29,9 +29,13 @@ const smooth = (a: number, b: number, x: number) => {
 };
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-/** Sea level (h) around the site: slightly below the pad datum near the pad, ~ -1.8 m by 7 km. */
+/**
+ * Sea level (h) around the site: 6.5 m below the pad datum near the pad (the hardstand stands
+ * on land ~1.5 m above the sea), -1.8 m from 7 km (the landing-zone slab is at h = 0), and
+ * exactly on the sphere from 41 km, where the terrain overlaps the globe.
+ */
 export function seaLevel(d: number): number {
-  return lerp(-6.5, -1.8, smooth(1500, 7000, d));
+  return lerp(lerp(-6.5, -1.8, smooth(1500, 7000, d)), 0, smooth(30000, 41000, d));
 }
 
 /** Pad-local y of a point at horizontal (x, z) and height h above the sphere (double precision). */

@@ -63,7 +63,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'thrust',
     term: 'Thrust',
     definition:
-      'The force an engine produces, in newtons: gas pressure on the inside of the chamber and nozzle as the exhaust is accelerated out. It does not come from the exhaust pushing on the air, which is why rockets work best in vacuum.',
+      'The force an engine produces, in newtons: gas pressure on the inside of the chamber and nozzle as the exhaust is accelerated out. It does not come from the exhaust pushing on the air: rockets work in vacuum, and work best there, because no outside pressure pushes back on the nozzle exit.',
     see: [{ part: 'engine' }, { demo: 'combustion' }],
   },
   {

@@ -43,7 +43,9 @@ let atlas: THREE.DataTexture | null = null;
 
 /**
  * 2 x 2 atlas of 128 px puffs. RGBA: density, normal x, normal y, unused. Tiles 0-1 are
- * cauliflower billows (steam, smoke), tiles 2-3 soft wisps (vapour, spray, puffs).
+ * cauliflower billows (a smooth union of spherical lobes: steam, smoke), tiles 2-3 soft wisps
+ * (vapour, spray, puffs). The normals are the true slopes of the lobes, so the Sun lights each
+ * lobe like a small sphere (bright tops, shaded undersides).
  */
 export function billowAtlas(): THREE.DataTexture {
   if (atlas) return atlas;
@@ -53,57 +55,112 @@ export function billowAtlas(): THREE.DataTexture {
   for (let tile = 0; tile < 4; tile++) {
     const rand = mulberry(1234 + tile * 977);
     const billowy = tile < 2;
-    const n1 = makeNoise2(rand, 6);
-    const n2 = makeNoise2(rand, 13);
-    const n3 = makeNoise2(rand, 29);
-    // bumps: spheres packed inside the unit disk, larger toward the centre
+    const n1 = makeNoise2(rand, 5);
+    const n2 = makeNoise2(rand, 11);
     const bumps: [number, number, number][] = [];
-    const count = billowy ? 16 : 7;
-    for (let i = 0; i < count; i++) {
-      const r = billowy ? 0.2 + 0.26 * rand() : 0.35 + 0.3 * rand();
-      const a = rand() * Math.PI * 2;
-      const d = Math.sqrt(rand()) * (0.92 - r);
-      bumps.push([Math.cos(a) * d, Math.sin(a) * d, r]);
+    if (billowy) {
+      bumps.push([(rand() - 0.5) * 0.1, (rand() - 0.5) * 0.1, 0.46 + 0.08 * rand()]);
+      for (let i = 0; i < 11; i++) {
+        const r = 0.16 + 0.17 * rand();
+        const a = (i / 11) * Math.PI * 2 + rand() * 0.5;
+        const d = (0.55 + 0.45 * rand()) * (0.9 - r);
+        bumps.push([Math.cos(a) * d, Math.sin(a) * d, r]);
+      }
+      // small lobes on the rims of the big ones (cauliflower detail)
+      const big = bumps.length;
+      for (let i = 0; i < 30; i++) {
+        const [bx, by, br] = bumps[Math.floor(rand() * big)];
+        const r = 0.05 + 0.065 * rand();
+        const a = rand() * Math.PI * 2;
+        let x = bx + Math.cos(a) * br * 0.8;
+        let y = by + Math.sin(a) * br * 0.8;
+        const d = Math.hypot(x, y);
+        if (d > 0.93 - r) {
+          x *= (0.93 - r) / d;
+          y *= (0.93 - r) / d;
+        }
+        bumps.push([x, y, r]);
+      }
+    } else {
+      for (let i = 0; i < 6; i++) {
+        const r = 0.3 + 0.3 * rand();
+        const a = rand() * Math.PI * 2;
+        const d = Math.sqrt(rand()) * (0.9 - r);
+        bumps.push([Math.cos(a) * d, Math.sin(a) * d, r]);
+      }
     }
-    const H = new Float32Array(T * T);
+    const K = 14;
+    let H = new Float32Array(T * T);
     for (let y = 0; y < T; y++)
       for (let x = 0; x < T; x++) {
         const px = ((x + 0.5) / T) * 2 - 1;
         const py = ((y + 0.5) / T) * 2 - 1;
-        let h = 0;
+        // smooth union of lobes (soft creases between them)
+        let acc = 0;
+        let any = false;
         for (const [bx, by, br] of bumps) {
           const dd = (px - bx) ** 2 + (py - by) ** 2;
-          if (dd < br * br) h = Math.max(h, Math.sqrt(br * br - dd) * (billowy ? 1 : 0.8));
+          if (dd < br * br) {
+            acc += Math.exp(K * Math.sqrt(br * br - dd));
+            any = true;
+          }
         }
-        // soft base dome so the billows sit on a body
-        const rr = px * px + py * py;
-        const dome = rr < 0.85 ? Math.sqrt(0.85 - rr) * 0.55 : 0;
+        let h = any ? Math.log(acc) / K : 0;
+        if (!billowy) h *= 0.55;
         const u = (px + 1) / 2;
         const v = (py + 1) / 2;
-        const detail = (n2(u, v) - 0.5) * 0.12 + (n3(u, v) - 0.5) * 0.06;
-        H[y * T + x] = Math.max(h, dome) + detail * Math.min(1, h * 4 + dome * 3) + (n1(u, v) - 0.5) * 0.05;
+        if (h > 0) h += ((n1(u, v) - 0.5) * 0.05 + (n2(u, v) - 0.5) * 0.025) * Math.min(1, h * 6);
+        H[y * T + x] = Math.max(0, h);
       }
+    // two passes of a 5-tap blur to soften the lobe rims
+    for (let pass = 0; pass < 2; pass++) {
+      const B = new Float32Array(T * T);
+      for (let y = 0; y < T; y++)
+        for (let x = 0; x < T; x++) {
+          let a = 0;
+          let w = 0;
+          for (let k = -2; k <= 2; k++) {
+            const xx = Math.min(T - 1, Math.max(0, x + k));
+            const wk = 3 - Math.abs(k);
+            a += H[y * T + xx] * wk;
+            w += wk;
+          }
+          B[y * T + x] = a / w;
+        }
+      const C = new Float32Array(T * T);
+      for (let y = 0; y < T; y++)
+        for (let x = 0; x < T; x++) {
+          let a = 0;
+          let w = 0;
+          for (let k = -2; k <= 2; k++) {
+            const yy = Math.min(T - 1, Math.max(0, y + k));
+            const wk = 3 - Math.abs(k);
+            a += B[yy * T + x] * wk;
+            w += wk;
+          }
+          C[y * T + x] = a / w;
+        }
+      H = C;
+    }
     const ox = (tile % 2) * T;
     const oy = Math.floor(tile / 2) * T;
+    const step = 2 / T;
     for (let y = 0; y < T; y++)
       for (let x = 0; x < T; x++) {
         const h = H[y * T + x];
-        const hx = H[y * T + Math.min(T - 1, x + 1)] - H[y * T + Math.max(0, x - 1)];
-        const hy = H[Math.min(T - 1, y + 1) * T + x] - H[Math.max(0, y - 1) * T + x];
-        const k = billowy ? 26 : 14;
-        let nx = -hx * k;
-        let ny = -hy * k;
-        const nz = 1;
-        const l = Math.hypot(nx, ny, nz);
+        const hx = (H[y * T + Math.min(T - 1, x + 1)] - H[y * T + Math.max(0, x - 1)]) / (2 * step);
+        const hy = (H[Math.min(T - 1, y + 1) * T + x] - H[Math.max(0, y - 1) * T + x]) / (2 * step);
+        let nx = -hx;
+        let ny = -hy;
+        const l = Math.hypot(nx, ny, 1);
         nx /= l;
         ny /= l;
         const px = ((x + 0.5) / T) * 2 - 1;
         const py = ((y + 0.5) / T) * 2 - 1;
         const rr = Math.sqrt(px * px + py * py);
-        // density: from the height field, with a soft rim that reaches zero before the tile edge
-        const edge = 1 - smooth(0.62, 0.98, rr);
-        let d = smooth(0.0, billowy ? 0.2 : 0.45, h) * edge;
-        if (!billowy) d *= 0.75 + 0.25 * n2((px + 1) / 2, (py + 1) / 2);
+        const edge = 1 - smooth(0.8, 0.99, rr);
+        let d = smooth(0.01, billowy ? 0.16 : 0.3, h) * edge;
+        if (!billowy) d *= 0.7 + 0.3 * n2((px + 1) / 2, (py + 1) / 2);
         const i = ((oy + y) * S + ox + x) * 4;
         data[i] = Math.round(Math.min(1, d) * 255);
         data[i + 1] = Math.round((nx * 0.5 + 0.5) * 255);
@@ -388,7 +445,6 @@ export class SpriteRenderer {
   private mat = makeMaterial();
   private far: Batch;
   private near: Batch;
-  private order = new Uint32Array(0);
   private depth = new Float32Array(0);
   private idx: number[] = [];
   capacity: number;
@@ -426,7 +482,6 @@ export class SpriteRenderer {
     const ps = sys.out;
     if (this.depth.length < n) {
       this.depth = new Float32Array(Math.ceil(n * 1.3));
-      this.order = new Uint32Array(Math.ceil(n * 1.3));
     }
     shadeClouds(ps, n, L.sunDir);
     camera.getWorldDirection(fwd);

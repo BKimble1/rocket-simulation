@@ -18,7 +18,7 @@ export const STRUCTURES: (PartLesson | PartNote)[] = [
     phases: [
       at('leo', 'maxq', 'Peak bending with no pressure stabilization.'),
       at('leo', 'meco', 'Highest acceleration: the heavy LOX tank above presses down hardest.'),
-      at('leo', 'entry-burn', 'Carries reversed loads as the booster decelerates engines-first.'),
+      at('leo', 'entry-burn', 'Carries the deceleration load of the entry burn, pushed again from the base.'),
     ],
     environment: `Cold from the LOX dome above and near ambient from the fuel dome below, so the structure has temperature gradients. Axial compression from the LOX tank, the upper stage and the payload accelerating above it, bending near maximum dynamic pressure, and on the return the loads of deceleration.`,
     figures: [
@@ -43,13 +43,13 @@ export const STRUCTURES: (PartLesson | PartNote)[] = [
   lesson({
     id: 'thrust-structure',
     summary: `The thrust structure gathers the push of seven engines, up to ${F.s1ThrustVac} in vacuum, from seven small mounting points and spreads it evenly into the cylindrical wall of the booster.`,
-    where: 'In the thrust section at the base of the booster, between the base heat shield (1.3 m) and the fuel tank\'s aft dome (4.3 m). In the cutaway: radial beams and a thrust ring meeting at the engine mounts, the gimbal points at 2.3 m, the four hold-down fittings and the landing-leg hinges on the aft skirt.',
+    where: `In the thrust section at the base of the booster, between the base heat shield (${F.st.s1HeatShield}) and the fuel tank's aft dome (${F.st.s1ThrustSectionTop}). In the cutaway: radial beams and a thrust ring meeting at the engine mounts, the gimbal points at ${F.st.s1Gimbal}, the four hold-down fittings and the landing-leg hinges on the aft skirt.`,
     connections: ['s1-engine-cluster', 'engine', 's1-fuel-tank', 'tvc-actuators', 'base-heat-shield', 'landing-legs', 'launch-mount'],
     function: 'Carry engine thrust into the vehicle, carry the vehicle\'s weight on the pad through the hold-downs, anchor the gimbal actuators, and carry landing loads through the legs.',
     how: 'Each engine\'s gimbal block bolts to a titanium mount fitting; beams run from the mounts to a thrust ring and the aft skirt, which spread the concentrated loads around the circumference so the thin tank wall above receives a nearly uniform push. The engines push; the whole vehicle above is pushed from below, so everything above the thrust structure is in compression.',
     why: 'Engine thrust arrives at seven points, but the tank wall can only accept load spread around its whole circumference. Without a structure to distribute it, each engine would punch into the dome.',
     phases: [
-      at('leo', 'ignition', 'The load path reverses: the hold-downs pull down while the engines push up.'),
+      at('leo', 'ignition', 'Hold-down fittings reverse their load: first they carry the weight, then they pull down against the thrust.'),
       at('leo', 'liftoff', `Carries ${F.s1ThrustSL} into the vehicle.`),
       at('leo', 'meco', 'Peak thrust-to-mass ratio of the burn.'),
       at('leo', 'landing-burn', 'Centre-engine thrust and then the leg loads at touchdown.'),
@@ -91,7 +91,7 @@ export const STRUCTURES: (PartLesson | PartNote)[] = [
   lesson({
     id: 'interstage',
     summary: `The interstage is the dark carbon-composite shell between the booster and the upper stage; it houses the upper-stage engine's long nozzle and carries the separation system at its top.`,
-    where: `On top of the booster, from 37.9 m to the separation plane at 44.4 m (${F.interstageLength} long). Inside, the E-1V nozzle extension hangs down ${F.nozzleInsideInterstage} below the separation plane, its exit only ${F.nozzleClearance} above the forward skirt. The pneumatic pushers and release collets ring its upper edge.`,
+    where: `On top of the booster, from ${F.st.s1ForwardSkirtTop} to the separation plane at ${F.st.interstageTop} (${F.interstageLength} long). Inside, the E-1V nozzle extension hangs down ${F.nozzleInsideInterstage} below the separation plane, its exit only ${F.nozzleClearance} above the forward skirt. The pneumatic pushers and release collets ring its upper edge.`,
     connections: ['stage-separation', 'vacuum-engine', 'nozzle-extension', 's1-lox-tank', 's2-tanks', 'grid-fins'],
     function: 'Carry all loads from the upper stage and payload into the booster, give the vehicle a smooth outer shape over the upper-stage engine, and hold the separation hardware.',
     how: 'A sandwich wall (carbon-fibre face sheets bonded to an aluminium honeycomb core) makes a stiff, light cylinder. Metal rings at each end transfer loads into the booster and the separation joint. It stays with the booster when the stages separate.',
@@ -126,9 +126,9 @@ export const STRUCTURES: (PartLesson | PartNote)[] = [
   lesson({
     id: 'common-bulkhead',
     summary: 'The common bulkhead is the single curved wall inside the upper stage that separates the LOX above from the RP-1 below: an insulated sandwich that replaces two domes and an intertank.',
-    where: 'Inside the upper stage at 49.9 m (its rim) bulging down to about 48.6 m into the RP-1. In the cutaway, look for the dome drawn as two thin metal skins with a core between them.',
+    where: `Inside the upper stage at ${F.st.s2CommonBulkheadEquator} (its rim) bulging down to about ${F.st.s2CommonBulkheadApex} into the RP-1. In the cutaway, look for the dome drawn as two thin metal skins with a core between them.`,
     connections: ['s2-tanks', 'vacuum-engine', 'pressurization'],
-    function: 'Keep the two propellants apart, hold the pressure difference between the tanks in either direction, and limit heat flow from the fuel into the LOX.',
+    function: 'Keep the two propellants apart, hold the pressure difference between the tanks (and survive it if it briefly reverses), and limit heat flow from the fuel into the LOX.',
     how: 'Two aluminium 2219 dome skins are bonded to an insulating honeycomb core. The LOX pressure plus the weight of the LOX column pushes down on the dome, which bulges toward the fuel: a dome pressed on its concave side is in tension, which it carries well. If the fuel side pressure ever exceeded the LOX side, the dome would be loaded on its convex side and could buckle, so pressures are controlled to keep the difference in the safe direction (or the dome is designed for reversal).',
     why: 'Upper-stage mass costs payload almost kilogram for kilogram, and a shorter stage is lighter and stiffer. One shared dome saves a dome, an intertank and roughly a dome height of length.',
     phases: [
@@ -138,7 +138,7 @@ export const STRUCTURES: (PartLesson | PartNote)[] = [
     ],
     environment: `LOX at ${F.loxBoil} on one side and RP-1 at near ambient on the other: a steep temperature difference across a few centimetres. Pressure difference in normal flight in one direction, with the risk of reversal during transients; the weight of the LOX under acceleration.`,
     figures: [
-      { label: 'Rim / apex height', value: '49.9 m / 48.6 m', note: 'Dome bulges down into the fuel tank' },
+      { label: 'Rim / apex height', value: `${F.st.s2CommonBulkheadEquator} / ${F.st.s2CommonBulkheadApex}`, note: 'Dome bulges down into the fuel tank' },
       { label: 'Dome height', value: F.domeHeight },
       { label: 'Payload cost of upper-stage mass', value: `about ${F.tradeS2} per 100 kg`, note: 'Ideal rocket-equation estimate, LEO mission' },
     ],
@@ -160,7 +160,7 @@ export const STRUCTURES: (PartLesson | PartNote)[] = [
   lesson({
     id: 'fairing',
     summary: `The fairing is the ${F.fairingDiameter} nose shell that protects the satellite from air pressure, heating and noise during the climb through the atmosphere, then splits in two and falls away.`,
-    where: `On top of the upper stage, from the payload interface at 53.9 m to the tip at 67.0 m (${F.fairingLength} long): a short boat-tail widening from the stage diameter, a cylinder, and an ogive nose. The seam between its two halves runs up the sides; hinges sit at its base and pushers along the seam.`,
+    where: `On top of the upper stage, from the payload interface at ${F.st.fairingBase} to the tip at ${F.st.fairingTip} (${F.fairingLength} long): a short boat-tail widening from the stage diameter, a cylinder, and an ogive nose. The seam between its two halves runs up the sides; hinges sit at its base and pushers along the seam.`,
     connections: ['payload-adapter', 'satellite-bus', 'avionics', 's2-tanks', 'service-tower'],
     function: 'Shield the payload during atmospheric flight, give the vehicle an aerodynamic nose, keep the payload clean on the pad, and then separate cleanly once the air is thin.',
     how: `Each half is a sandwich: ${F.fairingFace} carbon-fibre face sheets on a ${F.fairingCore} aluminium honeycomb core. The core holds the skins apart so the wall is stiff against the pressure of the airflow and damps some of the noise. Vents let the inside pressure follow the falling outside pressure. At separation, latches along the seam and around the base release, pneumatic pushers open the halves, which rotate outward on their base hinges and then fly free.`,

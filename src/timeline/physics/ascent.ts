@@ -26,7 +26,7 @@ import {
   RESEARCH_CAPSULE_ITEM,
   SM_COM,
   SM_DRY,
-  SM_PROP_FULL,
+  SM_PROP_LAUNCH,
   areaOf,
   boosterDry,
   fairingHalf,
@@ -36,7 +36,7 @@ import {
   upperDry,
   type MassItem,
 } from './vehicle';
-import { DEG, clamp, qaxisY, qaxisZ, qclone, qlook, qrot, v3, vadd, vangle, vcross, vdot, vlen, vnorm, vrotate, vscale, vsub, type Q, type V3 } from './vec';
+import { DEG, clamp, qaxisY, qaxisZ, qclone, qlook, qrot, v3, vadd, vangle, vcross, vdot, vlen, vnorm, vscale, vsub, type Q, type V3 } from './vec';
 
 export const RATE_ASCENT = { wMax: 5 * DEG, aMax: 1.5 * DEG };
 export const RATE_UPPER = { wMax: 3 * DEG, aMax: 1 * DEG };
@@ -55,7 +55,7 @@ export interface StackSpec {
 export const SATELLITE_PAYLOADS: PayloadId[] = ['leoSat', 'gtoSat', 'lunarProbe'];
 
 /** Fixed (non-propellant) mass items of the stack at liftoff. */
-export function stackItems(spec: StackSpec): { items: MassItem[]; bodies: BodyId[] } {
+export function stackItems(spec: StackSpec, payloadKg?: number): { items: MassItem[]; bodies: BodyId[] } {
   const items: MassItem[] = [...boosterDry(spec.recovery)];
   const bodies: BodyId[] = ['booster'];
   if (spec.boosterOnly) {
@@ -69,7 +69,7 @@ export function stackItems(spec: StackSpec): { items: MassItem[]; bodies: BodyId
     items.push(CAPSULE_ITEM, { m: SM_DRY, c: SM_COM }, LES_ITEM);
     bodies.push('capsule', 'service', 'les');
   } else {
-    items.push(fairingHalf('A', 0), fairingHalf('B', 0), { m: PAYLOADS[spec.payload].mass, c: PAYLOAD_COM[spec.payload] });
+    items.push(fairingHalf('A', 0), fairingHalf('B', 0), { m: payloadKg ?? PAYLOADS[spec.payload].mass, c: PAYLOAD_COM[spec.payload] });
     bodies.push('fairingA', 'fairingB', 'satellite');
   }
   return { items, bodies };
@@ -167,6 +167,8 @@ export interface S1Params {
   side: V3;
   kickDeg: number;
   kickDur: number;
+  /** Seconds after tower clear at which the kick begins. */
+  kickDelay?: number;
   /** Tower clear: nozzle-exit plane this high above the ground (m). */
   towerClearAlt: number;
   /** Max-q bucket (null: none). */
@@ -216,11 +218,10 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
   let bucketState: 'pre' | 'down' | 'up' = 'pre';
   let bucketT = 0;
   const kick = p.kickDeg * DEG;
+  let maxTheta = 0;
   let prevDes: Q | null = null;
   const center = c.group('s1.center')!;
   const outer = c.group('s1.outer')!;
-  const siteZero = sitePosition(0);
-  const pad0 = vnorm({ x: siteZero.x, y: siteZero.y, z: siteZero.z });
   for (let guard = 0; guard < 20000; guard++) {
     const t = c.t;
     const dt = t < 20 ? 0.1 : 0.2;
@@ -231,17 +232,20 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
     // ── attitude
     if (Number.isNaN(towerClear) && alt >= p.towerClearAlt) {
       towerClear = t;
-      pitchStart = t + 1.0;
+      pitchStart = t + (p.kickDelay ?? 1.0);
     }
-    let nose: V3 = up;
+    // in-plane gravity turn: the nose follows the air-relative velocity's pitch angle in the
+    // launch plane, never less than the kick (so Coriolis drift cannot turn it westward)
+    let theta = 0;
     const va = vsub(c.v, airVelocity(c.r));
     if (!Number.isNaN(pitchStart) && t >= pitchStart) {
       const u = clamp((t - pitchStart) / p.kickDur, 0, 1);
       const kickAng = kick * (u * u * (3 - 2 * u));
-      const kickDir = vadd(vscale(up, Math.cos(kickAng)), vscale(hor, Math.sin(kickAng)));
-      const vAng = vangle(va, up);
-      nose = u >= 1 && vAng >= kick && vlen(va) > 1 ? vnorm(va) : kickDir;
+      const thetaV = Math.atan2(vdot(va, hor), vdot(va, up));
+      theta = u >= 1 ? Math.max(kickAng, thetaV) : kickAng;
+      if (theta > maxTheta) maxTheta = theta;
     }
+    const nose = vadd(vscale(up, Math.cos(theta)), vscale(hor, Math.sin(theta)));
     const des = qlook(nose, p.side);
     let wFF: V3 | null = null;
     if (prevDes) {
@@ -319,7 +323,7 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
   }
   const v = c.v;
   const va = vsub(v, airVelocity(c.r));
-  const downrange = R_EARTH * vangle(c.r, vrotateEarth(pad0, c.t));
+  const downrange = groundDistance(c.r, c.t);
   return {
     towerClear,
     pitchStart,
@@ -331,11 +335,10 @@ export function flyFirstStage(ctx: Ctx | null, c: Craft, p: S1Params): S1Result 
   };
 }
 
-/** Pad direction rotated with the Earth to time t. */
-function vrotateEarth(p: V3, t: number): V3 {
+/** Great-circle distance (m) from the pad to the point under r, both at time t. */
+export function groundDistance(r: V3, t: number): number {
   const s = sitePosition(t);
-  void p;
-  return { x: s.x, y: s.y, z: s.z };
+  return R_EARTH * vangle(r, { x: s.x, y: s.y, z: s.z });
 }
 
 /** Throttle, propellant and gimbal channels for the first stage. */
@@ -401,6 +404,8 @@ export interface UpperBurnPlan {
   /** Steering constants (solved). */
   A: number;
   B: number;
+  /** Propellant (kg) the burn must leave in the tanks (later burns, residuals). */
+  residual?: number;
 }
 
 export interface BurnHooks {
@@ -443,6 +448,8 @@ export interface BurnResult {
   r: V3;
   v: V3;
   prop: number;
+  /** True when the stage ran out of usable propellant before reaching the target energy. */
+  depleted: boolean;
 }
 
 /**
@@ -456,6 +463,8 @@ export function upperBurn(c: Craft, plan: UpperBurnPlan, hooks: BurnHooks | null
   let prevDes: Q | null = null;
   let thr = 0;
   let cutT = NaN;
+  let cutFrom = 1;
+  let depleted = false;
   let holdQ: Q = qclone(c.q);
   const tailStepDt = 0.1;
   for (let guard = 0; guard < 20000; guard++) {
@@ -503,6 +512,17 @@ export function upperBurn(c: Craft, plan: UpperBurnPlan, hooks: BurnHooks | null
     c.step(dt, { q: des, wMax: RATE_UPPER.wMax, aMax: RATE_UPPER.aMax, tau: 1.5 }, wFF);
     if (!inTail && t >= plan.tIgn + IGN_S2) {
       const e1 = energyWithTail(c, g);
+      // propellant for the tail-off must remain: a stage that cannot reach the target energy cuts off at depletion
+      const tailUse = g.eng.mdot * g.thr * TAIL_S2 * 0.5 + 1;
+      if ((c.tanks.s2 ?? 0) <= (plan.residual ?? 0) + tailUse && snap) {
+        depleted = true;
+        cutT = c.t;
+        cutFrom = g.thr;
+        thr = g.thr;
+        holdQ = qclone(c.q);
+        if (hooks) hooks.step(c);
+        continue;
+      }
       if (e1 >= plan.target.energy && snap) {
         // cutoff inside this step: redo it up to the crossing, then start the tail-off
         const f = clamp((plan.target.energy - e0) / (e1 - e0), 0, 1);
@@ -517,13 +537,11 @@ export function upperBurn(c: Craft, plan: UpperBurnPlan, hooks: BurnHooks | null
         continue;
       }
     }
-    if ((c.tanks.s2 ?? 0) < 0) throw new Error('upper stage ran dry before cutoff');
     if (hooks) hooks.step(c);
     if (inTail && thr <= 0) break;
   }
-  return { tCut: cutT, tEnd: c.t, r: { ...c.r }, v: { ...c.v }, prop: c.tanks.s2 ?? 0 };
+  return { tCut: cutT, tEnd: c.t, r: { ...c.r }, v: { ...c.v }, prop: c.tanks.s2 ?? 0, depleted };
 }
-let cutFrom = 1;
 
 /** Specific energy the stage will have after a tail-off started now. */
 function energyWithTail(c: Craft, g: EngineGroup): number {
@@ -588,7 +606,121 @@ export function ellipseEnergy(rp: number, ra: number): number {
 }
 
 export const STACK_S2_PROP = S2.propellant;
-export { rotateAbout };
-function rotateAbout(v: V3, k: V3, a: number) {
-  return vrotate(v, k, a);
+
+// ───────────────────────────── staging ─────────────────────────────
+
+export interface SepResult {
+  booster: Craft;
+  tSep: number;
+  tSes1: number;
+}
+
+/**
+ * Coast from the end of the first-stage tail-off to separation (MECO + 3 s), release the
+ * booster with pneumatic pushers (1.0 m/s relative, applied over 0.5 s, so the upper stage's
+ * nozzle clears the interstage before ignition 7 s later), and coast the upper stack to the
+ * upper-stage ignition time. Both crafts start from the stack's exact origin pose.
+ */
+export function separateStages(ctx: Ctx | null, stack: Craft, meco: number, spec: StackSpec, record: boolean, items: MassItem[]): SepResult {
+  const tSep = meco + 3;
+  const tSes1 = tSep + 7;
+  const hold = qclone(stack.q);
+  const recS = (c: Craft) => {
+    if (ctx && record) ctx.rec(c, 0.25);
+  };
+  while (stack.t < tSep - 1e-9) {
+    const dt = Math.min(0.25, tSep - stack.t);
+    stack.command('s1.center', 0);
+    stack.command('s1.outer', 0);
+    stack.step(dt, { q: hold, wMax: RATE_ASCENT.wMax, aMax: RATE_ASCENT.aMax, tau: 2 });
+    recS(stack);
+    if (ctx && record) s1Channels(ctx, stack, 6);
+  }
+  const bItems = boosterDry(spec.recovery);
+  // stackItems lists the booster's dry items first
+  const rest = items.slice(bItems.length);
+  const booster = stack.split({
+    bodies: ['booster'],
+    fixedMass: sumMass(bItems).m,
+    tankIds: ['s1'],
+    aero: { area: areaOf(3.7), cd: cdSlender },
+    comFn: comFrom(bItems),
+    parentFixedMass: sumMass(rest).m,
+    parentComFn: comFrom(rest),
+  });
+  stack.groups = [{ id: 's2', eng: ENG_S2, n: 1, tank: 's2', thr: 0, next: 0 }];
+  // pushers: equal and opposite impulses along the axis
+  const mb = booster.mass;
+  const mu = stack.mass;
+  const dvRel = 1.0;
+  const push = 0.5;
+  const axis = qaxisY(stack.q);
+  const aU = (dvRel * mb) / (mb + mu) / push;
+  const aB = (dvRel * mu) / (mb + mu) / push;
+  const hB = qclone(booster.q);
+  for (let t = 0; t < push - 1e-9; t += 0.25) {
+    stack.extra = vscale(axis, aU);
+    booster.extra = vscale(axis, -aB);
+    stack.step(0.25, { q: hold, wMax: RATE_ASCENT.wMax, aMax: RATE_ASCENT.aMax, tau: 2 });
+    booster.step(0.25, { q: hB, wMax: RATE_ASCENT.wMax, aMax: RATE_ASCENT.aMax, tau: 2 });
+    recS(stack);
+    recS(booster);
+  }
+  stack.extra = v3();
+  booster.extra = v3();
+  return { booster, tSep, tSes1 };
+}
+
+/** Coast the upper stack (attitude held) until time `until`. */
+export function coastHold(ctx: Ctx | null, c: Craft, until: number, record: boolean, dtMax = 0.5) {
+  const hold = qclone(c.q);
+  while (c.t < until - 1e-9) {
+    const dt = Math.min(dtMax, until - c.t);
+    c.step(dt, { q: hold, wMax: RATE_UPPER.wMax, aMax: RATE_UPPER.aMax, tau: 2 });
+    if (ctx && record) ctx.rec(c, dtMax);
+  }
+}
+
+// ───────────────────────────── liftoff state and kick shooting ─────────────────────────────
+
+/** The stack at T-0 on the pad as a craft (S1 groups lit at the liftoff throttle). */
+export function stackAtLiftoff(env: Craft['env'], spec: StackSpec, s1Prop: number, s2Prop: number, pt: { outerN: number; liftoffThrottle: number }, payloadKg?: number): Craft {
+  const { items, bodies } = stackItems(spec, payloadKg);
+  const pp = padPose(0);
+  const tanks: Craft['tanks'] = { s1: s1Prop };
+  if (!spec.boosterOnly) tanks.s2 = s2Prop;
+  if (spec.crew) tanks.sm = SM_PROP_LAUNCH;
+  const c = new Craft({ bodies, t: 0, r: pp.p, v: pp.v, q: pp.q, fixedMass: sumMass(items).m, tanks, aero: aeroStack(spec.crew, spec.boosterOnly), comFn: comFrom(items), env });
+  c.w = { ...OMEGA_VEC };
+  c.rehome(pp.p, pp.v);
+  c.groups = [
+    { id: 's1.center', eng: ENG_S1, n: 1, tank: 's1', thr: pt.liftoffThrottle, next: pt.liftoffThrottle },
+    { id: 's1.outer', eng: ENG_S1, n: pt.outerN, tank: 's1', thr: pt.liftoffThrottle, next: pt.liftoffThrottle },
+  ];
+  return c;
+}
+
+/**
+ * Find the pitch-kick angle that gives the wanted flight-path angle (air-relative) at first-
+ * stage cutoff: bisection (larger kicks give flatter trajectories).
+ */
+export function shootKick(make: () => Craft, p: Omit<S1Params, 'kickDeg' | 'record'>, gammaDeg: number, lo = 0.3, hi = 4): { kick: number; res: S1Result } {
+  const g = (k: number) => {
+    const c = make();
+    const r = flyFirstStage(null, c, { ...p, kickDeg: k, record: false });
+    return { r, gam: (r.mecoState.gamma * 180) / Math.PI - (r.mecoState.alt < 20_000 ? 90 : 0) };
+  };
+  let a = lo;
+  let b = hi;
+  let best = { kick: a, res: g(a).r, err: Infinity };
+  for (let i = 0; i < 26; i++) {
+    const m = (a + b) / 2;
+    const { r, gam } = g(m);
+    const err = Math.abs(gam - gammaDeg);
+    if (err < best.err) best = { kick: m, res: r, err };
+    if (gam > gammaDeg) a = m;
+    else b = m;
+    if (b - a < 1e-4) break;
+  }
+  return { kick: best.kick, res: best.res };
 }

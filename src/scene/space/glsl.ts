@@ -2,7 +2,7 @@
  * GLSL shared by the space passes. The atmosphere functions mirror atmosphere.ts exactly (same
  * constants, same table parameterisation), so the CPU lighting state and the GPU picture agree.
  */
-import { ATMO, TRANS_W, TRANS_H, SUN_IRRADIANCE } from './atmosphere';
+import { ATMO, TRANS_W, TRANS_H } from './atmosphere';
 
 const f = (x: number) => {
   const s = x.toExponential(8);
@@ -28,7 +28,9 @@ const float A_OZONE_W = ${f(ATMO.ozoneHalfWidth)};
 const float A_SUN_R = ${f(ATMO.sunRadius)};
 const float A_TW = ${f(TRANS_W)};
 const float A_TH = ${f(TRANS_H)};
-const float SUN_E = ${f(SUN_IRRADIANCE)};
+// Sun irradiance at the top of the atmosphere (scene units, camera white balance applied)
+uniform vec3 uSunE;
+#define SUN_E uSunE
 
 uniform sampler2D uTransLUT;
 uniform sampler2D uMsLUT;
@@ -195,16 +197,20 @@ float heightProfile(float hf, float topF) {
   return smoothstep(0.0, 0.07, hf) * (1.0 - smoothstep(topH * 0.55, topH, hf));
 }
 
-/* 2D-ish shape (0..1) at a point: coverage modulated by clusters and cells. lod 0 = full
-   detail, 1 = coverage only. */
+/* Shape (0..1) at a point: coverage thresholding clusters and cells. lod 0 = full detail;
+   toward 1 the field is replaced by its local mean (what a long step or a wide pixel sees), so
+   distant clouds neither sparkle nor vanish. */
 float cloudShape(vec3 pEF, vec2 wc, float lod) {
   float cov = wc.x;
   vec4 a = texture(uNoise, pEF * (1.0 / 40000.0));
+  float clusters = a.r * 0.7 + a.g * 0.3;
+  float mean = cov * cov * (0.35 + 0.9 * clusters) * 0.62;
+  if (lod >= 0.999) return mean;
   vec4 b = texture(uNoise, pEF * (1.0 / 7000.0) + vec3(0.37, 0.11, 0.73));
-  float clusters = a.r * 0.65 + a.g * 0.35;
-  float cells = mix(0.62, b.r, 1.0 - lod * 0.85);
-  float base = clusters * 0.5 + cells * 0.5;
-  return remap01(base, 1.0 - cov, 1.0 - cov * 0.25 + 0.25);
+  float cells = b.r * 0.8 + b.g * 0.2;
+  float base = clusters * 0.45 + cells * 0.55;
+  float detailed = remap01(base, 1.0 - cov, 1.0);
+  return mix(detailed, mean, lod);
 }
 
 /* Density (0..1) at an Earth-fixed point pEF with altitude h. */
@@ -218,9 +224,9 @@ float cloudDensity(vec3 pEF, float h, float lod, float erodeLod) {
   if (s <= 0.0) return 0.0;
   if (erodeLod < 1.0) {
     vec4 e = texture(uNoise, pEF * (1.0 / 1600.0) + vec3(0.5, 0.2, 0.9));
-    float er = e.g * 0.625 + e.b * 0.25 + e.a * 0.125;
+    float er = e.g * 0.5 + e.b * 0.3 + e.a * 0.2;
     // erode more at the bottom (wispy) and less in the core
-    float amt = (0.42 + 0.3 * (1.0 - hf)) * (1.0 - erodeLod);
+    float amt = (0.28 + 0.2 * (1.0 - hf)) * (1.0 - erodeLod);
     s = remap01(s, er * amt, 1.0);
   }
   return s;

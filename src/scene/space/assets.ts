@@ -34,13 +34,16 @@ const placeholders: SpaceTextures = {
 export const spaceTextures: SpaceTextures = { ...placeholders };
 
 /** Loading state: `ready` once every texture has arrived (or failed; failures keep a placeholder). */
-export const spaceAssets = { ready: false, loaded: 0, total: 5, failed: [] as string[], version: 0, promise: null as Promise<void> | null };
+export const spaceAssets = { ready: false, loaded: 0, total: 5, failed: [] as string[], version: 0, promise: null as Promise<void> | null, cloudsReady: false, envReady: false };
 
 let started = '';
 
 /** Start loading (idempotent per resolution); resolves when all textures are in. */
 export function loadSpaceTextures(maxAniso = 8): Promise<void> {
-  const big = tierSpec().maxTexture >= 4096;
+  const spec = tierSpec();
+  const big = spec.maxTexture >= 4096;
+  // anisotropic filtering: sharp globe at grazing angles; cheap on GPUs, bounded on low tiers
+  const aniso = Math.min(maxAniso, spec.maxTexture >= 8192 ? 8 : spec.maxTexture >= 4096 ? 4 : 1);
   const key = big ? 'big' : 'small';
   if (started === key && spaceAssets.promise) return spaceAssets.promise;
   started = key;
@@ -64,7 +67,7 @@ export function loadSpaceTextures(maxAniso = 8): Promise<void> {
               t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
               t.wrapS = THREE.RepeatWrapping;
               t.wrapT = THREE.ClampToEdgeWrapping;
-              t.anisotropy = k === 'stars' ? 1 : maxAniso;
+              t.anisotropy = k === 'stars' ? 1 : aniso;
               t.minFilter = THREE.LinearMipmapLinearFilter;
               t.magFilter = THREE.LinearFilter;
               t.generateMipmaps = true;

@@ -123,8 +123,8 @@ export const MOUNT = {
   legS: 3.6,
   legV: 6.7,
   legSize: 1.6,
-  /** Hold-down clamp azimuths (deg, from +x toward +z) and grip radius. */
-  clampAz: [45, 135, 225, 315],
+  /** Hold-down clamp azimuths (deg, from +x toward +z): at the vehicle's fittings (+X, +Z, -X, -Z). */
+  clampAz: [0, 90, 180, 270],
   gripR: 1.85,
 };
 
@@ -141,7 +141,7 @@ export const TOWER = {
 
 // ───────────────────────────── facilities ─────────────────────────────
 
-export const WATER_TOWER = { x: -150, z: -170, top: 90, tankR: 6.6 };
+export const WATER_TOWER = { x: -120, z: -150, top: 90, tankR: 6.6 };
 export const LOX_SPHERE = { x: 175, z: -20, r: 7.8, legs: 8 };
 export const RP1_TANKS = { x: 160, z: 92, r: 2.1, length: 19, count: 3, spacing: 7.2 };
 export const GAS_TUBES = { x: 112, z: 148 };
@@ -157,9 +157,9 @@ export const LIGHT_POLES: [number, number][] = [
   [-80, -68],
 ];
 export const BUILDINGS = {
-  padOps: { x: -150, z: 72, w: 30, d: 14, h: 8.5 },
+  padOps: { x: -150, z: 110, w: 30, d: 14, h: 8.5 },
   pneumatics: { x: -112, z: -78, w: 16, d: 10, h: 6.2 },
-  substation: { x: -185, z: 138, w: 26, d: 18 },
+  substation: { x: -240, z: 150, w: 26, d: 18 },
   gate: { x: -420, z: 262 },
 };
 export const BUNKER = { x: -330, z: -150, r: 14, h: 7.5 };
@@ -174,10 +174,10 @@ export const SITE_ROADS: { w: number; pts: [number, number][]; kind?: 'asphalt' 
   // service loop around the pad
   { w: 7, pts: [[-120, 262], [-150, 200], [-200, 110], [-210, 0], [-190, -110], [-120, -205], [0, -240], [120, -200], [210, -110], [240, 0], [225, 110], [170, 190], [90, 230], [-2, 240]] },
   // spur to the ops building and substation
-  { w: 7, pts: [[-205, 60], [-170, 72]] },
-  { w: 6, pts: [[-203, 120], [-185, 125]] },
+  { w: 7, pts: [[-200, 110], [-167, 110]] },
+  { w: 6, pts: [[-178, 150], [-226, 150]] },
   // spur to the water tower and pneumatics building
-  { w: 6, pts: [[-165, -145], [-150, -160]] },
+  { w: 6, pts: [[-172, -130], [-134, -146]] },
   { w: 6, pts: [[-196, -80], [-122, -80]] },
   // spur to the tank farm
   { w: 7, pts: [[236, -20], [192, -20]] },

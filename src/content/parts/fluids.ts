@@ -44,7 +44,7 @@ export const FLUIDS: (PartLesson | PartNote)[] = [
   lesson({
     id: 's1-lox-tank',
     summary: `The booster's upper tank, holding ${F.s1Lox} of liquid oxygen at ${F.loxBoil}: most of the propellant mass, stored in a thin aluminium shell that is also the vehicle's structure.`,
-    where: `The long upper section of the first stage, from 17.3 m to about 37.5 m (${F.s1LoxTankLength} apex to apex), above the intertank and below the forward skirt. In the cutaway: the ellipsoidal domes, the orthogrid ribs inside the barrel, anti-slosh baffle rings, the helium bottles (COPVs) mounted inside, and the downcomer leaving the aft dome.`,
+    where: `The long upper section of the first stage, from ${F.st.s1LoxAftApex} to about ${F.st.s1LoxFwdApex} (${F.s1LoxTankLength} apex to apex), above the intertank and below the forward skirt. In the cutaway: the ellipsoidal domes, the orthogrid ribs inside the barrel, anti-slosh baffle rings, the helium bottles (COPVs) mounted inside, and the downcomer leaving the aft dome.`,
     connections: ['lox-downcomer', 'pressurization', 's1-intertank', 'interstage', 'grid-fins', 'cold-gas-rcs', 'service-tower'],
     function: 'Store the oxidizer for the seven engines and carry the flight loads of everything above it.',
     how: 'LOX is loaded from ground tanks through the tower umbilical while it boils and vents; it is topped up until shortly before launch. In flight, helium keeps the gas space above the liquid (ullage) at a controlled pressure as the level falls. That pressure does two jobs: it gives the turbopumps enough inlet pressure to avoid cavitation, and it stiffens the thin wall against buckling. The walls are the airframe (an integral tank): the barrel carries thrust and bending, the pressure puts the wall in hoop tension.',
@@ -82,7 +82,7 @@ export const FLUIDS: (PartLesson | PartNote)[] = [
   lesson({
     id: 's1-fuel-tank',
     summary: `The booster's lower tank, holding ${F.s1Rp1} of RP-1 kerosene at ambient temperature, with the LOX downcomer running straight through its centre.`,
-    where: `Just above the thrust section, from 4.3 m to about 17 m (${F.s1FuelTankLength} apex to apex), below the intertank. In the cutaway: the amber RP-1, the downcomer pipe down its middle, anti-slosh baffles, and the fuel outlets in the aft dome feeding the engine manifold.`,
+    where: `Just above the thrust section, from ${F.st.s1FuelAftApex} to about ${F.st.s1FuelFwdApex} (${F.s1FuelTankLength} apex to apex), below the intertank. In the cutaway: the amber RP-1, the downcomer pipe down its middle, anti-slosh baffles, and the fuel outlets in the aft dome feeding the engine manifold.`,
     connections: ['lox-downcomer', 'thrust-structure', 's1-intertank', 'pressurization', 'engine', 'raceway', 'landing-legs'],
     function: 'Store the fuel for the seven engines, which also serves as their coolant, and carry the thrust of the whole cluster up into the rest of the vehicle.',
     how: 'RP-1 is loaded at ambient temperature and pressurized with helium. It leaves through outlets in the aft dome to a manifold feeding every turbopump. Because it sits directly on the thrust structure, its barrel wall is the path by which the engines\' thrust pushes the whole vehicle upward.',
@@ -108,7 +108,7 @@ export const FLUIDS: (PartLesson | PartNote)[] = [
     ifAbsent: 'Without the fuel tank there is no fuel and no coolant; the engines could not run, and the thrust structure would have nothing to push against but the LOX tank\'s dome.',
     depth: {
       quick: 'The lower tank holds kerosene. The engines are right below it, so its walls also carry their push up into the rest of the rocket.',
-      engineering: 'Axial load in the fuel-tank barrel equals the thrust minus the inertial load of everything below the section; during the burn it compresses the thin wall, so pressure stabilization matters here as in the LOX tank. Keeping the fuel above its minimum pump inlet pressure while it drains is the pressurization system\'s job.',
+      engineering: 'The barrel carries the inertial load (mass times acceleration plus gravity) of everything it supports above it: intertank, LOX tank and LOX, interstage, upper stage and payload. The fuel itself rests on the aft dome, which hands its load straight to the thrust structure. Internal pressure offsets part of the compression, as in the LOX tank; keeping the fuel above its minimum pump inlet pressure while it drains is the pressurization system\'s job.',
       materials: 'The same aluminium-lithium and 2219 family as the LOX tank, with welded penetrations for the downcomer and the fuel outlets.',
     },
     demo: 'feed-flow',
@@ -119,7 +119,7 @@ export const FLUIDS: (PartLesson | PartNote)[] = [
   lesson({
     id: 'lox-downcomer',
     summary: 'The downcomer is the large pipe that carries liquid oxygen from the upper tank down through the middle of the fuel tank to the engines.',
-    where: `From the outlet in the LOX tank's aft dome (17.3 m), down through the intertank, then through the centre of the RP-1 tank to the engine LOX manifold in the thrust section: about ${F.downcomerLength} of pipe. In the cutaway it is the pale-blue line through the amber fuel.`,
+    where: `From the outlet in the LOX tank's aft dome (${F.st.s1LoxAftApex}), down through the intertank, then through the centre of the RP-1 tank to the engine LOX manifold in the thrust section: about ${F.downcomerLength} of pipe. In the cutaway it is the pale-blue line through the amber fuel.`,
     connections: ['s1-lox-tank', 's1-fuel-tank', 's1-intertank', 'turbopump', 'thrust-structure'],
     function: `Deliver about ${F.s1LoxFlow} of LOX (${F.s1LoxVolumeFlow}) to seven engines at full thrust with a steady, bubble-free flow.`,
     how: `A welded aluminium duct with flexible bellows joints and stainless flanges. The bellows let the pipe shrink when it chills (aluminium contracts about 0.4 % from room temperature to LOX temperature, so about ${F.downcomerContraction} over this length) and let the tanks and pipe move relative to one another under load. An anti-vortex baffle at the tank outlet stops a swirl from drawing gas into the line.`,
@@ -168,7 +168,7 @@ export const FLUIDS: (PartLesson | PartNote)[] = [
     figures: [
       { label: 'Helium density gain when stored cold', value: `about ${F.heliumDensityRatio} ×`, note: 'Ideal gas, room temperature (293 K) versus LOX temperature, same pressure' },
       { label: 'Volume to refill per second at full thrust', value: F.s1VolumeFlow, note: 'LOX plus RP-1, computed' },
-      { label: 'Storage pressure', value: 'tens of MPa', note: 'Typical COPV range; illustrative' },
+      { label: 'Storage pressure', value: 'about 100 × tank pressure', note: 'Tens of MPa, typical of helium COPVs; illustrative' },
     ],
     materials: mats('pressurization'),
     materialsWhy: 'A COPV is a thin gas-tight titanium liner wrapped in carbon fibre. The fibres carry most of the pressure load (they are much stronger per kilogram than any metal); the liner only has to seal, because fibre composites alone leak gas. Titanium lines are strong and light at high pressure.',
@@ -178,7 +178,7 @@ export const FLUIDS: (PartLesson | PartNote)[] = [
     ifAbsent: 'The ullage pressure would fall as the propellant drained: pumps would cavitate and lose thrust, and the thin tanks would lose the pressure that stiffens them.',
     depth: {
       quick: 'Helium gas from bottles inside the oxygen tank fills the space the propellant leaves, keeping the tanks stiff and the pumps well fed.',
-      engineering: 'Pressurant mass needed ∝ p·V / (R·T) of the final ullage: heating the helium before it enters the tank reduces the mass needed, cold storage raises how much fits in a bottle. Alternatives include autogenous pressurization (vaporized propellant, e.g. heated oxygen for the LOX tank). A documented kerosene first stage also stored its helium in bottles inside the LOX tank.',
+      engineering: 'The pressurant mass needed is proportional to p·V / (R·T) of the final ullage: heating the helium before it enters the tank reduces the mass needed, cold storage raises how much fits in a bottle. Alternatives include autogenous pressurization (vaporized propellant, e.g. heated oxygen for the LOX tank). A documented kerosene first stage also stored its helium in bottles inside the LOX tank.',
       materials: 'Carbon fibre for hoop strength per kilogram, titanium for a gas-tight liner and lines. COPVs trade low mass for sensitivity to impact damage and a stress-rupture life that must be tracked.',
     },
     demo: 'tank-pressure',
@@ -188,7 +188,7 @@ export const FLUIDS: (PartLesson | PartNote)[] = [
   lesson({
     id: 's2-tanks',
     summary: `The upper stage's two propellant tanks, RP-1 below and LOX above, built as one short cylinder divided by a common bulkhead and holding ${F.s2Prop} of propellant.`,
-    where: `The white upper-stage body from 45.9 m to about 53.9 m (${F.s2TankLength} apex to apex), between the thrust cone and E-1V below and the avionics ring and payload adapter above. In the cutaway: RP-1 in the lower part, the curved common bulkhead bulging down into it, LOX above.`,
+    where: `The white upper-stage body from ${F.st.s2FuelAftApex} to about ${F.st.s2LoxFwdApex} (${F.s2TankLength} apex to apex), between the thrust cone and E-1V below and the avionics ring and payload adapter above. In the cutaway: RP-1 in the lower part, the curved common bulkhead bulging down into it, LOX above.`,
     connections: ['common-bulkhead', 'vacuum-engine', 'avionics', 'payload-adapter', 's2-rcs', 'interstage'],
     function: `Store ${F.s2Lox} of LOX and ${F.s2Rp1} of RP-1 for the E-1V and deliver them bubble-free, including after long weightless coasts.`,
     how: 'Helium pressurizes both tanks. During powered flight the propellant sits at the bottom of each tank. During a coast the stage is in free fall and the liquid floats, clings to walls and sloshes; before a restart the settling thrusters give a small push so the liquid collects over the outlets. Baffles damp sloshing, and insulation plus attitude control limit how much the LOX warms in sunlight.',

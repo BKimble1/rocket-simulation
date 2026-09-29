@@ -215,6 +215,8 @@ export const CAPSULE_ITEM: MassItem = { m: CAPSULE.mass, c: v3(0, MOUNT_Y.upperS
 /** Service module: dry + propellant counted separately (propellant for phasing, deorbit). */
 export const SM_DRY = 2600;
 export const SM_PROP_FULL = SERVICE_MODULE.mass - SM_DRY;
+/** Service-module propellant at launch (full). */
+export const SM_PROP_LAUNCH = SM_PROP_FULL;
 export const SM_COM = v3(0, MOUNT_Y.upperStage + SERVICE_MODULE.length / 2, 0);
 export const LES_ITEM: MassItem = { m: ABORT_TOWER.mass, c: v3(0, MOUNT_Y.upperStage + SERVICE_MODULE.length + CAPSULE.height + 2.6, 0) };
 export const LES_JETTISON_PROP = ENG_LES_JETTISON.mdot * 1.5;

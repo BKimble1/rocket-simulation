@@ -197,7 +197,7 @@ const RIM = /* glsl */ `
 
 type Hook = (shader: THREE.WebGLProgramParametersWithUniforms) => void;
 
-function withHook(m: THREE.Material, key: string, hook: Hook) {
+export function withHook(m: THREE.Material, key: string, hook: Hook) {
   const prev = (m as THREE.Material & { __hooks?: { key: string; hook: Hook }[] }).__hooks ?? [];
   const hooks = [...prev, { key, hook }];
   (m as THREE.Material & { __hooks?: { key: string; hook: Hook }[] }).__hooks = hooks;

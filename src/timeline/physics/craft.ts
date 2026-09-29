@@ -395,6 +395,26 @@ export class Craft {
     this.record();
   }
 
+  /** Exact copy of the dynamic state (for re-doing a step up to an event inside it). */
+  snapshot() {
+    return { t: this.t, r: { ...this.r }, v: { ...this.v }, q: qclone(this.q), w: { ...this.w }, tanks: { ...this.tanks }, thr: this.groups.map((g) => [g.thr, g.next] as [number, number]), fixed: this.fixedMass, alpha: { ...this.alpha } };
+  }
+
+  restore(s: ReturnType<Craft['snapshot']>) {
+    this.t = s.t;
+    this.r = { ...s.r };
+    this.v = { ...s.v };
+    this.q = qclone(s.q);
+    this.w = { ...s.w };
+    this.tanks = { ...s.tanks };
+    this.groups.forEach((g, i) => {
+      g.thr = s.thr[i][0];
+      g.next = s.thr[i][1];
+    });
+    this.fixedMass = s.fixed;
+    this.alpha = { ...s.alpha };
+  }
+
   /** Change composition in place (e.g. propellant or a mass changes discontinuously): keeps the origin pose. */
   recompose(fn: () => void) {
     this.record();

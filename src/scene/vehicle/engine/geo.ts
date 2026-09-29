@@ -541,3 +541,194 @@ export function bellowsLoop(r: number, len: number, conv: number, amp: number, w
   const inner = outer.map(([x, y]) => [x - wall, y] as V2).reverse();
   return { pts: [...outer, ...inner] };
 }
+
+// ───────────────────────────── clipped circular sweeps ─────────────────────────────
+
+export interface TubeOpts {
+  /** Outer radius (or per-frame function of the path fraction 0..1). */
+  ro: number | ((t: number) => number);
+  /** Inner radius (0 or undefined: solid rod, outer surface only). */
+  ri?: number | ((t: number) => number);
+  /** Radial segments of the full circle. */
+  segs: number;
+  /** Section plane z = clipZ: returns separate back (z <= clipZ) and front parts. */
+  clipZ?: number;
+  /** Cap the open ends (for rods and for the ends of isolated pieces). */
+  endCaps?: boolean;
+}
+
+export interface ClippedTube {
+  back: SweepResult;
+  front: SweepResult;
+}
+
+/**
+ * Sweep a circular (optionally hollow) cross-section along frames and cut it exactly by the
+ * plane z = clipZ: each ring keeps only the arc on the requested side; the arc ends are joined
+ * by flat section strips lying in the plane. Works for pipes at any angle, bends that cross the
+ * plane, volutes and tori.
+ */
+export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
+  const F = frames.length;
+  const roOf = (i: number) => (typeof o.ro === 'number' ? o.ro : o.ro(i / Math.max(1, F - 1)));
+  const riOf = (i: number) => (o.ri === undefined ? 0 : typeof o.ri === 'number' ? o.ri : o.ri(i / Math.max(1, F - 1)));
+  const hollow = o.ri !== undefined && o.ri !== 0;
+  const M = Math.max(6, o.segs);
+  const TAU = Math.PI * 2;
+  const make = (side: 1 | -1): SweepResult => {
+    const surf = new Buf();
+    const cut = new Buf();
+    const caps = new Buf();
+    /** Kept arc [a0, a1] of the ring of radius r (full ring: seam at the point nearest the plane). */
+    const arcOf = (f: Frame, r: number): { a0: number; a1: number; full: boolean } | null => {
+      if (o.clipZ === undefined) return { a0: 0, a1: TAU, full: true };
+      const A = Math.hypot(f.n.z, f.b.z);
+      const th0 = A > 1e-9 ? Math.atan2(f.b.z, f.n.z) : 0;
+      const base = side > 0 ? th0 : th0 + Math.PI;
+      const dz = (o.clipZ - f.p.z) * side;
+      if (A * r < 1e-9) return dz >= 0 ? { a0: base, a1: base + TAU, full: true } : null;
+      const k = dz / (r * A);
+      if (k >= 1) return { a0: base, a1: base + TAU, full: true };
+      if (k <= -1) return null;
+      const c = Math.acos(k);
+      return { a0: base + c, a1: base + TAU - c, full: false };
+    };
+    const P = new THREE.Vector3();
+    const Nn = new THREE.Vector3();
+    const ringPt = (f: Frame, r: number, th: number) => P.copy(f.p).addScaledVector(f.n, r * Math.cos(th)).addScaledVector(f.b, r * Math.sin(th));
+    const ringN = (f: Frame, th: number, s: number) => Nn.copy(f.n).multiplyScalar(Math.cos(th) * s).addScaledVector(f.b, Math.sin(th) * s);
+    const tri = (buf: Buf, a: number, b: number, c: number, want: THREE.Vector3) => {
+      const A = new THREE.Vector3().fromArray(buf.pos, a * 3);
+      const g = new THREE.Vector3().fromArray(buf.pos, b * 3).sub(A).cross(new THREE.Vector3().fromArray(buf.pos, c * 3).sub(A));
+      if (g.dot(want) >= 0) buf.idx.push(a, b, c);
+      else buf.idx.push(a, c, b);
+    };
+    let run: number[] = [];
+    const flush = () => {
+      if (run.length < 2) {
+        run = [];
+        return;
+      }
+      const cols = M + 1;
+      const surface = (radius: (i: number) => number, s: 1 | -1) => {
+        const base = surf.count;
+        for (const i of run) {
+          const f = frames[i];
+          const arc = arcOf(f, radius(i));
+          if (!arc) {
+            // inner ring entirely on the removed side: collapse it onto the chord midpoint
+            const ao = arcOf(f, roOf(i))!;
+            const mid = ringPt(f, roOf(i), ao.a0).clone().lerp(ringPt(f, roOf(i), ao.a1).clone(), 0.5);
+            for (let m = 0; m <= M; m++) surf.v(mid, ringN(f, (ao.a0 + ao.a1) / 2, s), f.u, m / M);
+            continue;
+          }
+          for (let m = 0; m <= M; m++) {
+            const th = arc.a0 + ((arc.a1 - arc.a0) * m) / M;
+            surf.v(ringPt(f, radius(i), th), ringN(f, th, s), f.u, m / M);
+          }
+        }
+        const nrm = new THREE.Vector3();
+        for (let j = 0; j < run.length - 1; j++)
+          for (let m = 0; m < M; m++) {
+            const a = base + j * cols + m;
+            nrm.fromArray(surf.nor, a * 3);
+            tri(surf, a, a + 1, a + cols, nrm);
+            nrm.fromArray(surf.nor, (a + 1) * 3);
+            tri(surf, a + 1, a + cols + 1, a + cols, nrm);
+          }
+      };
+      surface(roOf, 1);
+      if (hollow) surface(riOf, -1);
+      // section strips in the plane: two strips per ring, [outer end -> inner end] on each side,
+      // or both halves of the chord when the plane misses the bore (or for a solid rod)
+      if (o.clipZ !== undefined) {
+        const cBase = cut.count;
+        const planeN = new THREE.Vector3(0, 0, side);
+        let any = false;
+        for (const i of run) {
+          const f = frames[i];
+          const ao = arcOf(f, roOf(i))!;
+          if (!ao.full) any = true;
+          const e0 = ringPt(f, roOf(i), ao.a0).clone();
+          const e1 = ringPt(f, roOf(i), ao.a1).clone();
+          const ai = hollow ? arcOf(f, riOf(i)) : null;
+          let m0: THREE.Vector3;
+          let m1: THREE.Vector3;
+          if (hollow && ai && !ai.full) {
+            m0 = ringPt(f, riOf(i), ai.a0).clone();
+            m1 = ringPt(f, riOf(i), ai.a1).clone();
+          } else {
+            m0 = e0.clone().lerp(e1, 0.5);
+            m1 = m0.clone();
+          }
+          cut.v(e0, planeN, f.u, 0);
+          cut.v(m0, planeN, f.u, 1);
+          cut.v(e1, planeN, f.u, 0);
+          cut.v(m1, planeN, f.u, 1);
+        }
+        if (any) {
+          for (let j = 0; j < run.length - 1; j++) {
+            const a = cBase + j * 4;
+            const b = a + 4;
+            for (const k of [0, 2]) {
+              tri(cut, a + k, a + k + 1, b + k, planeN);
+              tri(cut, a + k + 1, b + k + 1, b + k, planeN);
+            }
+          }
+        } else {
+          cut.pos.length = cBase * 3;
+          cut.nor.length = cBase * 3;
+          cut.uv.length = cBase * 2;
+        }
+      }
+      // end caps (annulus or disc) where a run starts or ends
+      const capAt = (i: number, dirSign: number) => {
+        const f = frames[i];
+        const t = frames[Math.min(F - 1, i + 1)].p.clone().sub(frames[Math.max(0, i - 1)].p).normalize().multiplyScalar(dirSign);
+        const ao = arcOf(f, roOf(i));
+        if (!ao) return;
+        const ai = hollow ? arcOf(f, riOf(i)) : null;
+        const base = caps.count;
+        for (let m = 0; m <= M; m++) {
+          const th = ao.a0 + ((ao.a1 - ao.a0) * m) / M;
+          caps.v(ringPt(f, roOf(i), th).clone(), t, 0, 0);
+          if (hollow && ai) caps.v(ringPt(f, riOf(i), ai.a0 + ((ai.a1 - ai.a0) * m) / M).clone(), t, 0, 0);
+          else caps.v(f.p.clone(), t, 0, 0);
+        }
+        for (let m = 0; m < M; m++) {
+          const a = base + m * 2;
+          tri(caps, a, a + 2, a + 1, t);
+          tri(caps, a + 1, a + 2, a + 3, t);
+        }
+      };
+      const first = run[0];
+      const last = run[run.length - 1];
+      if (o.endCaps || first > 0) capAt(first, -1);
+      if (o.endCaps || last < F - 1) capAt(last, 1);
+      run = [];
+    };
+    for (let i = 0; i < F; i++) {
+      if (arcOf(frames[i], roOf(i))) run.push(i);
+      else flush();
+    }
+    flush();
+    return { surf: surf.geo(), cut: cut.geo(), caps: caps.geo() };
+  };
+  if (o.clipZ === undefined) return { back: make(1), front: { surf: null, cut: null, caps: null } };
+  return { back: make(1), front: make(-1) };
+}
+
+/** Frames along a circle (radius R, around a vertical axis through `centre`), angles in the lathe convention. */
+export function circleFrames(centre: THREE.Vector3, R: number, a0: number, a1: number, segsFull: number, opts: { dy?: (t: number) => number } = {}): Frame[] {
+  const n = Math.max(2, Math.ceil((segsFull * Math.abs(a1 - a0)) / (Math.PI * 2)));
+  const out: Frame[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const a = a0 + (a1 - a0) * t;
+    const radial = new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
+    const p = centre.clone().addScaledVector(radial, R);
+    if (opts.dy) p.y += opts.dy(t);
+    out.push({ p, n: radial, b: new THREE.Vector3(0, 1, 0), u: R * (a - a0) });
+  }
+  return out;
+}

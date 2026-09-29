@@ -64,12 +64,12 @@ export function mli(kind: Foil): THREE.Material {
     }
     const gold = kind === 'gold';
     return new THREE.MeshStandardMaterial({
-      color: gold ? '#e0a83e' : '#d3d7dc',
-      roughness: gold ? 0.3 : 0.26,
+      color: gold ? '#e3ad48' : '#d6dade',
+      roughness: gold ? 0.42 : 0.38,
       metalness: 1,
       map: c.lum,
       normalMap: c.normal,
-      normalScale: new THREE.Vector2(0.95, 0.95),
+      normalScale: new THREE.Vector2(1, 1),
       roughnessMap: c.rough,
     });
   });

@@ -10,7 +10,7 @@ export const AL_LI: MaterialDraft = {
   name: 'Aluminium-lithium alloy (2195 class)',
   family: 'Aluminium alloys',
   focus:
-    'The barrel material of the K-1 propellant tanks. It shows the three things a cryogenic tank wall has to balance: low density, high strength and stiffness, and toughness at liquid-oxygen temperature, plus how a thin shell is kept from buckling.',
+    'The barrel material of the K-1 propellant tanks, also used for the intertank panels and the crew capsule pressure vessel. It shows the three things a cryogenic tank wall has to balance: low density, high strength and stiffness, and toughness at liquid-oxygen temperature, plus how a thin shell is kept from buckling.',
   suits:
     'A tank barrel is sized by several requirements at once: hoop stress from internal pressure (wall thickness t = p·r/σ), axial compression and bending from thrust and wind in flight, and buckling of the thin shell. Adding a few percent of lithium, the lightest metal, makes aluminium lighter and stiffer. In the 2195 alloy it is about 5 % less dense and about 30 % stronger than the 2219 it replaced on the Space Shuttle super lightweight tank, so the same wall can be thinner. Like other aluminium alloys it has no ductile-to-brittle transition: at 90 K it is stronger and still tough, so a small crack does not run. The K-1 barrels are machined into an orthogrid (a thin skin with a square grid of integral ribs), which raises the bending stiffness of the wall many times for little extra mass, and the booster flies with its tanks pressurized, which puts the skin in tension and stabilizes it (pressure stabilization).',
   limits:
@@ -122,9 +122,9 @@ export const GRCOP: MaterialDraft = {
   name: 'Copper-chromium-niobium alloys (GRCop-42 and GRCop-84)',
   family: 'Copper alloys',
   focus:
-    'NASA-developed copper alloys strengthened by fine chromium-niobium (Cr2Nb) particles. They line the K-1 combustion chambers because they conduct heat almost as well as pure copper yet keep their strength when hot. Key idea: in a cooled liner, conductivity is what protects the wall; it is not insulation.',
+    'NASA-developed copper alloys strengthened by fine chromium-niobium (Cr₂Nb) particles. They line the K-1 combustion chambers because they conduct heat almost as well as pure copper yet keep their strength when hot. Key idea: in a cooled liner, conductivity is what protects the wall; it is not insulation.',
   suits:
-    'The liner faces gas at about 3,500 to 3,700 K and, near the throat, heat fluxes of tens of megawatts per square metre. No metal survives that uncooled. Regenerative cooling works only if the heat crosses the thin wall into the fuel with a small temperature drop, and the drop across a wall is ΔT = q·t/k, so a high conductivity k keeps the hot face cool. GRCop-42 conducts 344 W/(m·K) at room temperature, close to pure copper (about 396), while its Cr2Nb particles stop the grain growth and softening that make pure copper too weak at liner temperatures. It also resists the thermal fatigue caused by every start and shutdown, and it can be 3D printed with the coolant channels already inside.',
+    'The liner faces gas at about 3,500 to 3,700 K and, near the throat, heat fluxes of tens of megawatts per square metre. No metal survives that uncooled. Regenerative cooling works only if the heat crosses the thin wall into the fuel with a small temperature drop, and the drop across a wall is ΔT = q·t/k, so a high conductivity k keeps the hot face cool. GRCop-42 conducts 344 W/(m·K) at room temperature, close to pure copper (about 396), while its Cr₂Nb particles stop the grain growth and softening that make pure copper too weak at liner temperatures. It also resists the thermal fatigue caused by every start and shutdown, and it can be 3D printed with the coolant channels already inside.',
   limits:
     'Dense, like all copper alloys, and modest in strength compared with steels, so the liner is closed out by a structural jacket (a nickel superalloy in the K-1) that carries the pressure load. Its life is set by thermal fatigue and creep at the hot wall, and a loss of coolant flow melts it within moments. Hot oxygen-rich gas attacks copper (blanching), so the mixture next to the wall is kept fuel-rich.',
   elsewhere: [
@@ -199,7 +199,7 @@ export const NIOBIUM_C103: MaterialDraft = {
   focus:
     'A niobium alloy that works while glowing orange-white. It forms the nozzle extension of the K-1 upper-stage engine and the satellite apogee engine: parts cooled by radiating heat to space instead of by a coolant.',
   suits:
-    'Far down a vacuum nozzle the gas has expanded and cooled, and the heat flux into the wall is a small fraction of that at the throat. A thin, uncooled skin can then reach equilibrium, radiating from its outer surface as much heat as it receives (q = ε·σ·T⁴). C-103 melts at about 2,350 °C, keeps useful strength when glowing above 1,000 °C, and, unlike most refractory metals, is ductile enough at room temperature to spin-form, weld and machine. It is no denser than a nickel superalloy (8,850 kg/m³), and it removes the plumbing and mass of a cooling circuit from the largest part of the engine.',
+    'Far down a vacuum nozzle the gas has expanded and cooled, and the heat flux into the wall is a small fraction of that at the throat. A thin, uncooled skin can then reach equilibrium, radiating from its outer surface as much heat as it receives (q = ε·σ·T⁴). C-103 melts at about 2,350 °C, keeps useful strength when glowing above 1,000 °C, and, unlike most refractory metals, is ductile enough at room temperature to spin-form, weld and machine. It is only slightly denser than a nickel superalloy (8,850 kg/m³, against 8,190 kg/m³ for alloy 718), and it removes the plumbing and mass of a cooling circuit from the largest part of the engine.',
   limits:
     'Niobium oxidizes rapidly in hot oxidizing gas, so C-103 is always coated, typically with a fused silicide layer that grows a protective silica-rich scale. The coating has a limited life and can crack, and a damaged spot can burn through. Radiation can reject only a few tenths of a megawatt per square metre (about 0.33 MW/m² at 1,370 °C with an emissivity of 0.8), roughly a hundred times less than a throat receives, so C-103 cannot replace a cooled chamber. The glowing extension also heats whatever it can see, and its thin skin can be dented or cracked by vibration and handling.',
   elsewhere: [
@@ -234,7 +234,7 @@ export const TITANIUM: MaterialDraft = {
   focus:
     'As strong as many steels at a little over half their density, and tolerant of heat that would soften aluminium. In the K-1: grid fins, COPV liners and high-pressure lines, engine mount fittings, the fuel-pump impeller, and spacecraft propellant tanks.',
   suits:
-    'Annealed Ti-6Al-4V has a yield strength of at least 827 MPa at a density of 4,430 kg/m³, the best strength-to-weight ratio of the common structural metals, and it keeps useful strength at several hundred °C. That suits grid fins: they sit in hot, fast flow during entry and must keep steering without an ablative coating, and a one-piece titanium lattice can be reused flight after flight. Titanium resists corrosion and is compatible with helium, nitrogen and storable propellants, so it makes thin, strong gas-tight liners and propellant tanks, and compact, highly loaded fittings where loads concentrate, such as engine mounts.',
+    'Annealed Ti-6Al-4V has a yield strength of at least 827 MPa at a density of 4,430 kg/m³, one of the best strength-to-weight ratios among structural metals, and it keeps useful strength at several hundred °C. That suits grid fins: they sit in hot, fast flow during entry and must keep steering without an ablative coating, and a one-piece titanium lattice can be reused flight after flight. Titanium resists corrosion and is compatible with helium, nitrogen and storable propellants, so it makes thin, strong gas-tight liners and propellant tanks, and compact, highly loaded fittings where loads concentrate, such as engine mounts.',
   limits:
     'Expensive and slow to machine, and reactive when hot: it must be welded under inert gas, and it can ignite on impact in liquid or high-pressure oxygen, so it is kept out of LOX service. Its stiffness (about 114 GPa) is about 1.6 times that of aluminium for about 1.6 times the density, so for stiffness-limited panels it gains little. It oxidizes and weakens at the temperatures where nickel superalloys still work.',
   elsewhere: [
@@ -242,7 +242,7 @@ export const TITANIUM: MaterialDraft = {
     { text: 'Spacecraft tanks for hydrazine and nitrogen tetroxide are commonly titanium, for strength, low mass and propellant compatibility.', source: 'sutton-rpe' },
   ],
   compare: [
-    { axis: 'Strength to weight', text: 'Best of the common structural metals: yield at least 827 MPa at 4,430 kg/m³.' },
+    { axis: 'Strength to weight', text: 'Among the best of the structural metals: yield at least 827 MPa at 4,430 kg/m³, about 35 % more yield strength per kilogram than 2219-T87, and useful at temperatures where aluminium is not.' },
     { axis: 'Heat tolerance', text: 'Useful to several hundred °C, far beyond aluminium, below nickel superalloys.' },
     { axis: 'Stiffness', text: 'About 114 GPa: stiffer than aluminium, but not per kilogram.' },
     { axis: 'Oxygen compatibility', text: 'Poor in liquid or high-pressure oxygen (can ignite on impact); excellent with helium, nitrogen and storable propellants.' },

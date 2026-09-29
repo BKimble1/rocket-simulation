@@ -62,6 +62,16 @@ export function sweep(poly: V2[], closed: boolean, o: SweepOpts): { skin: THREE.
   const phi1 = o.phi1 ?? TAU;
   const segs = Math.max(3, o.segs);
   const crease = o.crease ?? 0.6;
+  if (closed) {
+    // orient counter-clockwise (material on the left) whatever order the caller listed
+    let a2 = 0;
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i];
+      const q = poly[(i + 1) % poly.length];
+      a2 += p[0] * q[1] - q[0] * p[1];
+    }
+    if (a2 < 0) poly = [...poly].reverse();
+  }
   const n = poly.length;
   const edges = closed ? n : n - 1;
   // edge normals (dy, -dr)

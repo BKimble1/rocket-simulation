@@ -110,6 +110,9 @@ const leoS2 = idealDv(E1V.ispVac, s2Gross + PAYLOADS.leoSat.mass, S2.dry + PAYLO
 const leoS2WithE1 = idealDv(E1.ispVac, s2Gross + PAYLOADS.leoSat.mass, S2.dry + PAYLOADS.leoSat.mass);
 const leoS2CarryingBooster = idealDv(E1V.ispVac, s2Gross + PAYLOADS.leoSat.mass + S1.dry, S2.dry + PAYLOADS.leoSat.mass + S1.dry);
 const leoS2CarryingFairing = idealDv(E1V.ispVac, s2Gross + PAYLOADS.leoSat.mass + FAIRING.mass, S2.dry + PAYLOADS.leoSat.mass + FAIRING.mass);
+/** Ideal velocity lost by the upper stage if it had to carry the empty booster (per payload stack). */
+const carryBoosterLoss = (payload: number) =>
+  idealDv(E1V.ispVac, s2Gross + payload, S2.dry + payload) - idealDv(E1V.ispVac, s2Gross + payload + S1.dry, S2.dry + payload + S1.dry);
 const capS2 = idealDv(E1V.ispVac, s2Gross + PAYLOADS.capsule.mass, S2.dry + PAYLOADS.capsule.mass);
 const capS2WithTower = idealDv(E1V.ispVac, s2Gross + PAYLOADS.capsule.mass + ABORT_TOWER.mass, S2.dry + PAYLOADS.capsule.mass + ABORT_TOWER.mass);
 
@@ -217,6 +220,25 @@ export const D = {
   // masses and ratios
   liftoffMass,
   liftoffTW: { leo: s1ThrustSL / (liftoffMass.leo * G0), station: s1ThrustSL / (liftoffMass.station * G0) },
+  /** Per ascent configuration: weight (N), net hold-down load (N), liftoff acceleration (m/s^2). */
+  stack: Object.fromEntries(
+    (Object.keys(liftoffMass) as (keyof typeof liftoffMass)[]).map((k) => [
+      k,
+      {
+        mass: liftoffMass[k],
+        weight: liftoffMass[k] * G0,
+        holdDown: s1ThrustSL - liftoffMass[k] * G0,
+        accel: (s1ThrustSL - liftoffMass[k] * G0) / liftoffMass[k],
+        tw: s1ThrustSL / (liftoffMass[k] * G0),
+      },
+    ]),
+  ) as Record<keyof typeof liftoffMass, { mass: number; weight: number; holdDown: number; accel: number; tw: number }>,
+  carryBoosterLoss: {
+    leo: carryBoosterLoss(PAYLOADS.leoSat.mass),
+    gto: carryBoosterLoss(PAYLOADS.gtoSat.mass),
+    lunar: carryBoosterLoss(PAYLOADS.lunarProbe.mass),
+    station: carryBoosterLoss(PAYLOADS.capsule.mass + ABORT_TOWER.mass),
+  },
   holdDownNet: s1ThrustSL - liftoffMass.leo * G0,
   liftoffAccel: (s1ThrustSL - liftoffMass.leo * G0) / liftoffMass.leo,
   sixEngineTW: ((S1.engineCount - 1) / S1.engineCount) * (s1ThrustSL / (liftoffMass.leo * G0)),
@@ -304,6 +326,12 @@ export const D = {
 };
 
 const kN = (n: number) => `${fmt(n / 1e3)} kN`;
+/** A station height as authored (one or two decimals), or rounded to 0.1 m when computed. */
+const stationM = (v: number) => {
+  const tenths = Math.abs(v * 10 - Math.round(v * 10)) < 1e-9;
+  const hundredths = Math.abs(v * 100 - Math.round(v * 100)) < 1e-9;
+  return `${fmt(v, tenths || !hundredths ? 1 : 2)} m`;
+};
 const kms = (n: number, d = 2) => `${fmt(n / 1e3, d)} km/s`;
 
 /** Formatted strings with units, used verbatim in the text. */
@@ -338,6 +366,7 @@ export const F = {
   e1TW: fmt(D.e1ThrustToWeight),
   pumpPower: `${fmt(D.pumpPower / 1e6)} MW`,
   e1ExitPressure: `${fmt(sig(D.e1ExitPressure / 1e3, 1))} kPa`,
+  e1SeaLevelPressureTerm: kN(sig(SEA_LEVEL_PRESSURE * D.e1ExitArea, 2)),
   e1vExitPressure: `${fmt(sig(D.e1vExitPressure / 1e3, 1))} kPa`,
   noDivergingLossSL: `${fmt(sig(D.noDivergingLossSL * 100, 2))} %`,
   noDivergingLossVac: `${fmt(sig(D.noDivergingLossVac * 100, 2))} %`,
@@ -389,6 +418,20 @@ export const F = {
   liftoffMassLunar: `${fmt(sig(D.liftoffMass.lunar / 1e3, 3))} t`,
   liftoffMassStation: `${fmt(sig(D.liftoffMass.station / 1e3, 3))} t`,
   liftoffWeightLeo: `${fmt((D.liftoffMass.leo * G0) / 1e6, 2)} MN`,
+  /** Per ascent configuration (leo, gto, lunar, station): mass, weight, hold-down load, acceleration, T/W. */
+  stack: Object.fromEntries(
+    Object.entries(D.stack).map(([k, v]) => [
+      k,
+      {
+        mass: `${fmt(sig(v.mass / 1e3, 3))} t`,
+        weight: `${fmt(v.weight / 1e6, 2)} MN`,
+        holdDown: kN(sig(v.holdDown, 2)),
+        accel: `${fmt(v.accel, 1)} m/s²`,
+        tw: fmt(v.tw, 2),
+        carryBoosterLoss: kms(D.carryBoosterLoss[k as keyof typeof D.carryBoosterLoss], 1),
+      },
+    ]),
+  ) as Record<keyof typeof D.stack, { mass: string; weight: string; holdDown: string; accel: string; tw: string; carryBoosterLoss: string }>,
   liftoffTWLeo: fmt(D.liftoffTW.leo, 2),
   liftoffTWStation: fmt(D.liftoffTW.station, 2),
   holdDownNet: kN(sig(D.holdDownNet, 2)),
@@ -406,6 +449,9 @@ export const F = {
   sandwichStiffnessRatio: fmt(sig(D.sandwichStiffnessRatio, 2)),
   radiatedAt1500K: `${fmt(D.radiatedAt1500K / 1e6, 2)} MW/m²`,
   // geometry
+  /** Axial stations (height above the first-stage nozzle exit plane), formatted. */
+  st: Object.fromEntries(Object.entries(STATIONS).map(([k, v]) => [k, stationM(v)])) as Record<keyof typeof STATIONS, string>,
+  legHinge: `${fmt(LEGS.hingeY, 1)} m`,
   s1FuelTankLength: `${fmt(D.s1FuelTankLength, 1)} m`,
   s1LoxTankLength: `${fmt(D.s1LoxTankLength, 1)} m`,
   intertankLength: `${fmt(D.intertankLength, 1)} m`,
@@ -487,11 +533,16 @@ export const F = {
   smDeorbitProp: `${fmt(sig(D.smDeorbitProp, 2))} kg`,
   smDeorbitBurn: `${fmt(sig(D.smDeorbitBurn, 2))} s`,
   deorbitDv: `${fmt(D.deorbitDv)} m/s`,
+  deorbitFraction: `${fmt((100 * D.deorbitDv) / D.leoSpeed, 1)} %`,
   towerLength: `${fmt(ABORT_TOWER.length, 1)} m`,
   towerMass: `${fmt(ABORT_TOWER.mass)} kg`,
   towerThrust: `${fmt(ABORT_TOWER.motorThrust / 1e6, 1)} MN`,
   lesTW: fmt(D.lesTW),
   crewHatchHeight: `${fmt(D.crewHatchHeight)} m`,
+  padDeckHeight: `${fmt(PAD.deckHeight, 1)} m`,
+  padNozzleExitHeight: `${fmt(PAD.nozzleExitHeight, 1)} m`,
+  towerHeight: `${fmt(PAD.tower.height)} m`,
+  towerOffset: `${fmt(Math.hypot(PAD.tower.x, PAD.tower.z), 1)} m`,
   landingZoneDistance: `${fmt(D.landingZoneDistance / 1e3, 1)} km`,
   xBandWavelength: `${fmt(D.xBandWavelength * 100, 1)} cm`,
   suborbitalFreeFall: `${fmt(sig(D.suborbitalFreeFall / 60, 1))} minutes`,

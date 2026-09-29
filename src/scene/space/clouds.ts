@@ -137,7 +137,7 @@ void main() {
   if (uOverlay > 0.5) steps = 8;
   else steps = int(clamp(len / 120.0, 6.0, float(uSteps)));
   float dt = len / float(steps);
-  float jit = ign(gl_FragCoord.xy);
+  float jit = hash12(gl_FragCoord.xy + fract(uCamEF.xz * 0.0) );
 
   vec3 T = vec3(1.0);
   float Tl = 1.0;
@@ -151,7 +151,7 @@ void main() {
     float r = length(pEF);
     float h = r - A_RB;
     float foot = t * uPixel;
-    float lod = smoothstep(250.0, 2500.0, max(foot, dt * 0.35));
+    float lod = smoothstep(120.0, 1400.0, max(foot, dt * 0.5));
     float elod = smoothstep(40.0, 260.0, max(foot, dt * 0.25));
     float dens = cloudDensity(pEF, h, lod, elod);
     if (dens > 0.003) {
@@ -159,14 +159,16 @@ void main() {
       float muS = dot(pEF, sunEF) / r;
       vec3 Ta = transmittanceSun(r, muS);
       float od = lightMarch(pEF, pEF, sunEF, lod);
-      // multiple-scattering octaves (Wrenninge): softer, brighter interiors
-      float lsun = exp(-od) * ph + 0.5 * exp(-od * 0.25) * mix(ph, 0.08, 0.6) + 0.25 * exp(-od * 0.06) * 0.08;
-      float powder = 1.0 - exp(-sig * 90.0);
+      // single scattering (phase, silver lining toward the Sun) plus a diffuse multiple-
+      // scattering term that decays slowly with depth and needs optically thick cloud around
+      float thick = 1.0 - exp(-sig * 320.0);
+      float ms = thick * (0.17 * exp(-od * 0.08) + 0.05 * exp(-od * 0.02));
+      float lsun = ph * exp(-od) + ms;
       float hf = clamp((h - C_BASE) / (C_TOP - C_BASE), 0.0, 1.0);
       vec3 Esky = SUN_E * skyIrradiance(muS);
       vec3 Egnd = SUN_E * (skyIrradiance(muS) + transmittanceSun(A_RB + 2.0, muS) * max(muS, 0.0)) * 0.12;
-      vec3 amb = (Esky * (0.45 + 0.55 * hf) + Egnd * (1.0 - hf)) / (4.0 * PI) * 1.6;
-      vec3 S = sig * (SUN_E * Ta * lsun * mix(0.55, 1.0, powder) * 3.2 + amb);
+      vec3 amb = (Esky * (0.45 + 0.55 * hf) + Egnd * (1.0 - hf)) / (4.0 * PI) * (1.0 + 1.5 * thick);
+      vec3 S = sig * (SUN_E * Ta * lsun + amb);
       float segT = exp(-sig * dt);
       vec3 inc = (S - S * segT) / max(sig, 1e-8);
       C += Tl * inc;
@@ -184,7 +186,7 @@ void main() {
   float a0 = max(0.0, iA.x);
   vec3 Tap = vec3(1.0);
   vec3 Lap = vec3(0.0);
-  if (tm > a0) Lap = integrateScattering(uCamPos, d, uSun, a0, tm, 6, 0.5, uCamR < A_RT ? 1 : 2, Tap) * SUN_E;
+  if (tm > a0) Lap = integrateScattering(uCamPos, d, uSun, a0, tm, 12, 0.5, uCamR < A_RT ? 1 : 2, Tap) * SUN_E;
   float alpha = (1.0 - Tl) * uFade;
   vec3 col = (Lap * (1.0 - Tl) + Tap * C) * uFade;
   gl_FragColor = vec4(col, alpha);
@@ -206,11 +208,34 @@ void main() {
 }
 `;
 
+const COMPOSITE_FRAG = /* glsl */ `
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform sampler2D uCloudTex;
+uniform vec2 uFullRes;
+varying vec3 vPos;
+uniform vec2 uLowRes;
+void main() {
+  vec2 uv = gl_FragCoord.xy / uFullRes;
+  vec2 o = 0.6 / uLowRes;
+  // small tent filter over the reduced-resolution march (hides the per-pixel jitter)
+  vec4 c = texture2D(uCloudTex, uv) * 0.36
+    + (texture2D(uCloudTex, uv + vec2(o.x, o.y)) + texture2D(uCloudTex, uv + vec2(-o.x, o.y))
+     + texture2D(uCloudTex, uv + vec2(o.x, -o.y)) + texture2D(uCloudTex, uv + vec2(-o.x, -o.y))) * 0.16;
+  if (c.a <= 0.0005) discard;
+  gl_FragColor = c;
+  #include <logdepthbuf_fragment>
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}
+`;
+
 export function makeCloudUniforms(shared: Record<string, THREE.IUniform>): Record<string, THREE.IUniform> {
   return {
     uTransLUT: shared.uTransLUT,
     uMsLUT: shared.uMsLUT,
     uIrrLUT: shared.uIrrLUT,
+    uSunE: shared.uSunE,
     uCoverage: shared.uCoverage,
     uNoise: shared.uNoise,
     uPadEF: shared.uPadEF,
@@ -219,7 +244,7 @@ export function makeCloudUniforms(shared: Record<string, THREE.IUniform>): Recor
     uCamR: shared.uCamR,
     uSun: shared.uSun,
     uToEF: shared.uToEF,
-    uPixel: shared.uPixel,
+    uPixel: { value: 0.001 },
     uCs: { value: new THREE.Vector4() },
     uCamEF: { value: new THREE.Vector3() },
     uRegime: { value: 0 },
@@ -235,6 +260,9 @@ export function makeCloudUniforms(shared: Record<string, THREE.IUniform>): Recor
     uThetaMax: { value: 0.1 },
     uLocalToRender: { value: new THREE.Matrix3() },
     uNearR: { value: 0 },
+    uCloudTex: { value: null },
+    uFullRes: { value: new THREE.Vector2(1, 1) },
+    uLowRes: { value: new THREE.Vector2(1, 1) },
   };
 }
 
@@ -247,12 +275,27 @@ function premultiplied(m: THREE.ShaderMaterial) {
   m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
 }
 
+/** The ray march, rendered into a reduced-resolution target (no depth test, premultiplied output). */
 export function makeCloudMaterial(uniforms: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    name: 'space.clouds.march',
+    uniforms,
+    vertexShader: DOME_VERT,
+    fragmentShader: CLOUD_FRAG.replace('#include <logdepthbuf_fragment>', ''),
+    depthWrite: false,
+    depthTest: false,
+    blending: THREE.NoBlending,
+    side: THREE.DoubleSide,
+  });
+}
+
+/** Full-resolution, depth-tested proxy that composites the marched clouds over the scene. */
+export function makeCloudCompositeMaterial(uniforms: Record<string, THREE.IUniform>): THREE.ShaderMaterial {
   const m = new THREE.ShaderMaterial({
     name: 'space.clouds',
     uniforms,
     vertexShader: DOME_VERT,
-    fragmentShader: CLOUD_FRAG,
+    fragmentShader: COMPOSITE_FRAG,
     transparent: true,
     depthWrite: false,
     depthTest: true,

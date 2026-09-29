@@ -350,7 +350,18 @@ export function bevelBox(w: number, h: number, d: number, bevel: number): THREE.
  * Loft: closed cross-sections (each an array of local 2D points (x, z)) placed along stations.
  * frame(s) returns the origin and the axes (x, z) of the section plane at station index s.
  */
-export function loft(sections: P2[][], frames: { o: THREE.Vector3; ax: THREE.Vector3; az: THREE.Vector3 }[], capEnds = true): THREE.BufferGeometry {
+export function loft(sectionsIn: P2[][], frames: { o: THREE.Vector3; ax: THREE.Vector3; az: THREE.Vector3 }[], capEnds = true): THREE.BufferGeometry {
+  // orientation: outward side normals need CCW sections (in x, z) when (ax, along, az) is right-handed
+  let area = 0;
+  const s0 = sectionsIn[0];
+  for (let i = 0; i < s0.length; i++) {
+    const [x1, z1] = s0[i];
+    const [x2, z2] = s0[(i + 1) % s0.length];
+    area += x1 * z2 - x2 * z1;
+  }
+  const along = frames[frames.length - 1].o.clone().sub(frames[0].o);
+  const hand = new THREE.Vector3().crossVectors(frames[0].ax, along).dot(frames[0].az);
+  const sections = area * hand < 0 ? sectionsIn.map((s) => [...s].reverse()) : sectionsIn;
   const m = sections[0].length;
   const pos: number[] = [];
   const uv: number[] = [];
