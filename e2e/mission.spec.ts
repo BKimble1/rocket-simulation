@@ -151,3 +151,33 @@ test('Back and Forward between missions load the mission the address names', asy
   await expect.poll(() => page.evaluate(() => (window as unknown as { __rocketPlayback: { player: { tl: { id: string } } } }).__rocketPlayback.player.tl.id)).toBe('leo');
   expect(new URL(page.url()).searchParams.get('m')).toBe('leo');
 });
+
+test('repeated mission changes and seeks do not grow scene objects, GPU resources or camera state', async ({ page }) => {
+  test.setTimeout(900_000);
+  const errors = watchErrors(page);
+  await page.goto(withHooks('?v=mission&m=leo'));
+  await waitForLocation(page, 'flight');
+  const open = async (m: string) => {
+    await page.getByRole('button', { name: /Satellite to low Earth orbit|Geostationary transfer/i }).first().click();
+    await page.getByRole('menuitem', { name: m }).click();
+    await frames(page, 4, 300_000);
+    await page.evaluate(() => (window as unknown as { __rocketSeekMission: (t: number) => void }).__rocketSeekMission(160));
+    await frames(page, 3, 300_000);
+  };
+  const snap = () =>
+    page.evaluate(() => {
+      const w = window as unknown as { __rocketGL: { info: { memory: { geometries: number; textures: number } } }; __rocketSceneCount: () => number; __rocketDirector: { blends: unknown[] } };
+      return { geo: w.__rocketGL.info.memory.geometries, tex: w.__rocketGL.info.memory.textures, nodes: w.__rocketSceneCount(), blends: w.__rocketDirector.blends.length };
+    });
+  await open('Geostationary transfer');
+  await open('Satellite to LEO');
+  const a = await snap();
+  await open('Geostationary transfer');
+  await open('Satellite to LEO');
+  const b = await snap();
+  expect(b.nodes).toBe(a.nodes);
+  expect(b.geo).toBeLessThanOrEqual(a.geo + 2);
+  expect(b.tex).toBeLessThanOrEqual(a.tex + 2);
+  expect(b.blends).toBeLessThanOrEqual(3);
+  expect(errors).toEqual([]);
+});

@@ -1701,6 +1701,10 @@ code {
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
+  /* no room for the reference telemetry beside the title, the phase panel and the dock */
+  .telemetry {
+    display: none;
+  }
   .lesson,
   .phasecard {
     top: calc(var(--header-h) + var(--safe-top) + 4px);

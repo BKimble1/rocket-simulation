@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import type { BodyId } from '../vehicle/parts';
 import type { MissionTimeline, Shot, ShotKind } from '../timeline/types';
 import { frame } from '../scene/frame';
-import { R_EARTH, SUN_DIRECTION, sitePosition, siteFrameQuaternion, moonPosition } from '../world/frames';
+import { R_EARTH, R_MOON, SUN_DIRECTION, sitePosition, siteFrameQuaternion, moonPosition } from '../world/frames';
 import { GROUND_CAMS, LANDING_ZONE, PAD } from '../world/site';
 import { clamp, fitFov, type CamPose } from './pose';
 import { bodyAt, channelAt, type BodyState } from '../timeline/sample';
@@ -102,7 +102,7 @@ export function subjectExtent(id: BodyId, t: number, tl: MissionTimeline | null 
 function chuteReachAt(tl: MissionTimeline, t: number): number {
   const d = channelAt(tl.channels['cap.drogue'], t, 0);
   const m = channelAt(tl.channels['cap.main'], t, 0);
-  return Math.max(35 * Math.min(1, d * 1.5), 66 * Math.min(1, m * 1.6));
+  return Math.max(38 * Math.min(1, d * 1.5), 72 * Math.min(1, m * 1.6));
 }
 /** Averaged over the last 4 s of mission time (still a pure function of t), so the framing opens up gently. */
 function chuteReach(tl: MissionTimeline, t: number): number {
@@ -117,6 +117,8 @@ const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
 const vSun = new THREE.Vector3();
 const vRef = new THREE.Vector3();
+const limb = new THREE.Vector3();
+const limbDir = new THREE.Vector3();
 const q1 = new THREE.Quaternion();
 
 export interface Basis {
@@ -549,20 +551,37 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
       out.pos.multiplyScalar(surfaceR / r);
       out.target.copy(centre);
       out.up.copy(out.pos).normalize();
-      out.fov = P.fov ?? fitFov(Math.max(size.half * 4, 30), out.pos.distanceTo(centre), ctx.aspect, 1.3);
+      // the extent already includes the parachutes: frame the capsule under its canopies
+      out.fov = P.fov ?? fitFov(Math.max(size.half * 1.35, 12), out.pos.distanceTo(centre), ctx.aspect, 1.25);
       return true;
     }
     case 'lunar': {
+      // the destination in context. The camera stands behind the probe on its line of sight to
+      // the Moon's sunward limb (the edge of the lit part as seen from the probe), a little toward
+      // the Sun, so the probe and the lit limb line up in one frame: far out, the whole sunlit
+      // Moon beyond the probe; at closest approach, when the probe passes over the night side,
+      // truthfully a dark disk hiding the stars with the bright crescent along its horizon.
       const d = P.d ?? 60;
-      orbitAround(d, P.az ?? 150, P.el ?? 10, B);
       moonPosition(t, frame.tl?.moonPhase0 ?? 0, v2);
-      // look past the spacecraft toward the Moon from the sunlit side, so both the probe and the
-      // Moon's day side are lit (from straight behind, the probe was a silhouette on the night side)
-      v3.subVectors(v2, centre).normalize();
-      vSun.copy(v3).multiplyScalar(-0.6).addScaledVector(SUN_DIRECTION, 0.8).normalize();
-      out.pos.copy(centre).addScaledVector(vSun, d).addScaledVector(B.up, d * 0.15);
-      out.target.copy(centre).addScaledVector(v3, d * 0.4);
-      out.fov = P.fov ?? 45;
+      vRef.subVectors(v2, centre);
+      const D = vRef.length();
+      vRef.divideScalar(D);
+      limbDir.copy(SUN_DIRECTION).addScaledVector(vRef, -SUN_DIRECTION.dot(vRef));
+      if (limbDir.lengthSq() < 1e-8) limbDir.copy(B.up).addScaledVector(vRef, -B.up.dot(vRef));
+      limbDir.normalize();
+      // the limb point toward the Sun, as seen from the probe
+      const alpha = Math.asin(Math.min(0.999, R_MOON / D));
+      const Dh = Math.sqrt(Math.max(0, D * D - R_MOON * R_MOON));
+      limb.copy(vRef).multiplyScalar(Math.cos(alpha)).addScaledVector(limbDir, Math.sin(alpha)).multiplyScalar(Dh).add(centre);
+      v3.subVectors(limb, centre).normalize();
+      // offset to the side in the travel frame (stable: the line to the limb is close to the Sun
+      // direction here, so an offset toward the Sun would be ill-defined)
+      vSun.copy(B.side).addScaledVector(v3, -B.side.dot(v3));
+      if (vSun.lengthSq() < 1e-6) vSun.copy(B.up).addScaledVector(v3, -B.up.dot(v3));
+      vSun.normalize();
+      out.pos.copy(centre).addScaledVector(v3, -d * 0.85).addScaledVector(vSun, d * 0.35).addScaledVector(B.up, d * 0.1);
+      out.up.copy(B.up);
+      out.fov = P.fov ?? aimTwo(out.pos, centre, size.half * 1.1, limb, R_MOON * 0.05, P.mix ?? 0.6, ctx.aspect, 60, out.target);
       return true;
     }
     case 'map':

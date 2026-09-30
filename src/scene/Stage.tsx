@@ -292,6 +292,11 @@ function Loop() {
         frame.shadowDirty = false;
       }
     } else gl.shadowMap.autoUpdate = true;
+    // exposure per location (flight sets its own from the sky: see space/system.ts): the hangar is
+    // exposed a little down so the white vehicle and the mid-grey hall both sit in the range where
+    // their contrast survives the tone mapping
+    if (frame.location === 'hangar') gl.toneMappingExposure = HANGAR_EXPOSURE;
+    else if (frame.location === 'map') gl.toneMappingExposure = 1;
     // an omitted interval: the picture captured before the gap stays up until it ends
     if (dissolve.hold && !frame.omitted) setHold(false, frame.clock);
     const a = snapshotAlpha(frame.clock);
@@ -368,6 +373,7 @@ function Loop() {
 }
 
 const rel = makePose();
+const HANGAR_EXPOSURE = 0.72;
 /** The WebGL context was lost and not yet restored (the interface says so; nothing is drawn). */
 export const contextLost = { value: false, since: 0 };
 
