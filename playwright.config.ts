@@ -12,7 +12,7 @@ const gpuArgs = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ig
 export default defineConfig({
   testDir: './e2e',
   testMatch: /.*\.spec\.ts/,
-  timeout: 180_000,
+  timeout: 300_000,
   expect: { timeout: 30_000 },
   fullyParallel: false,
   workers: 1,

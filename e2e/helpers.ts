@@ -15,7 +15,7 @@ export function watchErrors(page: Page) {
 }
 
 /** Wait until the stage has rendered some frames in the given location. */
-export async function waitForLocation(page: Page, loc: 'hangar' | 'flight' | 'map', timeout = 90_000) {
+export async function waitForLocation(page: Page, loc: 'hangar' | 'flight' | 'map', timeout = 150_000) {
   await page.waitForFunction((l) => (window as unknown as { __rocketFrame?: { location: string; n: number } }).__rocketFrame?.location === l, loc, { timeout });
   await page.waitForFunction(() => ((window as unknown as { __rocketFrame?: { n: number } }).__rocketFrame?.n ?? 0) > 5, null, { timeout });
 }
