@@ -9,7 +9,7 @@ import type { PartId } from '../../vehicle/parts';
 import type { MaterialId } from '../../content/materials/ids';
 import { box, cyl, DEG, rbox, strut, sweep, uvMetres, type Kit, type V2 } from './kit';
 import { hatch, mli, MLI_REPEAT, osr, P, radiator, tape, type Foil } from './mats';
-import { rng } from './textures';
+import { HATCH_REPEAT, rng } from './textures';
 
 export type FaceId = 'px' | 'nx' | 'pz' | 'nz' | 'top' | 'bot';
 export type SkinKind = Foil | 'osr' | 'radiator';
@@ -143,6 +143,8 @@ export interface BusParts {
   bus: THREE.Group;
   /** Interior equipment parent (hangar only). */
   inner: THREE.Object3D | null;
+  /** The removable +Z wall (hangar only): equipment mounted on it leaves with it in the section. */
+  wall: THREE.Object3D | null;
   /** Face frames for mounting appendages. */
   frame: (f: FaceId) => ReturnType<typeof faceFrame>;
 }
@@ -195,11 +197,20 @@ export function buildBus(kit: Kit, parent: THREE.Object3D, s: BusSpec): BusParts
   }
   // section caps: honeycomb edges of the panels left open by the removed +Z face
   if (cut) {
+    // hatch at its drawing scale, the cell walls running through the panel thickness (the
+    // pattern's lines run along v): u along the panel, v across it
     const hm = hatch('honeycomb');
-    for (const sx of [-1, 1]) kit.mesh(box(T, H, 0.003), hm, ...TAG_BUS, cut.caps, sx * (s.hx - T / 2), (s.y0 + s.y1) / 2, s.hz + 0.0015);
-    for (const yy of [s.y0 + T / 2, s.y1 - T / 2]) kit.mesh(box(2 * s.hx - 2 * T, T, 0.003), hm, ...TAG_BUS, cut.caps, 0, yy, s.hz - T + 0.0015);
+    const capUV = (g: THREE.BufferGeometry, alongY: boolean) => {
+      const p = g.attributes.position;
+      const uv = g.attributes.uv;
+      for (let i = 0; i < p.count; i++) uv.setXY(i, (alongY ? p.getY(i) : p.getX(i)) / HATCH_REPEAT, (alongY ? p.getX(i) : p.getY(i)) / HATCH_REPEAT);
+      uv.needsUpdate = true;
+      return g;
+    };
+    for (const sx of [-1, 1]) kit.mesh(capUV(box(T, H, 0.003), true), hm, ...TAG_BUS, cut.caps, sx * (s.hx - T / 2), (s.y0 + s.y1) / 2, s.hz + 0.0015);
+    for (const yy of [s.y0 + T / 2, s.y1 - T / 2]) kit.mesh(capUV(box(2 * s.hx - 2 * T, T, 0.003), false), hm, ...TAG_BUS, cut.caps, 0, yy, s.hz - T + 0.0015);
   }
-  return { bus, inner: cut ? cut.inner : null, frame: (f) => faceFrame(s, f) };
+  return { bus, inner: cut ? cut.inner : null, wall: cut ? cut.wedge : null, frame: (f) => faceFrame(s, f) };
 }
 
 /** 1575 mm separation ring and a short aft cone up to the bus floor (satellite side of the clamp band). */

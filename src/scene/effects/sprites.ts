@@ -265,21 +265,31 @@ void main() {
   // tiles 4-7: the same billows for thin media (puffs, vapour, spray), lit through
   float tile = floor(vTile + 0.02);
   float soft = clamp((vTile - tile) / 0.9, 0.0, 1.0);
+  // a streak (one puff drawn along the path it covered in a spawn interval) has no billow
+  // outline of its own: with the tile's crisp rim its flat run shows straight sides and the
+  // column reads as a stack of boxes. Streaks take a soft, rounded profile instead.
+  soft = max(soft, 0.85 * smoothstep(0.05, 0.5, vCap));
   float thinMedium = step(3.5, tile);
   tile = mod(tile, 4.0);
   vec2 base = vec2(mod(tile, 2.0), floor(tile / 2.0)) * 0.5;
   vec2 uv = vec2(sign(vUv.x) * max(0.0, abs(vUv.x) - vCap), vUv.y);
   vec2 uvT = base + (uv * 0.5 + 0.5) * 0.5;
   vec4 tx = texture2D(uAtlas, uvT);
+  float ru = length(uv);
   // an old, diffuse puff: its outline fades out gradually instead of ending at the lobe rims
-  float dens = tx.r * mix(1.0, 1.0 - smoothstep(0.15, 0.95, length(uv)), soft);
+  float dens = tx.r * mix(1.0, 1.0 - smoothstep(0.15, 0.95, ru), soft);
+  // a distant sprite samples the coarse mip levels, where the tiles bleed into each other and
+  // the density no longer reaches zero at the quad's edge: window it so no square outline shows
+  dens *= 1.0 - smoothstep(0.78, 1.0, ru);
   float a = dens * vAlb.a * vFade;
   vec3 emitT = vEmit.rgb * dens * dens * vFade;
   if (a < 0.002 && dot(emitT, vec3(1.0)) < 0.002) discard;
   // tile-space normal rotated into view space
   vec2 nt = tx.gb * 2.0 - 1.0;
   vec2 nxy = vRot * nt.x + vec2(-vRot.y, vRot.x) * nt.y;
-  vec3 n = normalize(vec3(nxy * (1.0 - 0.5 * soft), sqrt(max(0.0, 1.0 - dot(nt, nt)))));
+  // thin media (gas puffs, vapour, spray) have no sharp lobes to shade: a flatter normal, or
+  // a sunlit puff reads as dirty billowing smoke
+  vec3 n = normalize(vec3(nxy * (1.0 - 0.5 * soft) * (1.0 - 0.55 * thinMedium), sqrt(max(0.0, 1.0 - dot(nt, nt)))));
   vec3 toCam = normalize(-vView);
   float shadow = vEmit.a;
   float ndl = dot(n, uSunView);

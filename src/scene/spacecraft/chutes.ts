@@ -188,15 +188,22 @@ class Chute {
     g.computeVertexNormals();
     g.computeBoundingSphere();
     g.computeBoundingBox();
+    const lp = this.linePos;
     for (let s = 0; s < d.gores; s++) {
       const phi = (s / d.gores) * Math.PI * 2;
       const k = s * 6;
-      this.linePos.set([skirtR * Math.sin(phi), ySkirt, skirtR * Math.cos(phi), 0, conf, 0], k);
+      lp[k] = skirtR * Math.sin(phi);
+      lp[k + 1] = ySkirt;
+      lp[k + 2] = skirtR * Math.cos(phi);
+      lp[k + 3] = 0;
+      lp[k + 4] = conf;
+      lp[k + 5] = 0;
     }
     this.lines.geometry.attributes.position.needsUpdate = true;
     this.lines.geometry.computeBoundingSphere();
     this.lines.geometry.computeBoundingBox();
-    this.riserPos.set([0, 0, 0, 0, conf, 0]);
+    this.riserPos.fill(0);
+    this.riserPos[4] = conf;
     this.riser.geometry.attributes.position.needsUpdate = true;
     this.riser.geometry.computeBoundingSphere();
     this.riser.geometry.computeBoundingBox();
@@ -243,13 +250,15 @@ export function buildChutes(kit: Kit, attach: THREE.Vector3): ChuteSet {
       }),
   );
   for (const c of [...drogues, ...mains]) group.add(c.group);
-  let last = '';
+  // last applied state (numbers, so an unchanged pose costs nothing and allocates nothing)
+  let lastD = NaN;
+  let lastM = NaN;
   return {
     group,
     set(drogue: number, main: number) {
-      const key = `${drogue.toFixed(4)}|${main.toFixed(4)}`;
-      if (key === last) return;
-      last = key;
+      if (Math.abs(drogue - lastD) < 1e-5 && Math.abs(main - lastM) < 1e-5) return;
+      lastD = drogue;
+      lastM = main;
       const de = smooth(0, 0.35, drogue);
       const di = smooth(0.2, 1, drogue);
       for (const c of drogues) c.update(de, di);

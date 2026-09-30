@@ -144,7 +144,8 @@ vec3 field(vec3 p) {
     float win = 1.0 - smoothstep(0.5 * rb, 0.92 * rb, r);
     float sl = exp(-pow((r - rsl) / w, 2.0)) * exp(-x / uWake) * (0.6 + 0.8 * nz) * tailFade * win;
     // faint beside the shock layer: the ionised wake glows far less than the gas at the shield
-    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 0.5;
+    // (seen along its length, from a camera following the capsule, it adds up over tens of metres)
+    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 0.18;
   }
   // soft glow around the stagnation region (the eye sees the bright layer bleed)
   float hd = length(vec2(r, y - uDelta * 0.5)) / (0.9 * R);
@@ -177,15 +178,17 @@ void main() {
     // entering from the wake side: wake first, then the front
     ta = tc; tb = t1; tc0 = t0; tc1 = tc;
   }
+  // glow right at the camera (a camera riding in the wake) fades in over a body radius
+  float nearK = 1.0 / max(uR, 0.1);
   float dt = (tb - ta) / 22.0;
   for (int i = 0; i < 22; i++) {
-    vec3 p = o + (ta + (float(i) + jit) * dt) * d;
-    col += field(p) * dt;
+    float t = ta + (float(i) + jit) * dt;
+    col += field(o + t * d) * (dt * smoothstep(0.0, 1.0, t * nearK));
   }
   float dw = (tc1 - tc0) / 14.0;
   for (int i = 0; i < 14; i++) {
-    vec3 p = o + (tc0 + (float(i) + jit) * dw) * d;
-    col += field(p) * dw;
+    float t = tc0 + (float(i) + jit) * dw;
+    col += field(o + t * d) * (dw * smoothstep(0.0, 1.0, t * nearK));
   }
   col *= uI;
   gl_FragColor = fxComposite(vec3(0.0), 0.0, fxFlame(col));

@@ -354,6 +354,8 @@ export class Kit {
   /** Groups faded out together with the wedges (appendages hiding the section). */
   readonly cutHide: THREE.Object3D[] = [];
   readonly fadeClones = new Map<THREE.Material, THREE.Material>();
+  /** fadeClones as a flat list [original, clone, ...] (iterated per frame without allocating). */
+  private fadePairs: THREE.Material[] = [];
   readonly labels: { text: string; anchor: THREE.Object3D }[] = [];
 
   constructor(detail: Detail) {
@@ -482,6 +484,8 @@ export class Kit {
       });
     for (const w of this.wedges) swap(w.g);
     for (const h of this.cutHide) swap(h);
+    this.fadePairs = [];
+    for (const [orig, f] of this.fadeClones) this.fadePairs.push(orig, f);
   }
 
   private cutFade = 1;
@@ -491,7 +495,10 @@ export class Kit {
   /** Fading clones follow their originals' opacity and visibility (posed state) times the cut fade. */
   syncFades(): void {
     const fade = this.cutFade;
-    for (const [orig, m] of this.fadeClones) {
+    const fp = this.fadePairs;
+    for (let i = 0; i < fp.length; i += 2) {
+      const orig = fp[i];
+      const m = fp[i + 1];
       m.opacity = orig.opacity * fade;
       m.visible = orig.visible;
       m.depthWrite = orig.depthWrite && fade > 0.6;

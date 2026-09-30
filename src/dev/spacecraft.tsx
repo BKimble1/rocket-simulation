@@ -5,6 +5,7 @@
  *   arrays= antenna= smarrays= drogue= main= nose= char= (0..1)   cut=0..1
  *   demo=spacecraft-ops|capsule-return|heat-shield-stack   p=0..1 (omit to loop over 12 s)
  *   mount=<model-frame y of the payload interface> (default 0)   labels=1   floor=0
+ *   rx=<deg> turns the model about X through its centre (rx=180 shows a heat shield or engine)
  * Camera: the usual hangar parameters (az, el, dist, tx, ty, tz, fov); sensible defaults per kind.
  */
 import { useFrame, useThree } from '@react-three/fiber';
@@ -66,9 +67,23 @@ export default function Dev() {
       m.geometry.computeBoundingBox();
       bounds.union(m.geometry.boundingBox!.clone().applyMatrix4(m.matrixWorld));
     });
-    (window as unknown as Record<string, unknown>).__spacecraft = { model, root, bounds };
+    // optional turn about X through the centre (the framing stays centred)
+    const rx = num('rx', 0);
+    if (rx) {
+      const pivot = new THREE.Group();
+      const c = bounds.getCenter(new THREE.Vector3());
+      pivot.position.copy(c);
+      pivot.rotation.x = rx * (Math.PI / 180);
+      root.position.copy(c).negate();
+      pivot.add(root);
+      return { model, root: pivot, bounds };
+    }
     return { model, root, bounds };
   }, [kind, detail, mount]);
+  // published from an effect: StrictMode may build (and discard) a second model in the memo
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).__spacecraft = { model, root, bounds };
+  }, [model, root, bounds]);
 
   // studio lighting: neutral room environment, a warm key with shadows, cool fill from the sky
   const key = useMemo(() => {
@@ -128,14 +143,24 @@ export default function Dev() {
     const list = (model.bodies.capsule?.userData.labels ?? []) as { text: string; anchor: THREE.Object3D }[];
     const show = q.get('labels') === '1' || demo === 'heat-shield-stack';
     if (!show) return [];
-    return list.map((l) => ({ ...l, sprite: labelSprite(l.text) }));
+    // each label has a leader line from its anchor on the layer's cut face to the label
+    return list.map((l) => {
+      const pos = new Float32Array(6);
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const leader = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: '#f3f2ee', depthTest: false, transparent: true, opacity: 0.85 }));
+      leader.renderOrder = 10;
+      leader.frustumCulled = false;
+      return { ...l, sprite: labelSprite(l.text), leader, pos };
+    });
   }, [model, demo]);
 
   // the framing (URL or per-kind default) is held until the viewer orbits or zooms, so a later
   // hangar reset elsewhere in the app does not move the dev camera away
   const first = useRef(true);
   const userMoved = useRef(false);
-  const tmp = useMemo(() => new THREE.Vector3(), []);
+  const right = useMemo(() => new THREE.Vector3(), []);
+  const anchorPos = useMemo(() => new THREE.Vector3(), []);
   const shot = useMemo(() => {
     const c = bounds.getCenter(new THREE.Vector3());
     const size = bounds.getSize(new THREE.Vector3());
@@ -164,12 +189,19 @@ export default function Dev() {
     }
     if (labels.length) {
       const cam = frame.camQuat;
-      const right = tmp.set(1, 0, 0).applyQuaternion(cam).clone();
+      right.set(1, 0, 0).applyQuaternion(cam);
       labels.forEach((l, i) => {
-        l.anchor.getWorldPosition(l.sprite.position);
+        l.anchor.getWorldPosition(anchorPos);
         const h = 0.07;
-        l.sprite.scale.set(h * (l.sprite.userData.aspect as number), h, 1);
-        l.sprite.position.addScaledVector(right, 0.55 + (h * (l.sprite.userData.aspect as number)) / 2).y += (i - 1.5) * 0.02;
+        const w = h * (l.sprite.userData.aspect as number);
+        l.sprite.scale.set(w, h, 1);
+        l.sprite.position.copy(anchorPos).addScaledVector(right, 0.55 + w / 2).y += (i - 1.5) * 0.02;
+        // leader: anchor to the label's left edge
+        anchorPos.toArray(l.pos, 0);
+        l.pos[3] = l.sprite.position.x - right.x * (w / 2);
+        l.pos[4] = l.sprite.position.y - right.y * (w / 2);
+        l.pos[5] = l.sprite.position.z - right.z * (w / 2);
+        l.leader.geometry.attributes.position.needsUpdate = true;
       });
     }
   });
@@ -184,6 +216,9 @@ export default function Dev() {
       <primitive object={root} />
       {labels.map((l) => (
         <primitive key={l.text} object={l.sprite} />
+      ))}
+      {labels.map((l) => (
+        <primitive key={`leader:${l.text}`} object={l.leader} />
       ))}
       {kind !== 'station' && q.get('floor') !== '0' && (
         <mesh rotation-x={-Math.PI / 2} position-y={floorY} receiveShadow>

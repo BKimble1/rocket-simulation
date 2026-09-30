@@ -323,7 +323,7 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
     { crease: 0.3 },
   );
 
-  // ── backshell: reusable tiles (50 mm) on a composite substructure (15 mm), ring frames to the vessel
+  // ── backshell: reusable tiles (50 mm) on an aluminium-lithium substructure (15 mm), ring frames to the vessel
   const coneSpec: ConeSpec = {
     L: OML.L,
     r: (s: number) => OML.p2r - s * SIN,
@@ -350,7 +350,7 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
   kit.solid(cap, [...coneOuter, ...[...coneInner].reverse()], segs, tileMat, hatch('ceramic'), 'backshell-tps', 'ceramic-tiles', { crease: 0.5, v: vCone });
   const subOuter = coneInner.map(([r, y]) => [r, y] as V2);
   const subInner = coneInner.map(([r, y]) => [r - 0.015 * COS, y - 0.015 * SIN] as V2);
-  kit.solid(cap, [...subOuter, ...[...subInner].reverse()], segs, P.cfrpPanel(), hatch('composite'), 'capsule', 'al-li', { crease: 0.5 });
+  kit.solid(cap, [...subOuter, ...[...subInner].reverse()], segs, P.aluMilled(), hatch('metal'), 'capsule', 'al-li', { crease: 0.5 });
   if (hangar) {
     for (const s of [0.35, 0.95, 1.55]) {
       const [r, y] = OML.at(s);
@@ -530,7 +530,7 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
     // the door skin (tiles like the cone around it) and its handle plate only read up close
     if (hangar) {
       const door = conePatch(pa, pb, hatchS - hh / 2, hatchS + hh / 2, 0.006, 16, 12, (phi, s) => [(((phi / (Math.PI * 2)) % 1) + 1) % 1, s / OML.L]);
-      place(kit.mesh(door, tileMat, 'capsule', 'al-li', cap), hatchPhi);
+      place(kit.mesh(door, tileMat, 'backshell-tps', 'ceramic-tiles', cap), hatchPhi);
     }
     frame(0.96, 1.06, 0.1, 0.07, 0.016, hatchPhi, hatchS, P.ti(), 'capsule', 'titanium');
     // round hatch window and the handle plate
@@ -659,16 +659,14 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
       kit.mesh(rbox(1.5, 0.08, 0.5, 0.02, 2), P.graphite(), 'capsule', 'al-li', con);
       for (const x of [-0.5, 0, 0.5]) kit.mesh(box(0.38, 0.01, 0.3), P.display(), 'capsule', 'al-li', con, x, -0.045, 0);
     } else {
-      // experiment racks: locker stacks around a central column
-      for (const [x, z, ry] of [
-        [0.72, 0.35, -Math.PI / 2],
-        [0.35, 0.72, Math.PI],
-        [-0.72, 0.35, Math.PI / 2],
-        [-0.3, -0.72, 0],
-      ] as [number, number, number][]) {
+      // experiment racks: locker stacks around a central column, their faces toward it, on the
+      // wall opposite the section quadrant (0..90 deg) so the section view shows their fronts;
+      // clear of the side hatch at 270 deg (the crew stowage lockers are not fitted)
+      for (const deg of [150, 195, 240]) {
+        const phi = deg * DEG;
         const rack = new THREE.Group();
-        rack.position.set(x, fl + 0.02, z);
-        rack.rotation.y = ry;
+        rack.position.set(Math.sin(phi) * 0.78, fl + 0.02, Math.cos(phi) * 0.78);
+        rack.rotation.y = phi + Math.PI;
         inner.add(rack);
         kit.mesh(rbox(0.56, 1.08, 0.46, 0.015, 1), P.boxGrey(), 'capsule', 'al-li', rack, 0, 0.54, 0);
         for (let k = 0; k < 4; k++) {
@@ -678,12 +676,13 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
       }
       kit.mesh(cyl(0.18, 0.2, 1.3, 32), P.aluMilled(), 'capsule', 'al-li', inner, 0, fl + 0.65, 0);
     }
-    // stowage lockers on the -X/-Z walls
-    for (const [x, z] of [
-      [-1.05, -0.55],
-      [-0.55, -1.05],
-    ])
-      kit.mesh(rbox(0.36, 0.5, 0.36, 0.02, 1), P.whitePaint(), 'capsule', 'al-li', inner, x, 1.25, z);
+    // crew stowage lockers on the -X/-Z walls
+    if (crewed)
+      for (const [x, z] of [
+        [-1.05, -0.55],
+        [-0.55, -1.05],
+      ])
+        kit.mesh(rbox(0.36, 0.5, 0.36, 0.02, 1), P.whitePaint(), 'capsule', 'al-li', inner, x, 1.25, z);
   }
 
   // ── parachutes

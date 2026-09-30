@@ -367,7 +367,7 @@ export function buildStation(kit: Kit): Built {
       // array drive: rotary joints turn the outboard trusses; beta gimbals turn each wing
       const alpha = s.arrayDrive * 1.2;
       for (const ob of outboard) ob.rotation.z = alpha;
-      wings.forEach((w, i) => (w.rotation.x = (i % 2 ? 1 : -1) * (25 * DEG) + s.arrayDrive * 0.8));
+      for (let i = 0; i < wings.length; i++) wings[i].rotation.x = (i % 2 ? 1 : -1) * (25 * DEG) + s.arrayDrive * 0.8;
     },
   };
 }

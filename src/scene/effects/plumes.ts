@@ -20,6 +20,7 @@ const C = (r: number, g: number, b: number) => new THREE.Color(r, g, b);
  */
 const COL = {
   core: C(1.0, 0.62, 0.24),
+  coreHigh: C(1.0, 0.8, 0.62),
   diamond: C(1.0, 0.8, 0.56),
   green: C(0.08, 1.0, 0.18),
   flameA: C(1.0, 0.42, 0.11),
@@ -104,9 +105,17 @@ function engineCore(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.margin = 1.35;
   // hot inviscid core, brightest at the exit and fading along its length (slightly green
   // during the igniter flash). Blob intensities are per metre of line of sight.
-  const coreCol = bcol(solid ? COL.solidCore : COL.core).lerp(COL.green, green * 0.7);
+  // Optical thickness of the afterburning soot envelope: opaque in the dense lower air, thin
+  // above ~20 km (the gas is tenuous and burns out). An opaque medium with a dim source reads
+  // as brown or bronze over a bright background (sky, clouds, the ballooned plume behind it).
+  const thick = Math.max(0.03, Math.min(1, rhoR * 3)) ** 0.8;
+  // High up there is little afterburning soot: the core is fainter and burns a paler cream
+  // (an orange Gaussian fading through mid tones reads as brass streaks inside the plume)
+  const coreCol = bcol(solid ? COL.solidCore : COL.core);
+  if (!solid) coreCol.lerp(COL.coreHigh, 1 - thick);
+  coreCol.lerp(COL.green, green * 0.7);
   const rCore = re * 0.6 * Math.sqrt(p.Rbal / re);
-  const coreI = (solid ? 16 : 3.6) * thr * st;
+  const coreI = (solid ? 16 : 3.6 * (0.45 + 0.55 * thick)) * thr * st;
   // the luminous core hides what is behind it (without this, yellow over blue sky reads green)
   p.blobOcc = solid ? 0.3 : 1.4;
   blob(p, Lcore * 0.1, Lcore * 0.3, rCore, coreI, coreCol);
@@ -122,13 +131,14 @@ function engineCore(e: EmitterSnap, p: VolumeParams, steps: number) {
   // TEA-TEB: the pyrophoric igniter burns bright green at the exit for a fraction of a second
   blob(p, 0.6 * D, 1.2 * D, 1.1 * re, 7 * green, bcol(COL.green));
   // flame envelope around the core
-  p.flameI = (solid ? 5 : 1.5) * thr * lumAir * (0.3 + 0.7 * st);
-  p.flameSigma = solid ? 2.5 : 0.9;
+  p.flameI = (solid ? 5 : 1.5) * thr * lumAir * (0.3 + 0.7 * st) / Math.sqrt(thick);
+  p.flameSigma = (solid ? 2.5 : 0.9) * thick;
   p.flameIn = [0.15 * D, 1.1 * D];
   p.flameLen = Lcore * 1.4;
   p.flameA.copy(solid ? COL.solidA : COL.flameA).lerp(COL.green, green * 0.8);
   p.flameB.copy(solid ? COL.solidB : COL.flameB);
-  p.turb = 0.5;
+  // turbulent afterburning low down; a smooth expanding jet high up (streaks would read as metal)
+  p.turb = 0.5 * (0.35 + 0.65 * thick);
   p.flow = 420;
   p.noiseK = 1.0;
   p.radK = 2.6;
@@ -150,8 +160,10 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   p.seed = 13.7;
   p.margin = 1.25;
   const sq = Math.sqrt(s.throttle);
-  p.flameI = (solid ? 4 : 3.4) * s.lum * sq * st;
-  p.flameSigma = (solid ? 2 : 1.5) * (0.4 + 0.6 * Math.min(1, s.rhoRatio * 3));
+  // opaque luminous soot low down, optically thin high up (see engineCore)
+  const thick = Math.max(0.03, Math.min(1, s.rhoRatio * 3)) ** 0.8;
+  p.flameI = ((solid ? 4 : 3.4) * s.lum * sq * st) / Math.sqrt(thick);
+  p.flameSigma = (solid ? 2 : 1.5) * thick;
   p.flameIn = [1.2, solid ? 2 : 6];
   p.flameLen = s.flameLen * (0.4 + 0.6 * st);
   p.flameA.copy(solid ? COL.solidA : COL.colFlameA);
@@ -164,8 +176,13 @@ function column(c: ClusterSnap, s: ColumnShape, p: VolumeParams, steps: number) 
   p.smokeSigma = (solid ? 0.9 : 1.0) * s.smoke * st;
   p.smokeIn = solid ? [s.smokeStart, s.smokeStart + 8] : [4, s.smokeStart + 14];
   p.sootOuter = solid ? 0 : 0.75;
+  // kerosene soot near the ground; higher up the tail is mostly condensed water (ice): paler
   p.smokeA.copy(solid ? COL.solidSmokeA : COL.sootA);
   p.smokeB.copy(solid ? COL.solidSmokeB : COL.sootB);
+  if (!solid) {
+    p.smokeA.lerp(COL.sootB, 1 - s.smoke);
+    p.smokeB.lerp(COL.envelope, 0.8 * (1 - s.smoke));
+  }
   // the under-expanded plume at altitude: sunlit translucent envelope with an orange glow near the nozzles
   const wbal = smooth(1.6, 14, s.pr);
   // condensed exhaust and afterburning keep the ballooned plume bright as it spreads; a small
@@ -205,7 +222,8 @@ function ggJet(e: EmitterSnap, p: VolumeParams, steps: number) {
   p.seed = hashId(e.id) * 31 + 5;
   p.margin = 1.4;
   // fuel-rich, sooty and nearly black at the outlet, turning grey-brown as it mixes
-  p.smokeSigma = (1.2 + 9 * sm) * e.throttle * st;
+  // (in thin air the fan is tenuous: nearly transparent, never a dark smudge over the plume)
+  p.smokeSigma = (0.12 + 10 * sm) * e.throttle * st;
   p.smokeIn = [0, 0.3];
   p.smokeA.copy(COL.ggSoot);
   p.smokeB.copy(COL.ggSootB);

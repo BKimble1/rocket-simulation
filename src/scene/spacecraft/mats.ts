@@ -178,7 +178,9 @@ export function ablator(): { mat: THREE.MeshStandardMaterial; char: { value: num
         {
           float cp = texture2D(charMap, vMapUv).r;
           float k = clamp(uChar * 1.25 - (1.0 - cp) * 0.35 * (1.0 - uChar), 0.0, 1.0);
-          vec3 charCol = vec3(0.045, 0.040, 0.036) * (0.55 + 1.6 * cp);
+          // block seams and honeycomb walls (lighter in the base map) still read through the char
+          float cell = clamp(diffuseColor.r / 0.145, 0.7, 1.9);
+          vec3 charCol = vec3(0.034, 0.027, 0.021) * (0.55 + 1.6 * cp) * cell;
           diffuseColor.rgb = mix(diffuseColor.rgb, charCol, k);
         }`,
       )
@@ -213,7 +215,9 @@ export function canopy(kind: 'ringsail' | 'ribbon'): THREE.Material {
       metalness: 0,
       side: THREE.DoubleSide,
       alphaMap: canopyAlpha(kind),
-      alphaTest: 0.5,
+      // a low threshold: slots thinner than a pixel average to mostly opaque in the mipmaps and
+      // close (a solid canopy) instead of flickering into broken dark lines far away
+      alphaTest: 0.3,
       normalMap: fabricNormal(),
       normalScale: new THREE.Vector2(0.25, 0.25),
       emissive: '#2a1a10',

@@ -344,13 +344,19 @@ const TAIL: Species = {
       rec.emit.setRGB(0.9, 0.4, 0.1).multiplyScalar(shape.lum);
       rec.tauE = 0.06;
     } else {
-      // kerosene soot: nearly black at the end of the flame, greying slowly as it mixes
-      const soot = 0.1 + 0.08 * rnd(14);
-      rec.alb0.setRGB(soot * 1.12, soot, soot * 0.9);
-      rec.alb1.setRGB(0.5, 0.49, 0.48);
-      // the tail end of the afterburning flame: a brief, dim glow (many sprites overlap here)
-      rec.emit.setRGB(0.3, 0.075, 0.012).multiplyScalar(shape.lum * (0.5 + 0.8 * rnd(15)));
-      rec.tauE = 0.06 + 0.08 * rnd(16);
+      // kerosene soot: nearly black at the end of the flame, greying slowly as it mixes. Higher
+      // up, the exhaust's water condenses and freezes in the cold thin air: the tail pales
+      // toward a white contrail instead of staying a dark (and, lit by the flame, brown) smoke.
+      const ice = 1 - shape.smoke;
+      const soot = 0.1 + 0.08 * rnd(14) + 0.35 * ice;
+      rec.alb0.setRGB(soot * 1.06, soot, soot * 0.95);
+      const g = 0.5 + 0.32 * ice;
+      rec.alb1.setRGB(g, g * 0.99, g * 0.98);
+      // the tail end of the afterburning flame: a brief, dim glow. Many sprites overlap here and
+      // their glow adds up: kept faint and short, or red light over the grey smoke turns it pink
+      // (the flame volume already carries the glow)
+      rec.emit.setRGB(0.1, 0.03, 0.006).multiplyScalar(shape.lum * (0.5 + 0.8 * rnd(15)));
+      rec.tauE = 0.04 + 0.05 * rnd(16);
     }
     rec.tauC = solid ? 1.2 : 2.6 + 1.4 * rnd(17);
     // overlap successive puffs along the path (a continuous column, not a string of beads)
@@ -646,6 +652,28 @@ const WATER: Species = {
 };
 
 const puffList: EmitterSnap[] = [];
+
+/**
+ * Attitude thrusters are safed on the pad and inhibited while the first stage is under power
+ * (the stack steers by gimballing its engines): no puffs near the ground, and none from a
+ * thruster within the powered stack's length of a firing first-stage (or abort-motor) cluster
+ * or close to its own stage's firing main engine.
+ * This also keeps a thruster channel that is left on from the start of a timeline (a key
+ * missing before its first firing) from streaming puffs beside the rocket through the ascent.
+ */
+function thrusterInhibited(e: EmitterSnap, snap: Snapshot): boolean {
+  if (e.altitude < 150) return true;
+  for (const c of snap.clusters) {
+    if ((c.kind === 'kerolox-sl' || c.kind === 'solid') && c.throttle > 0.03 && c.centroid.distanceToSquared(e.pos) < 95 * 95) return true;
+  }
+  // likewise a stage steering with its own gimballed main engine (upper stage, service module)
+  for (const m of snap.emitters) {
+    const main = m.kind === 'kerolox-vac' || (m.kind === 'hypergolic' && m.exitRadius >= SMALL_THRUSTER);
+    if (main && m.throttle > 0.03 && m.pos.distanceToSquared(e.pos) < 30 * 30) return true;
+  }
+  return false;
+}
+
 const PUFF: Species = {
   name: 'puff',
   salt: 67,
@@ -654,7 +682,7 @@ const PUFF: Species = {
   window: false,
   spawn(k, ts, _dt, snap, rec, rnd, ctx) {
     puffList.length = 0;
-    for (const e of snap.emitters) if ((e.kind === 'cold-gas' || e.kind === 'mono' || (e.kind === 'hypergolic' && e.exitRadius < SMALL_THRUSTER)) && e.throttle > 0.03) puffList.push(e);
+    for (const e of snap.emitters) if ((e.kind === 'cold-gas' || e.kind === 'mono' || (e.kind === 'hypergolic' && e.exitRadius < SMALL_THRUSTER)) && e.throttle > 0.03 && !thrusterInhibited(e, snap)) puffList.push(e);
     if (!puffList.length) return false;
     const e = puffList[((k % puffList.length) + puffList.length) % puffList.length];
     if (rnd(0) > e.throttle) return false;
@@ -692,15 +720,16 @@ const PUFF: Species = {
     rec.tauB = 1;
     rec.floor = -1e9;
     rec.size0 = (mono ? 0.07 : 0.12 + 0.08 * rnd(5)) * ctx.sizeK;
-    rec.size1 = (mono ? (0.9 + 0.5 * rnd(6)) * (1.3 - 0.3 * dense) : (1.4 + 1.4 * rnd(6)) * (1 - dense) + (2.2 + 2.2 * rnd(6)) * dense) * ctx.sizeK;
+    rec.size1 = (mono ? (0.9 + 0.5 * rnd(6)) * (1.3 - 0.3 * dense) : (0.9 + 0.9 * rnd(6)) * (1 - dense) + (2.2 + 2.2 * rnd(6)) * dense) * ctx.sizeK;
     rec.tauS = 0.4;
-    // in vacuum the gas expands at its thermal speed and is gone in a fraction of a second;
-    // in air it slows within metres and disperses in about a second
-    rec.sizeLin = (mono ? 2.5 : 3.5) * (1 - dense) + 0.5 * dense;
+    // in vacuum the gas expands at its thermal speed and is gone in a fraction of a second (its
+    // thinning fringe is invisible: the visible puff stays compact); in air it slows within
+    // metres and disperses in about a second
+    rec.sizeLin = (mono ? 2.5 : 2.2) * (1 - dense) + 0.5 * dense;
     // cold nitrogen condenses into a sunlit ice-crystal puff that stays visible for most of a
     // second even in vacuum; hot hydrazine or hypergolic products only flash
     rec.life = (mono ? 0.35 + 0.35 * rnd(7) : 0.6 + 0.4 * rnd(7)) * (1 - dense) + (0.8 + 0.6 * rnd(7)) * dense;
-    rec.alpha0 = Math.min(1, (hyp ? 0.26 : mono ? 0.22 : 0.42 + 0.1 * dense) * ctx.alphaK);
+    rec.alpha0 = Math.min(1, (hyp ? 0.26 : mono ? 0.22 : 0.55 - 0.03 * dense) * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.03;
     rec.fadeOut = 0.25;

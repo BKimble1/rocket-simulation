@@ -280,8 +280,9 @@ export function buildLeoSat(kit: Kit, mountY: number): Built {
     centralTube(kit, inner, 0.6, y0 + 0.02, y1 - 0.02);
     sphereTank(kit, inner, 0.5, y0 + 1.5);
     kit.mesh(strut(new THREE.Vector3(0, y0 + 1.0, 0), new THREE.Vector3(0.3, y0 + 0.3, 0.7), 0.012, 6), P.ti(), 'attitude-thrusters', 'titanium', inner);
+    // wheel plate bolted to the floor panel (its top face at y0 + 0.025)
     const wheels = new THREE.Group();
-    wheels.position.set(0, y0 + 0.2, 0.86);
+    wheels.position.set(0, y0 + 0.04, 0.86);
     inner.add(wheels);
     kit.mesh(rbox(1.05, 0.03, 0.4, 0.01), P.aluMilled(), 'attitude-thrusters', 'titanium', wheels, 0, 0, 0);
     for (const [x, y, rz, rx] of [
@@ -294,6 +295,8 @@ export function buildLeoSat(kit: Kit, mountY: number): Built {
       w.position.set(x, y, 0.02);
       w.rotation.set(rx * DEG + 90 * DEG, 0, rz * DEG);
       if (y > 0.5) kit.mesh(strut(new THREE.Vector3(x, 0.02, -0.1), new THREE.Vector3(x, y - 0.1, -0.1), 0.02, 6), P.aluMilled(), 'attitude-thrusters', 'titanium', wheels);
+      // saddle bracket under the lower wheels (their rims come down to the plate)
+      else kit.mesh(rbox(0.16, 0.06, 0.13, 0.008), P.aluMilled(), 'attitude-thrusters', 'titanium', wheels, x, 0.045, 0.02);
     }
     for (const sx of [-1, 1]) {
       const xw = sx * (hx - 0.025);
@@ -309,7 +312,7 @@ export function buildLeoSat(kit: Kit, mountY: number): Built {
       ]);
     }
     // battery modules on the floor
-    for (const x of [-0.75, 0.75]) avionicsBox(kit, inner, 0.28, 0.32, 0.36, x, y0 + 0.2, -0.75);
+    for (const x of [-0.75, 0.75]) avionicsBox(kit, inner, 0.28, 0.32, 0.36, x, y0 + 0.025 + 0.16, -0.75);
   }
 
   const topY = by + 1.0;
@@ -395,7 +398,9 @@ export function buildGtoSat(kit: Kit, mountY: number): Built {
   for (const sz of [1, -1]) {
     const w = buildWing(kit, { panels: 4, w: 1.7, h: 2.6 });
     w.root.position.set(0, wy, sz * (hz + MLI_T));
-    w.root.rotation.y = -Math.PI / 2;
+    // wing axis along +/-Z; turned half a turn about that axis so the cells face +X at zero
+    // drive (toward the usual three-quarter view) instead of showing the panel backs
+    w.root.rotation.set(Math.PI, -Math.PI / 2, 0, 'YXZ');
     if (sz < 0) w.root.scale.x = -1;
     sc.add(w.root);
     wings.push(w);
@@ -480,18 +485,22 @@ export function buildGtoSat(kit: Kit, mountY: number): Built {
   const inner = bus.inner;
   if (inner) {
     centralTube(kit, inner, 0.6, y0 + 0.02, y1 - 0.02);
-    pillTank(kit, inner, 0.52, 0.5, 0, y0 + 0.95, 0, 'attitude-thrusters', 'titanium');
-    pillTank(kit, inner, 0.52, 0.5, 0, y0 + 2.3, 0, 'attitude-thrusters', 'titanium');
+    // oxidizer below, fuel above: 1.4 m pills with a 0.1 m gap (they must not interpenetrate)
+    pillTank(kit, inner, 0.5, 0.4, 0, y0 + 0.9, 0, 'attitude-thrusters', 'titanium');
+    pillTank(kit, inner, 0.5, 0.4, 0, y0 + 2.4, 0, 'attitude-thrusters', 'titanium');
+    // helium pressurant bottles (titanium, as tagged)
     for (const [x, z] of [
       [0.72, 0.62],
       [-0.72, 0.62],
     ]) {
-      const cm = kit.mesh(new THREE.SphereGeometry(0.2, 32, 16), P.carbon(), 'attitude-thrusters', 'titanium', inner, x, y0 + 0.35, z);
+      const cm = kit.mesh(new THREE.SphereGeometry(0.2, 32, 16), P.ti(), 'attitude-thrusters', 'titanium', inner, x, y0 + 0.35, z);
       cm.scale.y = 1.25;
     }
+    // amplifier boxes on the north/south walls: the +Z wall's boxes leave with that wall in the
+    // section view (they would float in front of the tanks otherwise)
     for (const sz of [1, -1])
       for (let k = 0; k < 3; k++)
-        for (const x of [-0.5, 0.0, 0.5]) avionicsBox(kit, inner, 0.34, 0.16, 0.12, x, y0 + 0.8 + k * 0.8, sz * (hz - 0.09), sz > 0 ? Math.PI : 0);
+        for (const x of [-0.5, 0.0, 0.5]) avionicsBox(kit, sz > 0 && bus.wall ? bus.wall : inner, 0.34, 0.16, 0.12, x, y0 + 0.8 + k * 0.8, sz * (hz - 0.09), sz > 0 ? Math.PI : 0);
   }
 
   const anchors = { ...emptyAnchors(y1 + 0.9), satRcs, satApogee: { exit: new THREE.Vector3(0, exitY, 0), exitRadius: re } };

@@ -653,14 +653,19 @@ export function ablatorTex(): { map: THREE.Texture; normal: THREE.Texture; char:
   for (let p = 0; p < S * S; p++) h[p] = 1 - Math.max(0, img[p * 4] - 140) / 200;
   const [cn, gn] = mkCanvas(S, S);
   gn.putImageData(heightToNormal(gn, h, S, S, 1.4), 0, 0);
-  // char: dark with lighter scoured patches and flow streaks radiating out
+  // char: dark with lighter scoured patches and flow streaks radiating out; the patches are
+  // feathered (radial gradients), so the surface mottles instead of showing hard pale discs
   gc.fillStyle = 'rgb(40,40,40)';
   gc.fillRect(0, 0, S, S);
-  for (let k = 0; k < 1500; k++) {
-    gc.fillStyle = `rgba(255,255,255,${0.04 + r() * 0.08})`;
-    gc.beginPath();
-    gc.arc(r() * S, r() * S, 3 + r() * 30, 0, Math.PI * 2);
-    gc.fill();
+  for (let k = 0; k < 900; k++) {
+    const x = r() * S;
+    const y = r() * S;
+    const rad = (6 + r() * r() * 70) * (S / 2048);
+    const gr = gc.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, `rgba(255,255,255,${0.05 + r() * 0.07})`);
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    gc.fillStyle = gr;
+    gc.fillRect(x - rad, y - rad, 2 * rad, 2 * rad);
   }
   gc.lineCap = 'round';
   for (let k = 0; k < 500; k++) {
@@ -740,9 +745,11 @@ export function canopyAlpha(kind: 'ringsail' | 'ribbon'): THREE.Texture {
     g.fillRect(0, 0, W, H);
     g.fillStyle = '#000';
     if (kind === 'ringsail') {
-      // slots in the crown region only (canvas y 0 = top = v 1 = skirt after flip, so draw by v)
-      const slots = [0.2, 0.3, 0.4, 0.5, 0.6];
-      for (const v of slots) g.fillRect(0, (1 - v) * H - 4, W, 7);
+      // slots between the sail rings in the crown region only (canvas y 0 = top = v 1 = skirt
+      // after flip, so draw by v); wide enough (about 0.3 m on a full main) to read as slots at
+      // a distance instead of breaking up into single-pixel cracks under the alpha test
+      const slots = [0.24, 0.36, 0.48, 0.6];
+      for (const v of slots) g.fillRect(0, (1 - v) * H - 8, W, 16);
     } else {
       for (let v = 0.12; v < 0.97; v += 0.045) g.fillRect(0, (1 - v) * H - 6, W, 11);
       g.fillStyle = '#fff';
