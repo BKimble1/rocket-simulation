@@ -39,14 +39,16 @@ export const frame = {
   camUp: new THREE.Vector3(0, 1, 0),
   /** Altitude of the camera above the spherical Earth (m). */
   camAlt: 0,
-  /** Decorative seconds (idle motion: wind, shimmer, flicker); stops while hidden. */
+  /** Decorative seconds (idle motion: wind, shimmer, flicker): the UI clock (see clock.ts). */
   decor: 0,
-  /** Real frame delta (s), clamped. */
+  /** This frame's step (s): the real interval, capped (see clock.ts). */
   dt: 1 / 60,
   /** Largest step one frame may advance the clocks (s). */
-  maxStep: 0.1,
-  /** Accumulated clamped frame time (s). */
+  maxStep: 0.25,
+  /** UI clock (s): the sum of frame steps. Camera transitions, dissolves, demonstrations. */
   clock: 0,
+  /** Real interval since the previous frame (ms, uncapped; for the frame-rate monitor). */
+  intervalMs: 0,
   /**
    * The hangar is static apart from its animations, so its shadow map is rendered only when
    * something moved (the scene sets this); flight locations update shadows every frame.
@@ -58,6 +60,13 @@ export const frame = {
   n: 0,
   /** Mission playback is paused (demonstrations may still animate on the stage clock). */
   paused: true,
+  /**
+   * Presentation is inside an omitted (skipped) interval: the picture captured on entering it is
+   * held, with a note, until the interval ends (see scene/dissolve.ts).
+   */
+  omitted: false,
+  /** Playback entered an omitted interval this frame (capture the picture now). */
+  enteredOmitted: false,
 };
 
 /** Convert an absolute (frame I) position into render coordinates. */

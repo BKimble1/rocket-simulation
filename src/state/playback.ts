@@ -12,8 +12,10 @@ import { frame } from '../scene/frame';
 import { stageHooks } from '../scene/Stage';
 import { effects } from '../scene/effects/input';
 import { snapFlight } from '../director/director';
+import { setHold } from '../scene/dissolve';
 import { FLAGS } from '../config';
-import { missionToPres } from '../timeline/sample';
+import { inOmitted, missionToPres } from '../timeline/sample';
+import type { PresSegment } from '../timeline/types';
 
 const cache = new Map<MissionId, MissionTimeline>();
 
@@ -50,6 +52,8 @@ export interface PlaybackSnapshot {
   held: string[];
   ended: boolean;
   error: string | null;
+  /** Inside an omitted (skipped) interval. */
+  omitted: boolean;
 }
 
 export const usePlayback = create<PlaybackSnapshot>(() => ({
@@ -66,6 +70,7 @@ export const usePlayback = create<PlaybackSnapshot>(() => ({
   held: [],
   ended: false,
   error: null,
+  omitted: false,
 }));
 
 export const playback = {
@@ -97,6 +102,7 @@ function publish(force = false) {
     branchPhase: branch && t >= branch.start && t <= branch.end ? phaseAt(branch.phases, t) : null,
     held: pl.holdReasons(),
     ended: pl.ended,
+    omitted: !!r.omitted,
   });
 }
 
@@ -123,6 +129,9 @@ export function seekPres(p: number) {
   const pl = playback.player;
   if (!pl) return;
   pl.seek(p);
+  // a seek shows the chosen moment itself, even inside a skipped interval
+  setHold(false, frame.clock);
+  frame.omitted = false;
   frame.missionTime = pl.missionTime;
   frame.presTime = pl.p;
   effects.seekEpoch++;
@@ -140,6 +149,10 @@ export function installPlaybackTick() {
       film.tick(dt);
       frame.missionTime = film.missionTime;
       frame.presTime = film.p;
+      const fp = film as unknown as { enteredOmitted?: boolean; film: { pres: PresSegment[] } };
+      frame.enteredOmitted = !!fp.enteredOmitted;
+      fp.enteredOmitted = false;
+      frame.omitted = inOmitted(fp.film.pres, film.p);
       frame.paused = !film.playing || film.held;
       const tl = frame.tl;
       if (tl && film.playing) for (const e of tl.events) if (e.t > t0 && e.t <= frame.missionTime) for (const f of playback.onEvent) f(e);
@@ -151,6 +164,9 @@ export function installPlaybackTick() {
     pl.tick(dt);
     frame.missionTime = pl.missionTime;
     frame.presTime = pl.p;
+    frame.enteredOmitted = pl.enteredOmitted;
+    pl.enteredOmitted = false;
+    frame.omitted = inOmitted(pl.tl.pres, pl.p);
     frame.paused = !pl.playing || pl.held;
     for (const e of pl.drainEvents()) for (const f of playback.onEvent) f(e);
     publish();

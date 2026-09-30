@@ -1,10 +1,15 @@
 /**
- * The film player (Watch mode). The page clock drives film time; narration audio is kept in
- * step with it. Speech can never run ahead of the picture or lag behind it:
+ * The film player (Watch mode). The stage's frame step drives film time (scene/clock.ts); the
+ * narration audio is kept in step with it. Speech can never run ahead of the picture or lag
+ * behind it, and it is never restarted as a way of correcting drift:
  *   - if the segment that should be speaking is not ready (buffering), the clock HOLDS until
  *     it is, then both continue from the same moment;
- *   - drift beyond 120 ms is corrected by re-seeking the audio (rate changes use the audio
- *     element's playbackRate with pitch preserved);
+ *   - small drift is corrected by nudging the audio's playback rate by a few percent (pitch
+ *     preserved), which is inaudible;
+ *   - when frames are too slow for real time, the picture falls behind the voice: the audio then
+ *     waits (paused where it is) until the picture catches up, instead of being re-seeked;
+ *   - only an audio that lags far behind the picture (after buffering or a device sleep) is
+ *     re-seeked, once;
  *   - a scene that is still loading holds the clock too (hold('loading')), with the narration
  *     paused where it is;
  *   - seeking sets the film time directly; nothing replays and no events fire;
@@ -14,8 +19,13 @@
  */
 import { asset } from '../config';
 import { cueAt, filmMission, segmentAt, type Film, type FilmSegment } from './film';
+import { stepPres } from '../timeline/sample';
 
 export type FilmHold = 'loading' | 'buffering' | 'dialog' | 'inspect';
+
+/** Drift (s) beyond which the audio waits for the picture, and beyond which a lagging audio is re-seeked. */
+const AUDIO_WAIT = 0.25;
+const AUDIO_RESEEK = 0.6;
 
 const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
 
@@ -184,7 +194,9 @@ export class FilmPlayer {
     this.sync(false);
     const blocking = [...this.holds].filter((h) => h !== 'buffering' || this.useAudio()).length > 0;
     if (blocking) return false;
-    this.p = Math.min(this.duration, this.p + Math.min(dt, 0.1) * this.rate);
+    const step = stepPres(this.film.pres, this.p, Math.min(dt, 0.25) * this.rate, this.duration);
+    this.p = step.p;
+    if (step.entered) this.enteredOmitted = true;
     if (this.p >= this.duration - 1e-3) {
       this.p = this.duration;
       this.ended = true;
@@ -230,17 +242,37 @@ export class FilmPlayer {
       return;
     }
     if (this.holds.delete('buffering')) this.changed();
-    if (force || Math.abs(el.currentTime - want) > 0.12) {
+    // positive drift: the voice is ahead of the picture
+    const drift = el.currentTime - want;
+    let rate = this.rate;
+    if (force || drift < -AUDIO_RESEEK) {
       try {
         el.currentTime = Math.max(0, want);
+        if (!force) this.audioReseeks++;
       } catch {
         /* not seekable yet */
       }
+      this.waitingForPicture = false;
+    } else if (drift > AUDIO_WAIT) {
+      // frames are too slow for real time: let the picture catch up with the voice
+      this.waitingForPicture = true;
+    } else if (this.waitingForPicture && drift <= 0.02) {
+      this.waitingForPicture = false;
+    } else if (Math.abs(drift) > 0.03) {
+      rate = this.rate * (1 - Math.max(-0.06, Math.min(0.06, drift * 0.6)));
     }
-    el.playbackRate = this.rate;
-    if (shouldPlay && el.paused) el.play().catch(() => this.blocked());
-    else if (!shouldPlay && !el.paused) el.pause();
+    if (Math.abs(el.playbackRate - rate) > 1e-3) el.playbackRate = rate;
+    const play = shouldPlay && !this.waitingForPicture;
+    if (play && el.paused) el.play().catch(() => this.blocked());
+    else if (!play && !el.paused) el.pause();
   }
+
+  /** Playback just entered an omitted interval (read and cleared by the stage tick). */
+  enteredOmitted = false;
+  /** Audio re-seeks made to correct drift (not user seeks): diagnostics and tests. */
+  audioReseeks = 0;
+  /** The voice is waiting for the picture to catch up (slow frames). */
+  waitingForPicture = false;
 
   private blocked() {
     // autoplay refused (no gesture): stop and let the viewer press Play

@@ -243,8 +243,10 @@ export function buildReturn(): MissionTimeline {
   // ── shots
   const shots: Shot[] = tidyShots(
     [
-      shot('approach', start, tU + 120, 'capsule', 'station', { d: 30, az: 80, el: 0, mix: 0.6 }),
-      shot('approach', tU + 120, tU + 900, 'capsule', 'station', { d: 60, az: 200, el: 10, mix: 0.3 }),
+      // angles around the line from the capsule to the station (az 0: behind the capsule, the
+      // station beyond it; 90: beside the line)
+      shot('approach', start, tU + 120, 'capsule', 'station', { d: 32, az: 80, el: 6, mix: 0.55 }),
+      shot('approach', tU + 120, tU + 900, 'capsule', 'station', { d: 60, az: 25, el: 12, mix: 0.3 }),
       shot('orbit', tU + 900, run.deorbit.start - 40, 'capsule', 'earth', { d: 40 }),
       shot('chase', run.deorbit.start - 40, run.deorbit.end + 30, 'capsule', undefined, { d: 28, az: 150, el: 12 }),
       shot('orbit', run.deorbit.end + 30, run.smSep - 15, 'capsule', 'earth', { d: 40, az: 200, el: 20 }),

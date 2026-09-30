@@ -5,8 +5,11 @@
  * is replayed and no events fire). A hold (a scene still loading, or a part inspection) stops
  * the clock where it is and resumes from the same moment.
  */
-import { presDuration, presToMission, eventsCrossed } from './sample';
+import { presDuration, presToMission, eventsCrossed, stepPres } from './sample';
 import type { MissionEvent, MissionTimeline } from './types';
+
+/** Largest presentation step one frame may take at rate 1 (s); matches scene/clock.ts MAX_STEP. */
+const MAX_STEP = 0.25;
 
 export type HoldReason = 'loading' | 'inspect' | 'hidden' | 'dialog';
 
@@ -20,6 +23,8 @@ export class MissionPlayer {
   /** Events crossed by forward playback since the last drain (for one-shot sounds). */
   private crossed: MissionEvent[] = [];
   readonly duration: number;
+  /** Playback just entered an omitted interval (read and cleared by the stage tick). */
+  enteredOmitted = false;
 
   constructor(public tl: MissionTimeline) {
     this.duration = presDuration(tl.pres);
@@ -89,7 +94,10 @@ export class MissionPlayer {
   tick(dt: number): boolean {
     if (!this.playing || this.held || this.ended) return false;
     const t0 = this.missionTime;
-    this.p = Math.min(this.duration, this.p + Math.min(dt, 0.1) * this.rate);
+    // dt is the stage's frame step, already capped (scene/clock.ts); capped again for callers without one
+    const step = stepPres(this.tl.pres, this.p, Math.min(dt, MAX_STEP) * this.rate, this.duration);
+    this.p = step.p;
+    if (step.entered) this.enteredOmitted = true;
     const t1 = this.missionTime;
     for (const e of eventsCrossed(this.tl, t0, t1)) this.crossed.push(e);
     if (this.p >= this.duration) {

@@ -10,13 +10,14 @@ import { Canvas, createPortal, useFrame, useThree, advance } from '@react-three/
 import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { FLAGS } from '../config';
-import { director, updateFlight, updateHangar, viewInsetGoal } from '../director/director';
-import { poseQuaternion, type CamPose } from '../director/pose';
+import { director, flightStats, updateFlight, updateHangar, viewInsetGoal } from '../director/director';
+import { makePose, poseQuaternion, type CamPose } from '../director/pose';
 import { bodyAt } from '../timeline/sample';
 import { R_EARTH } from '../world/frames';
 import { BODY_IDS, frame, type Location } from './frame';
 import { perf, tierSpec, useQuality, initialTier } from './quality';
-import { stageClock } from './clock';
+import { frameStep } from './clock';
+import { afterDraw, dissolve, hasPendingDissolve, requestDissolve, setHold, snapshotAlpha } from './dissolve';
 
 export const scenes: Record<Location, THREE.Scene> = {
   hangar: new THREE.Scene(),
@@ -40,6 +41,77 @@ export const stageHooks = {
   afterRender: null as null | (() => void),
 };
 
+/** Set by the interface to show a notice while the WebGL context is lost. */
+export let onContextChange: null | ((lost: boolean) => void) = null;
+export function setContextListener(f: null | ((lost: boolean) => void)) {
+  onContextChange = f;
+}
+
+/**
+ * Optional GPU timing (EXT_disjoint_timer_query_webgl2), only with ?diag=1 or ?trace=1 and only
+ * where the browser supports it; results arrive a few frames late and feed the overlay.
+ */
+function makeGpuTimer(gl: THREE.WebGLRenderer) {
+  const c = gl.getContext() as WebGL2RenderingContext;
+  const ext = FLAGS.diag || FLAGS.trace ? (c.getExtension('EXT_disjoint_timer_query_webgl2') as { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number } | null) : null;
+  const pending: WebGLQuery[] = [];
+  let active: WebGLQuery | null = null;
+  return {
+    supported: !!ext,
+    begin() {
+      if (!ext || active || pending.length > 4) return;
+      active = c.createQuery();
+      if (active) c.beginQuery(ext.TIME_ELAPSED_EXT, active);
+    },
+    end() {
+      if (!ext || !active) return;
+      c.endQuery(ext.TIME_ELAPSED_EXT);
+      pending.push(active);
+      active = null;
+    },
+    poll() {
+      if (!ext) return;
+      const disjoint = c.getParameter(ext.GPU_DISJOINT_EXT);
+      while (pending.length) {
+        const q = pending[0];
+        if (!c.getQueryParameter(q, c.QUERY_RESULT_AVAILABLE)) break;
+        const ns = c.getQueryParameter(q, c.QUERY_RESULT) as number;
+        if (!disjoint) perf.pushGpu(ns / 1e6);
+        c.deleteQuery(q);
+        pending.shift();
+      }
+    },
+  };
+}
+
+/** Diagnostic camera trace (?trace=1): one record per frame, kept out of normal use. */
+export interface TraceRecord {
+  n: number;
+  clock: number;
+  t: number;
+  p: number;
+  loc: string;
+  mode: string;
+  subject: string | null;
+  key: string;
+  blends: number;
+  pushes: number;
+  cuts: number;
+  pos: [number, number, number];
+  fov: number;
+  intervalMs: number;
+  dt: number;
+  dissolve: number;
+}
+export const cameraTrace: TraceRecord[] = [];
+
+/** A location can be entered: its scene is ready and, for flight, a mission is loaded. */
+function canEnter(loc: Location): boolean {
+  if (!director.ready[loc]) return false;
+  if (loc === 'flight') return !!frame.tl;
+  return true;
+}
+
 function Loop() {
   const { gl, camera, size } = useThree();
   const cam = camera as THREE.PerspectiveCamera;
@@ -48,6 +120,7 @@ function Loop() {
     const mat = new THREE.ShaderMaterial({
       uniforms: { map: { value: null as THREE.Texture | null }, alpha: { value: 1 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      // the snapshot holds displayed (tone-mapped, encoded) values: written back unchanged
       fragmentShader: 'uniform sampler2D map; uniform float alpha; varying vec2 vUv; void main(){ gl_FragColor = vec4(texture2D(map, vUv).rgb, alpha); }',
       transparent: true,
       depthTest: false,
@@ -59,17 +132,30 @@ function Loop() {
     scene.add(mesh);
     return { scene, mat, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), tex: null as THREE.FramebufferTexture | null };
   }, []);
+  const timer = useMemo(() => makeGpuTimer(gl), [gl]);
+  const last = useMemo(() => ({ ms: 0 }), []);
 
   useEffect(() => {
     director.aspect = size.width / Math.max(1, size.height);
   }, [size]);
+  useEffect(
+    () => () => {
+      overlay.tex?.dispose();
+      overlay.mat.dispose();
+    },
+    [overlay],
+  );
 
-  // 1. clocks and the player
-  useFrame((_, delta) => {
-    if (FLAGS.virtual) stageClock.step(1 / 30);
-    const dt = FLAGS.virtual ? 1 / 30 : Math.min(0.1, Math.max(0, delta));
+  // 1. clocks and the player: one capped frame step for everything (see clock.ts)
+  useFrame(() => {
+    const nowMs = performance.now();
+    const interval = last.ms > 0 ? nowMs - last.ms : 1000 / 60;
+    last.ms = nowMs;
+    const dt = frameStep(interval / 1000);
+    frame.intervalMs = interval;
     frame.dt = dt;
-    frame.decor = stageClock.seconds();
+    frame.clock += dt;
+    frame.decor = frame.clock;
     frame.n++;
     stageHooks.tick?.(dt);
   }, -30);
@@ -115,7 +201,15 @@ function Loop() {
       cam.far = 1000;
     }
     director.input.dx = director.input.dy = director.input.zoom = 0;
-    poseQuaternion(pose, cam.quaternion);
+    // orientation relative to the floating origin (flight) or the hangar/map origin
+    if (loc === 'flight') {
+      rel.pos.set(0, 0, 0);
+      rel.target.subVectors(pose.target, pose.pos);
+      rel.up.copy(pose.up);
+      rel.upHint.copy(pose.upHint);
+      rel.fov = pose.fov;
+      poseQuaternion(rel, cam.quaternion);
+    } else poseQuaternion(pose, cam.quaternion);
     frame.camQuat.copy(cam.quaternion);
     frame.camFov = pose.fov;
     if (cam.fov !== pose.fov || cam.aspect !== director.aspect) {
@@ -158,41 +252,84 @@ function Loop() {
         frame.shadowDirty = false;
       }
     } else gl.shadowMap.autoUpdate = true;
-    gl.render(scenes[frame.location], cam);
-    // entering another location: capture this picture as displayed and dissolve from it
+    // an omitted interval: the picture captured before the gap stays up until it ends
+    if (dissolve.hold && !frame.omitted) setHold(false, frame.clock);
+    const a = snapshotAlpha(frame.clock);
+    const covered = a >= 1 && dissolve.hold && !hasPendingDissolve();
+    timer.begin();
+    if (!covered) gl.render(scenes[frame.location], cam);
+    timer.end();
+    // a running dissolve: its snapshot over the live picture
+    if (a > 0 && overlay.tex) {
+      overlay.mat.uniforms.map.value = overlay.tex;
+      overlay.mat.uniforms.alpha.value = a;
+      gl.autoClear = false;
+      gl.render(overlay.scene, overlay.cam);
+      gl.autoClear = true;
+    }
+    // entering another location: capture the picture as displayed and dissolve from it
     const want = director.wantLocation;
     if (want !== frame.location) {
-      if (director.ready[want]) {
-        const w = gl.domElement.width;
-        const h = gl.domElement.height;
-        if (!overlay.tex || overlay.tex.image.width !== w || overlay.tex.image.height !== h) {
-          overlay.tex?.dispose();
-          overlay.tex = new THREE.FramebufferTexture(w, h);
-        }
-        gl.copyFramebufferToTexture(overlay.tex);
-        director.dissolve = { from: frame.location, start: frame.decor, dur: director.reduced ? 0.3 : 0.55 };
-        frame.location = want;
-        frame.shadowDirty = true;
-        director.waiting = null;
+      if (canEnter(want)) {
+        if (!hasPendingDissolve('location'))
+          requestDissolve('location', director.reduced ? 0.3 : 0.55, () => {
+            frame.location = director.wantLocation !== frame.location && canEnter(director.wantLocation) ? director.wantLocation : frame.location;
+            frame.shadowDirty = true;
+            director.waiting = null;
+            perf.warmup(performance.now());
+          });
       } else director.waiting = want;
+    } else director.waiting = null;
+    if (frame.enteredOmitted) {
+      frame.enteredOmitted = false;
+      if (frame.location === 'flight') requestDissolve('omit', director.reduced ? 0.3 : 0.8, () => setHold(true, frame.clock));
     }
-    const d = director.dissolve;
-    if (d && overlay.tex) {
-      const u = (frame.decor - d.start) / d.dur;
-      if (u >= 1) director.dissolve = null;
-      else {
-        overlay.mat.uniforms.map.value = overlay.tex;
-        overlay.mat.uniforms.alpha.value = 1 - u * u * (3 - 2 * u);
-        gl.autoClear = false;
-        gl.render(overlay.scene, overlay.cam);
-        gl.autoClear = true;
+    // the frame is complete (scene and any running dissolve): capture it if a change asks for it
+    afterDraw(() => {
+      if (contextLost.value) return false;
+      const w = gl.domElement.width;
+      const h = gl.domElement.height;
+      if (!overlay.tex || overlay.tex.image.width !== w || overlay.tex.image.height !== h) {
+        overlay.tex?.dispose();
+        overlay.tex = new THREE.FramebufferTexture(w, h);
       }
-    }
+      gl.setRenderTarget(null);
+      gl.copyFramebufferToTexture(overlay.tex);
+      return true;
+    }, frame.clock);
+    timer.poll();
     stageHooks.afterRender?.();
-    perf.push(performance.now() - t0 + 0, performance.now());
+    const t1 = performance.now();
+    perf.pushFrame(frame.intervalMs, t1 - t0, t1, typeof document !== 'undefined' && document.hidden);
+    if (FLAGS.trace) {
+      const p = director.flightPose.pos;
+      cameraTrace.push({
+        n: frame.n,
+        clock: +frame.clock.toFixed(4),
+        t: +frame.missionTime.toFixed(3),
+        p: +frame.presTime.toFixed(3),
+        loc: frame.location,
+        mode: director.mode,
+        subject: director.subject,
+        key: director.autoKey,
+        blends: director.blends.length,
+        pushes: flightStats.pushes,
+        cuts: flightStats.cuts,
+        pos: [p.x, p.y, p.z],
+        fov: +frame.camFov.toFixed(3),
+        intervalMs: +frame.intervalMs.toFixed(2),
+        dt: +frame.dt.toFixed(4),
+        dissolve: +a.toFixed(3),
+      });
+      if (cameraTrace.length > 20000) cameraTrace.splice(0, 5000);
+    }
   }, 10);
   return null;
 }
+
+const rel = makePose();
+/** The WebGL context was lost and not yet restored (the interface says so; nothing is drawn). */
+export const contextLost = { value: false, since: 0 };
 
 function Input({ el }: { el: HTMLElement | null }) {
   useEffect(() => {
@@ -286,6 +423,23 @@ function Setup() {
     gl.outputColorSpace = THREE.SRGBColorSpace;
     gl.shadowMap.enabled = true;
     gl.shadowMap.type = THREE.PCFShadowMap;
+    // a lost context (driver reset, too many tabs, mobile memory pressure): keep the page, hold
+    // playback, tell the viewer, and resume when the browser restores it (three.js rebuilds its
+    // GPU resources from the scene); if it never comes back the interface offers a reload
+    const canvas = gl.domElement;
+    const lost = (e: Event) => {
+      e.preventDefault();
+      contextLost.value = true;
+      contextLost.since = performance.now();
+      onContextChange?.(true);
+    };
+    const restored = () => {
+      contextLost.value = false;
+      frame.shadowDirty = true;
+      onContextChange?.(false);
+    };
+    canvas.addEventListener('webglcontextlost', lost);
+    canvas.addEventListener('webglcontextrestored', restored);
     if (FLAGS.hooks) {
       const w = window as unknown as Record<string, unknown>;
       w.__rocketAdvance = (n = 1) => {
@@ -294,6 +448,11 @@ function Setup() {
       w.__rocketFrame = frame;
       w.__rocketDirector = director;
       w.__rocketGL = gl;
+      w.__rocketTrace = cameraTrace;
+      w.__rocketPerf = perf;
+      w.__rocketFlightStats = flightStats;
+      w.__rocketDissolve = dissolve;
+      w.__rocketLoseContext = () => (gl.getContext().getExtension('WEBGL_lose_context') as { loseContext(): void; restoreContext(): void } | null);
       w.__rocketSceneCount = () => {
         let n = 0;
         scenes.flight.traverse(() => n++);

@@ -14,8 +14,8 @@ function worst(frames: TraceFrame[]) {
   for (let i = 1; i < frames.length; i++) {
     const a = frames[i - 1], b = frames[i];
     if (b.alt < low.alt) low = b;
-    const isOff = b.offAxis > b.halfFov;
-    if (isOff) { if (offRun === 0) off.push(`t=${b.t.toFixed(0)} ${b.key}`); offRun++; } else offRun = 0;
+    const isOff = b.visible === false;
+    if (isOff) { if (offRun === 0) off.push(`t=${b.t.toFixed(0)} ${b.key} off=${b.offAxis.toFixed(0)} fov=${b.fov.toFixed(0)}`); offRun++; } else { if (offRun) off[off.length-1] += ` (${offRun} frames to t=${a.t.toFixed(0)})`; offRun = 0; }
     if (b.cut) continue;
     const d = (a.dir.angleTo(b.dir) * 180) / Math.PI;
     const r = (a.up.angleTo(b.up) * 180) / Math.PI;

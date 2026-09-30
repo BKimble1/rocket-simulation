@@ -3,6 +3,7 @@ import { Suspense, useEffect } from 'react';
 import * as THREE from 'three';
 import { Stage, stageHooks } from '../scene/Stage';
 import { director } from '../director/director';
+import { copyPose, makePose, type CamPose } from '../director/pose';
 import { frame } from '../scene/frame';
 import { DEV } from './index';
 import { groundPoint } from '../director/shots';
@@ -50,7 +51,16 @@ export function DevStage({ name }: { name: string }) {
         p.up.copy(up);
         p.fov = fov || 40;
         director.blends.length = 0;
-        director.blends.push({ key: 'dev', start: 0, dur: 0, eval: (o) => (o.pos.copy(p.pos), o.target.copy(p.target), o.up.copy(p.up), (o.fov = p.fov), true) });
+        const hold = makePose();
+        copyPose(hold, p);
+        director.blends.push({
+          f: { id: 'dev', subject: null, place: 'ground', dur: 0, eval: (o: CamPose) => (copyPose(o, hold), true) },
+          start: 0,
+          dur: 0,
+          last: makePose(),
+          has: false,
+        });
+        director.autoKey = 'dev';
       };
     }
     return () => {

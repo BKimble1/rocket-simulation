@@ -149,6 +149,32 @@ export function presRate(segs: PresSegment[], p: number): { rate: number; note?:
   return { rate: span > 0 ? (s.m1 - s.m0) / span : 1, note: s.note, omitted: s.omitted };
 }
 
+/**
+ * Advance presentation time from p by dp, but stop just inside an omitted interval when this step
+ * would enter it from outside, so the frame shown on entering is the moment before the gap (the
+ * picture is captured there and held over the skipped interval: see scene/dissolve.ts).
+ * Returns the new presentation time and whether an omitted interval was entered.
+ */
+export function stepPres(segs: PresSegment[], p: number, dp: number, end: number): { p: number; entered: boolean } {
+  const next = Math.min(end, p + dp);
+  if (!segs.length || dp <= 0) return { p: next, entered: false };
+  const was = segmentAtPres(segs, p);
+  const wasOmitted = !!was.omitted && p >= was.p0 && p < was.p1;
+  if (wasOmitted) return { p: next, entered: false };
+  for (const s of segs) {
+    if (s.p0 > next) break;
+    if (s.omitted && s.p0 >= p && s.p0 <= next && s.p1 > s.p0) return { p: Math.min(s.p1, s.p0 + 1e-6), entered: true };
+  }
+  return { p: next, entered: false };
+}
+
+/** Presentation time p is inside an omitted (skipped) interval. */
+export function inOmitted(segs: PresSegment[], p: number): boolean {
+  if (!segs.length) return false;
+  const s = segmentAtPres(segs, p);
+  return !!s.omitted && p >= s.p0 && p < s.p1;
+}
+
 // ───────────────────────────── events and phases ─────────────────────────────
 
 export function phaseAt(phases: Phase[], t: number): Phase | null {
