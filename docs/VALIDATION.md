@@ -185,7 +185,8 @@ Two kinds of recording, both made from the production build on the machine descr
   this machine, not the app's frame pacing on a GPU.
   `home.mp4` (34 s), `explore.mp4` (55 s: find the turbopump, open its cutaway),
   `mission-leo.mp4` (69 s: play the satellite mission from liftoff), `watch.mp4` (59 s: the
-  overview film with captions and narration).
+  overview film with captions and narration). They were recorded before the last round of fixes
+  listed above; none of those fixes changes what these four clips show.
 - **Virtual-clock recordings** (`docs/recordings/virtual/`, 960 × 540, 30 fps): the page's clock
   is advanced exactly 1/30 s per captured frame, so each clip shows motion and continuity at
   true speed regardless of how long a frame took to render. They say nothing about frame rate.
@@ -224,6 +225,9 @@ All of it can be regenerated: `scripts/record-all.sh`, `scripts/screenshots.sh`,
   face sits just behind a skin; the known cases were removed, the cause is renderer-wide.
 - **Hangar camera moves** to a distant subject take one to three seconds, by design (the
   camera pulls back to keep the destination in view).
+- **Desktop playbar.** Side panels and phone bottom sheets move the projection so they never
+  hide the subject; the desktop playbar at the bottom is not counted, so a low subject (the
+  capsule in the docking still) can sit partly behind it.
 - **Software rendering** made the flight scenes run at well under 1 fps here; behaviour was
   verified, smoothness on real hardware was not.
 - **Sources** that could not be opened from the build environment (nasa.gov and NTRS were
