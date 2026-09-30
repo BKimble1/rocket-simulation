@@ -1,0 +1,12 @@
+{
+  "name": "v2-staging",
+  "about": "Main engine cut-off, stage separation and upper-stage ignition in the held staging framing (mission played at 2x).",
+  "url": "/?v=mission&m=leo&ui=0",
+  "width": 640, "height": 360, "frames": 270,
+  "setup": [
+    { "until": "window.__rocketFrame.location === 'flight'" },
+    { "eval": "window.__rocketPlayback.player.pause(); window.__rocketSeekMission(144); window.__rocketPlayback.player.setRate(2)" },
+    { "advance": 30 },
+    { "eval": "window.__rocketPlayback.player.play()" }
+  ]
+}

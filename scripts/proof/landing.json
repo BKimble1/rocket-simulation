@@ -1,0 +1,12 @@
+{
+  "name": "v2-booster-landing",
+  "about": "The booster storyline (same mission clock): landing burn, legs deploy, touchdown, from the landing-zone camera.",
+  "url": "/?v=mission&m=leo&focus=booster&ui=0",
+  "width": 640, "height": 360, "frames": 330,
+  "setup": [
+    { "until": "window.__rocketFrame.location === 'flight'" },
+    { "eval": "window.__rocketPlayback.player.pause(); window.__rocketSeekMission(477)" },
+    { "advance": 30 },
+    { "eval": "window.__rocketPlayback.player.play()" }
+  ]
+}

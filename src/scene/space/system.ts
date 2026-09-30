@@ -338,8 +338,12 @@ export function createSpace(opts: SpaceOptions) {
     sun.target.updateMatrixWorld();
     sun.color.copy(skyState.sunColor);
     sun.intensity = skyState.sunIntensity;
-    sun.visible = skyState.sunIntensity > 1e-4;
-    sun.castShadow = sun.visible;
+    // never toggled: a change in the number of lights or shadow-casting lights recompiles every
+    // lit material (V1 did it at every eclipse entry and exit: a hitch). In Earth's shadow the
+    // light is simply black and its shadow map is not redrawn.
+    sun.visible = true;
+    sun.castShadow = true;
+    sun.shadow.autoUpdate = skyState.sunIntensity > 1e-4;
 
     hemi.position.copy(subject).normalize(); // hemisphere "up" = local vertical at the subject
     const hm = Math.max(L.sky.x, L.sky.y, L.sky.z, L.ground.x, L.ground.y, L.ground.z, 1e-6);

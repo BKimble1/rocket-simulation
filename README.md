@@ -48,8 +48,11 @@ npm run preview:rocket # http://127.0.0.1:4173/rocket/
 ```
 
 The base path can also be set with `ROCKET_BASE=/some/path/ npm run build`. A hub link
-("Back to FAB / ONE") appears in the header when `VITE_HUB_URL` (and optionally
-`VITE_HUB_LABEL`) is set at build time.
+("Back to FAB / ONE", a compact "FAB / ONE" on phones) appears in the header when `VITE_HUB_URL`
+(and optionally `VITE_HUB_LABEL`) is set at build time; `VITE_FABONE_HOME`, which the FAB / ONE
+site's build sets for every simulation it hosts, is accepted as the same link. In the FAB / ONE site
+the app is served at `/rocket` (see that repository's `simulations/rocket/SOURCE.json` for the
+exact commit it was imported from).
 
 Package a static build as a ZIP for later upload (does not deploy anything):
 
@@ -61,7 +64,9 @@ npm run package -- rocket  # release/kimble-rocket-rocket-<commit>.zip (base /ro
 ## Test
 
 ```sh
-npm test                   # unit and model tests (Vitest): physics, missions, content integrity
+npm test                   # unit and model tests (Vitest): physics, missions, content integrity,
+                           # camera regressions (src/director/director.test.ts), clocks, quality
+                           # tier, dissolves, narration drift
 npx playwright test        # end-to-end against the production build (run npm run build first)
 npm run build:rocket && npm run e2e:rocket   # the same tests under /rocket/
 ```
@@ -74,9 +79,18 @@ node scripts/shot.mjs "<url>" out.png 1440 900 9000          # screenshot
 node scripts/perf.mjs "<url>" 1440 900 10 1                    # frame times, draw calls, transfer
 node scripts/record-realtime.mjs <name> "<url>" 12             # wall-clock video → docs/recordings/realtime/
 node scripts/record-virtual.mjs <name> "<url>" 300             # frame-by-frame (virtual time) video
+node scripts/storyboard.mjs <base> leo out/ "-20,-2,4,152"       # stills at mission times (virtual clock)
+node scripts/record-proof.mjs scripts/proof/launch.json docs/recordings/v2   # V2 proof clips (with actions)
+npx vitest run src/director/audit.report.test.ts --silent=false  # camera trace report (no rendering)
 ```
 
-Useful URL parameters: `?quality=high|medium|low`, `?diag=1` (frame times, draw calls),
+`perf.mjs` reports real frame intervals (median, p95, p99, stalls, missed 60 Hz frames), CPU
+render time and GPU time where timer queries exist, draw calls and triangles; `--seek=<t>`
+measures a paused mission moment (for example `--seek=-1` at ignition).
+
+Useful URL parameters: `?quality=high|medium|low`, `?diag=1` (frame intervals, CPU and GPU
+time, draw calls), `?trace=1` (a per-frame camera trace on `window.__rocketTrace`: mode, subject,
+framing, transitions, pose, clocks),
 deep links such as `?v=explore&part=turbopump&view=cutaway`, `?v=mission&m=leo&ch=staging`,
 `?v=explore&lens=materials&mat=grcop`, `?v=watch&m=lunar`, and for captures `?ui=0` (no
 interface) or `?ui=brand` (only the KIMBLE identity).
@@ -113,4 +127,6 @@ needed to use the app. To rebuild it: `tools/narration/setup.sh` once, then
 - [`ASSET_LICENSES.md`](ASSET_LICENSES.md): provenance and licences of every asset
 - [`docs/VALIDATION.md`](docs/VALIDATION.md): what was tested and measured, what is approximated,
   what is blocked
+- [`docs/V2_AUDIT.md`](docs/V2_AUDIT.md): the V1 defects found (camera, clocks, dissolves, quality),
+  how they were reproduced and measured, and the V2 results
 - [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md): conventions for adding a module

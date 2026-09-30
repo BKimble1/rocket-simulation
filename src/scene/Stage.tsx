@@ -117,7 +117,8 @@ export const warm = { flight: '' as string, hangar: false, pending: false, ms: 0
 function prewarm(gl: THREE.WebGLRenderer, scene: THREE.Scene, cam: THREE.Camera): Promise<void> {
   const hidden: THREE.Object3D[] = [];
   scene.traverse((o) => {
-    if (!o.visible) {
+    // lights keep their state: the number of lights is part of every lit material's program
+    if (!o.visible && !(o as THREE.Light).isLight) {
       hidden.push(o);
       o.visible = true;
     }

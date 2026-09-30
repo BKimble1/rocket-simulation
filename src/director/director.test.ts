@@ -191,6 +191,17 @@ describe('interrupted and rapid transitions', () => {
   });
 });
 
+describe('reduced motion', () => {
+  it('camera changes are short dissolves, never camera flights', () => {
+    const leo = tl('leo');
+    const p = missionToPres(leo.pres, 100);
+    const r = traceFlight({ mission: leo, mode: 'auto', p0: p, p1: p + 4, fps: 60, reduced: true, actions: [{ at: p + 0.5, mode: 'chase' }, { at: p + 1.5, mode: 'ground' }, { at: p + 2.5, mode: 'auto' }] });
+    expect(r.metrics.pushes).toBe(0);
+    expect(r.metrics.cuts).toBeGreaterThanOrEqual(4);
+    expect(r.metrics.maxBlends).toBe(1);
+  });
+});
+
 describe('continuity of every mission (Auto, real-time playback, 60 fps)', () => {
   for (const id of ['leo', 'suborbital', 'gto', 'station', 'return', 'lunar'] as MissionId[]) {
     it(`${id}: no jumps, no horizon flips, never below ground, subject always in view`, () => {

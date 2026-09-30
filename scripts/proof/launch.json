@@ -1,0 +1,12 @@
+{
+  "name": "v2-launch-to-ascent",
+  "about": "Last seconds of the countdown on the ignition camera: engines light, the vehicle leaves its mount; a dissolve to the tower-clearance camera as it climbs past the tower.",
+  "url": "/?v=mission&m=leo&ui=0",
+  "width": 640, "height": 360, "frames": 390,
+  "setup": [
+    { "until": "window.__rocketFrame.location === 'flight'" },
+    { "eval": "window.__rocketPlayback.player.pause(); window.__rocketSeekMission(-6)" },
+    { "advance": 30 },
+    { "eval": "window.__rocketPlayback.player.play()" }
+  ]
+}

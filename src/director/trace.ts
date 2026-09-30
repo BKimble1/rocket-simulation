@@ -79,6 +79,8 @@ export interface TraceOptions {
   followPhaseFocus?: boolean;
   /** Run exactly this many frames (for paused playback, where presentation time does not move). */
   frames?: number;
+  /** Reduced motion (camera changes become short dissolves). */
+  reduced?: boolean;
 }
 
 export interface TraceMetrics {
@@ -144,7 +146,7 @@ export function traceFlight(o: TraceOptions): { frames: TraceFrame[]; metrics: T
   frame.tl = tl;
   frame.location = 'flight';
   director.aspect = o.aspect ?? 16 / 9;
-  director.reduced = false;
+  director.reduced = !!o.reduced;
   frame.missionTime = presToMission(tl.pres, p);
   sampleBodies(tl, frame.missionTime);
   const focus = o.focus ?? tl.phases.find((ph) => frame.missionTime >= ph.start && frame.missionTime < ph.end)?.focus ?? 'upper';

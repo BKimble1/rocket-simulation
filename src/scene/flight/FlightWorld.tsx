@@ -357,9 +357,10 @@ function InspectionLight() {
     const dark = 1 - Math.min(1, Math.max(0, skyState.sunIntensity / 0.8));
     const k = enabled && inSpace && frame.location === 'flight' ? dark : 0;
     inspectionLight.active = k;
-    light.visible = k > 1e-3;
-    if (!light.visible) return;
+    // always in the scene (its intensity goes to 0): adding or removing a light would recompile
+    // every lit material the moment the spacecraft enters or leaves Earth's shadow
     light.intensity = 2.1 * k;
+    if (k <= 1e-3) return;
     // from the camera, raised and to the right, toward the subject
     c.copy(s.pos).sub(frame.origin);
     const d = Math.max(10, c.length());

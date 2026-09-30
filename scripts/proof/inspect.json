@@ -1,0 +1,15 @@
+{
+  "name": "v2-inspect-and-return",
+  "about": "Paused at stage separation in Chase: show a part from the phase card (dissolve to the hangar, the part framed), then return to the same moment and camera (dissolve back).",
+  "url": "/?v=mission&m=leo&ch=staging&cam=chase",
+  "width": 960, "height": 540, "frames": 240,
+  "setup": [
+    { "until": "window.__rocketFrame.location === 'flight'" },
+    { "eval": "window.__rocketPlayback.player.pause(); window.__rocketSeekMission(153)" },
+    { "advance": 40 }
+  ],
+  "during": [
+    { "frame": 20, "click": ".phasecard .chip" },
+    { "frame": 150, "click": "button:has-text('Return to mission')" }
+  ]
+}
