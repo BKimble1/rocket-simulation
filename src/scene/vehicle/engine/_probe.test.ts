@@ -1,14 +1,20 @@
 import { test } from 'vitest';
-import { engineDesign } from './design';
-import { routes, TP } from './layout';
+import * as THREE from 'three';
+import { buildEngineWith } from './buildEngine';
+import { plainMaterialSet } from './mats';
 test('probe', () => {
-  const d = engineDesign('E-1');
-  const R = routes(d);
-  const f = (a: { x: number; y: number; z: number }[]) => a.map((p) => `(${p.x.toFixed(3)},${p.y.toFixed(3)},${p.z.toFixed(3)})`).join(' ');
-  console.log('lox', f(R.loxDischarge));
-  console.log('fuel', f(R.fuelDischarge));
-  console.log('fuelTap', f(R.fuelTap));
-  console.log('loxTap', f(R.loxTap));
-  console.log('exh', f(R.exhaust));
-  console.log('rc', d.rc, 'rOut(-0.4)', d.rOut(-0.4), d.rOut(-0.7), 'TP', JSON.stringify(TP));
+  for (const k of ['E-1', 'E-1V'] as const)
+    for (const det of ['hangar', 'flight', 'cluster'] as const) {
+      const e = buildEngineWith(k, det, plainMaterialSet());
+      let calls = 0, tris = 0;
+      e.root.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        for (let p: THREE.Object3D | null = m; p; p = p.parent) if (!p.visible) return;
+        const g = m.geometry;
+        calls++;
+        tris += ((g.index ? g.index.count : g.attributes.position.count) / 3) * ((m as THREE.InstancedMesh).isInstancedMesh ? (m as THREE.InstancedMesh).count : 1);
+      });
+      console.log('BUDGET', k, det, calls, Math.round(tris));
+    }
 });

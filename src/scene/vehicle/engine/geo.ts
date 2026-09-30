@@ -585,7 +585,7 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
     const cut = new Buf();
     const caps = new Buf();
     /** Kept arc [a0, a1] of the ring of radius r (full ring: seam at the point nearest the plane). */
-    const arcOf = (f: Frame, r: number): { a0: number; a1: number; full: boolean } | null => {
+    const arcOf = (f: Frame, r: number): { a0: number; a1: number; full: boolean; deg?: boolean } | null => {
       if (o.clipZ === undefined) return { a0: 0, a1: TAU, full: true };
       const A = Math.hypot(f.n.z, f.b.z);
       const th0 = A > 1e-9 ? Math.atan2(f.b.z, f.n.z) : 0;
@@ -593,12 +593,32 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
       const dz = (o.clipZ - f.p.z) * side;
       // a ring lying in the plane belongs to both halves (rounding would otherwise give it to one
       // side only and leave a one-segment gap in the other, e.g. in a torus crossing the plane)
-      if (A * r < 1e-9) return dz >= -1e-7 ? { a0: base, a1: base + TAU, full: true } : null;
+      if (A * r < 1e-9) return dz >= -1e-7 ? { a0: base, a1: base + TAU, full: true, deg: true } : null;
       const k = dz / (r * A);
       if (k >= 1) return { a0: base, a1: base + TAU, full: true };
       if (k <= -1) return null;
       const c = Math.acos(k);
       return { a0: base + c, a1: base + TAU - c, full: false };
+    };
+    /**
+     * Arc of ring i. A ring parallel to the plane has no direction toward the plane, so its seam
+     * angle would be arbitrary (atan2 of rounding noise) and could differ by half a turn from its
+     * neighbours', twisting the strip between them into an hourglass: it takes a neighbour's.
+     */
+    const arcI = (i: number, r: number) => {
+      const a = arcOf(frames[i], r);
+      if (!a || !a.deg) return a;
+      // the nearest regular ring of the same run, looking back first (a straight stretch along Z
+      // then takes one seam angle throughout, the one of the bend it follows)
+      for (const step of [-1, 1])
+        for (let j = i + step; j >= 0 && j < F; j += step) {
+          const b = arcOf(frames[j], r);
+          if (!b) break;
+          if (b.deg) continue;
+          const base = (b.a0 + b.a1) / 2 - Math.PI;
+          return { a0: base, a1: base + TAU, full: true };
+        }
+      return a;
     };
     const P = new THREE.Vector3();
     const Nn = new THREE.Vector3();
@@ -621,7 +641,7 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
       }
       let widest = 0;
       for (const i of run) {
-        const a = arcOf(frames[i], roOf(i));
+        const a = arcI(i, roOf(i));
         if (a) widest = Math.max(widest, a.a1 - a.a0);
       }
       M = Math.max(4, Math.ceil((MF * widest) / TAU - 1e-6));
@@ -630,10 +650,10 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
         const base = surf.count;
         for (const i of run) {
           const f = frames[i];
-          const arc = arcOf(f, radius(i));
+          const arc = arcI(i, radius(i));
           if (!arc) {
             // inner ring entirely on the removed side: collapse it onto the chord midpoint
-            const ao = arcOf(f, roOf(i))!;
+            const ao = arcI(i, roOf(i))!;
             const mid = ringPt(f, roOf(i), ao.a0).clone().lerp(ringPt(f, roOf(i), ao.a1).clone(), 0.5);
             for (let m = 0; m <= M; m++) surf.v(mid, ringN(f, (ao.a0 + ao.a1) / 2, s), f.u, m / M);
             continue;
@@ -664,11 +684,11 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
         let any = false;
         for (const i of run) {
           const f = frames[i];
-          const ao = arcOf(f, roOf(i))!;
+          const ao = arcI(i, roOf(i))!;
           if (!ao.full) any = true;
           const e0 = ringPt(f, roOf(i), ao.a0).clone();
           const e1 = ringPt(f, roOf(i), ao.a1).clone();
-          const ai = hollow ? arcOf(f, riOf(i)) : null;
+          const ai = hollow ? arcI(i, riOf(i)) : null;
           let m0: THREE.Vector3;
           let m1: THREE.Vector3;
           if (hollow && ai && !ai.full) {
@@ -702,9 +722,9 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
       const capAt = (i: number, dirSign: number) => {
         const f = frames[i];
         const t = frames[Math.min(F - 1, i + 1)].p.clone().sub(frames[Math.max(0, i - 1)].p).normalize().multiplyScalar(dirSign);
-        const ao = arcOf(f, roOf(i));
+        const ao = arcI(i, roOf(i));
         if (!ao) return;
-        const ai = hollow ? arcOf(f, riOf(i)) : null;
+        const ai = hollow ? arcI(i, riOf(i)) : null;
         const base = caps.count;
         for (let m = 0; m <= M; m++) {
           const th = ao.a0 + ((ao.a1 - ao.a0) * m) / M;
@@ -725,7 +745,7 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
       run = [];
     };
     for (let i = 0; i < F; i++) {
-      if (arcOf(frames[i], roOf(i))) run.push(i);
+      if (arcI(i, roOf(i))) run.push(i);
       else flush();
     }
     flush();

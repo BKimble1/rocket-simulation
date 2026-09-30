@@ -667,7 +667,8 @@ const PUFF: Species = {
     rec.p0.copy(e.pos).addScaledVector(e.dir, e.exitRadius * 2);
     const off = perp(e.dir, rnd(2) * Math.PI * 2, v2).multiplyScalar(Math.tan(0.32 * Math.sqrt(rnd(3))));
     v1.copy(e.dir).add(off).normalize();
-    const sp = (mono ? 22 + 14 * rnd(4) : 34 + 26 * rnd(4)) * (1 + 1.2 * dense);
+    // speed of the visible puff (its dense core; the fast rarefied fringe is invisible)
+    const sp = mono ? (22 + 14 * rnd(4)) * (1 + 1.2 * dense) : (12 + 10 * rnd(4)) * (1 - dense) + (34 + 26 * rnd(4)) * 2.2 * dense;
     rec.up.copy(rec.p0).normalize();
     rec.group = Group.Puff;
     if (vac) {
@@ -690,18 +691,20 @@ const PUFF: Species = {
     rec.tauB = 1;
     rec.floor = -1e9;
     rec.size0 = (mono ? 0.07 : 0.12 + 0.08 * rnd(5)) * ctx.sizeK;
-    rec.size1 = (mono ? 0.9 + 0.5 * rnd(6) : 2.2 + 2.2 * rnd(6)) * ctx.sizeK * (1.3 - 0.3 * dense);
+    rec.size1 = (mono ? (0.9 + 0.5 * rnd(6)) * (1.3 - 0.3 * dense) : (1.4 + 1.4 * rnd(6)) * (1 - dense) + (2.2 + 2.2 * rnd(6)) * dense) * ctx.sizeK;
     rec.tauS = 0.4;
     // in vacuum the gas expands at its thermal speed and is gone in a fraction of a second;
     // in air it slows within metres and disperses in about a second
-    rec.sizeLin = (mono ? 2.5 : 9) * (1 - dense) + 0.5 * dense;
-    rec.life = (0.35 + 0.35 * rnd(7)) * (1 - dense) + (0.8 + 0.6 * rnd(7)) * dense;
-    rec.alpha0 = Math.min(1, (hyp ? 0.26 : mono ? 0.22 : 0.3 + 0.2 * dense) * ctx.alphaK);
+    rec.sizeLin = (mono ? 2.5 : 3.5) * (1 - dense) + 0.5 * dense;
+    // cold nitrogen condenses into a sunlit ice-crystal puff that stays visible for most of a
+    // second even in vacuum; hot hydrazine or hypergolic products only flash
+    rec.life = (mono ? 0.35 + 0.35 * rnd(7) : 0.6 + 0.4 * rnd(7)) * (1 - dense) + (0.8 + 0.6 * rnd(7)) * dense;
+    rec.alpha0 = Math.min(1, (hyp ? 0.26 : mono ? 0.22 : 0.42 + 0.1 * dense) * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.03;
     rec.fadeOut = 0.25;
-    rec.thin = 1 - 0.2 * dense;
-    rec.thinRef = rec.size0 * 4;
+    rec.thin = mono ? 1 - 0.2 * dense : 0.65 - 0.1 * dense;
+    rec.thinRef = mono ? rec.size0 * 4 : rec.size1 * 0.5;
     if (hyp) {
       // a brief orange flash at the nozzle, then a faint, slightly warm white puff
       rec.alb0.setRGB(0.95, 0.9, 0.84);

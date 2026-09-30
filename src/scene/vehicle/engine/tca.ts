@@ -613,7 +613,9 @@ function extension(k: Kit, d: Design, segs: number, detail: EngineDetail) {
     .reverse();
   const loop: V2[] = [[r0, y0], [r0 + d.tube + 0.03, y0], [r0 + d.tube + 0.03, y0 - 0.012], ...outer, ...inner.slice(0, -1)];
   // lip at the exit (rolled edge)
-  const segsExt = Math.max(segs, detail === 'hangar' ? 144 : segs);
+  // (the light detail is the upper stage's engine in flight, where the 2.8 m bell is the largest
+  // shape in the close-ups: never coarser than 64 segments)
+  const segsExt = Math.max(segs, detail === 'hangar' ? 144 : detail === 'flight' ? segs : 64);
   const add = (phi: [number, number], front: boolean) => {
     const res = revolve([{ pts: loop }], phi[0], phi[1], segsExt, { caps: k.section && phi !== FULL, crease: 40 });
     uvAlong(res.surf, yTop, yBot);
@@ -624,8 +626,8 @@ function extension(k: Kit, d: Design, segs: number, detail: EngineDetail) {
     add(BACK, false);
     add(FRONT, true);
   } else add(FULL, false);
-  if (detail === 'cluster') return;
-  // stiffener rings (hat sections) and the exit lip
+  // stiffener rings (hat sections) and the exit lip (also in the light detail: they are what
+  // makes the plain cone read as a thin, stiffened niobium shell, and merge into its mesh)
   const ring = (x: number, h: number, dep: number) => {
     const [r, y] = wallPt(d, x, th);
     const hat: V2[] = [
