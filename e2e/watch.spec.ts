@@ -7,7 +7,7 @@ test('watch: captions follow the film, pause holds, chapters seek @phone', async
   await page.getByRole('button', { name: /Overview: Satellite to low Earth orbit/ }).click();
   await waitForLocation(page, 'flight');
   await expect(page.locator('.caption')).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Pause' }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
   const t = await missionTime(page);
   await page.waitForTimeout(1500);
   expect(await missionTime(page)).toBeCloseTo(t, 3);
