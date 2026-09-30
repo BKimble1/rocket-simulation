@@ -68,6 +68,8 @@ export const director = {
   flightPose: makePose(),
   hangarPose: makePose(),
   mapPose: makePose(),
+  /** Body the current framing is about (diagnostics). */
+  subject: null as BodyId | null,
   /** Shot the Auto director is on (key), for change detection. */
   autoKey: '',
   reduced: false,
@@ -204,9 +206,13 @@ function now(): number {
   return frame.decor;
 }
 
+/** Diagnostic counters (camera trace and tests). */
+export const flightStats = { pushes: 0, cuts: 0 };
+
 function pushBlend(key: string, evalFn: Blend['eval'], dur: number) {
   const last = director.blends[director.blends.length - 1];
   if (last && last.key === key) return;
+  flightStats.pushes++;
   director.blends.push({ key, eval: evalFn, start: now(), dur: director.reduced ? Math.min(dur, 0.25) : dur });
   // bounded: drop blends that are fully covered
   while (director.blends.length > 4) director.blends.shift();

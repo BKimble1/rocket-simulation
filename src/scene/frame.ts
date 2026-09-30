@@ -43,6 +43,10 @@ export const frame = {
   decor: 0,
   /** Real frame delta (s), clamped. */
   dt: 1 / 60,
+  /** Largest step one frame may advance the clocks (s). */
+  maxStep: 0.1,
+  /** Accumulated clamped frame time (s). */
+  clock: 0,
   /**
    * The hangar is static apart from its animations, so its shadow map is rendered only when
    * something moved (the scene sets this); flight locations update shadows every frame.
