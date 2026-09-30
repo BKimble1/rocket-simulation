@@ -88,6 +88,38 @@ describe('stateless effects particles', () => {
     for (const p of ground) expect(p.height).toBeLessThan(600);
   });
 
+  it('makes the ground cloud neutral white steam with some grey smoke, never tan', () => {
+    const src = new SyntheticSource({ scenario: 'ascent' });
+    const sys = new ParticleSystem(1);
+    sys.setSource(src);
+    for (const t of [0, 3, 8, 40]) {
+      sys.update(t, 1);
+      const ground = sys.out.slice(0, sys.count).filter((p) => p.group === 0);
+      expect(ground.length).toBeGreaterThan(20);
+      let white = 0;
+      for (const p of ground) {
+        const a = p.albedo;
+        // neutral: no channel departs from the others by more than a few percent
+        expect(Math.max(a.r, a.g, a.b) - Math.min(a.r, a.g, a.b)).toBeLessThan(0.03);
+        expect(Math.min(a.r, a.g, a.b)).toBeGreaterThan(0.5);
+        if (a.g > 0.88) white++;
+      }
+      expect(white / ground.length).toBeGreaterThan(0.7);
+    }
+  });
+
+  it('diffuses the edges of old cloud puffs only', () => {
+    const src = new SyntheticSource({ scenario: 'ascent' });
+    const sys = new ParticleSystem(1);
+    sys.setSource(src);
+    sys.update(2, 2);
+    const young = sys.out.slice(0, sys.count).filter((p) => p.group === 0);
+    for (const p of young) expect(p.soft).toBeLessThan(0.05);
+    sys.update(90, 3);
+    const old = sys.out.slice(0, sys.count).filter((p) => p.group === 0);
+    expect(old.reduce((s, p) => s + p.soft, 0) / old.length).toBeGreaterThan(0.6);
+  });
+
   it('draws no smoke from a vacuum upper-stage burn', () => {
     const src = new SyntheticSource({ scenario: 'upper' });
     const sys = new ParticleSystem(1);

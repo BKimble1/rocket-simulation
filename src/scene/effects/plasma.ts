@@ -139,7 +139,10 @@ vec3 field(vec3 p) {
     float nz = fxNoise(vec3(p.x * 1.3, (y + uTime * 60.0) * 0.35, p.z * 1.3) / R);
     // fades out before the end of the bounding volume (no visible cut)
     float tailFade = 1.0 - smoothstep(0.55, 0.95, x / max(yr - uY0, 1e-3));
-    float sl = exp(-pow((r - rsl) / w, 2.0)) * exp(-x / uWake) * (0.6 + 0.8 * nz) * tailFade;
+    // windowed to zero inside the bounding frustum (no visible wall when seen from the wake)
+    float rb = mix(uRb0, uRb1, clamp((y - uY0) / (uY1 - uY0), 0.0, 1.0));
+    float win = 1.0 - smoothstep(0.5 * rb, 0.92 * rb, r);
+    float sl = exp(-pow((r - rsl) / w, 2.0)) * exp(-x / uWake) * (0.6 + 0.8 * nz) * tailFade * win;
     // faint beside the shock layer: the ionised wake glows far less than the gas at the shield
     e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 0.5;
   }

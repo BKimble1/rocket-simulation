@@ -24,6 +24,8 @@ test('lines clear each other and the chamber and bell', () => {
     const d = engineDesign(kind);
     const R = routes(d);
     const lines: { name: string; pts: THREE.Vector3[]; r: number; bend: number }[] = [
+      { name: 'loxInlet', pts: R.loxInlet, r: TP.loxDuctR, bend: 0.05 },
+      { name: 'fuelInlet', pts: R.fuelInlet, r: TP.fuelDuctR, bend: 0.07 },
       { name: 'loxDischarge', pts: R.loxDischarge, r: TP.loxLineR, bend: 0.1 },
       { name: 'movToDome', pts: R.movToDome, r: TP.loxLineR, bend: 0.1 },
       { name: 'fuelDischarge', pts: R.fuelDischarge, r: TP.fuelLineR, bend: 0.09 },
@@ -71,6 +73,19 @@ test('lines clear each other and the chamber and bell', () => {
         }
       }
       if (worst < 0.002) bad.push(`${kind} ${A.name} x wall: gap ${(worst * 1000).toFixed(1)} mm at ${at.toArray().map((v) => v.toFixed(3)).join(',')}`);
+    }
+    // no elbow tighter than its own tube: the inside of the bend would fold over itself
+    for (const A of lines) {
+      const p = filletPath(A.pts, A.bend, 0.01, 5).p;
+      for (let i = 1; i < p.length - 1; i++) {
+        const ang = p[i].clone().sub(p[i - 1]).normalize().angleTo(p[i + 1].clone().sub(p[i]).normalize());
+        if (ang < 1e-3) continue;
+        const rb = (p[i].distanceTo(p[i - 1]) + p[i].distanceTo(p[i + 1])) / 2 / ang;
+        if (rb < A.r * 1.05) {
+          bad.push(`${kind} ${A.name}: bend radius ${(rb * 1000).toFixed(0)} mm under the tube radius at ${p[i].toArray().map((v) => v.toFixed(3)).join(',')}`);
+          break;
+        }
+      }
     }
     expect(bad).toEqual([]);
   }

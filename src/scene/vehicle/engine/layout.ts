@@ -107,8 +107,10 @@ export function routes(d: Design): Routes {
     v(x - 0.12, TP.loxVoluteY, -rEnd),
     v(0.14, -0.17, -0.3),
     v(-0.18, -0.19, -0.31),
-    v(-0.47, -0.19, -0.16),
-    v(-0.47, -0.19, 0),
+    // (the last corner sits 0.08 m outboard of the valve inlet so the elbow into it can take a
+    // bend radius of 1.6 pipe radii; a tighter corner folds the inside of the elbow over itself)
+    v(-0.5, -0.19, -0.13),
+    v(-0.5, -0.19, 0),
     movIn.clone(),
   ];
   const movToDome = [movOut.clone(), domePort.clone()];
@@ -121,8 +123,9 @@ export function routes(d: Design): Routes {
     v(0.12, -0.4, -0.35),
     v(-0.2, -0.41, -0.33),
     v(-0.4, -0.42, -0.14),
+    // (no collinear point below this corner: it would cap the elbow's radius at 35 mm, under
+    // the pipe's own radius)
     v(-0.4, -0.44, 0),
-    v(-0.4, mfvIn.y + 0.1, 0),
     mfvIn.clone(),
   ];
   const ym = d.y(d.manifoldX);

@@ -573,10 +573,62 @@ export interface ClippedTube {
  * by flat section strips lying in the plane. Works for pipes at any angle, bends that cross the
  * plane, volutes and tori.
  */
-export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
+export function clippedTube(frames0: Frame[], o: TubeOpts): ClippedTube {
+  const roAt = (t: number) => (typeof o.ro === 'number' ? o.ro : o.ro(t));
+  let frames = frames0;
+  let ts = frames0.map((_f, i) => i / Math.max(1, frames0.length - 1));
+  // Where the plane starts or stops cutting into the tube between two rings, the rings alone
+  // leave a sliver of wall that neither half covers (a pinhole in the intact view). A "tip" ring
+  // is inserted exactly where the plane touches the tube: a single point on one side, the whole
+  // ring on the other, so the two halves meet edge to edge.
+  const tips = new Set<Frame>();
+  if (o.clipZ !== undefined) {
+    const cz = o.clipZ;
+    const kOf = (f: Frame, r: number) => {
+      const A = Math.hypot(f.n.z, f.b.z);
+      return A * r < 1e-9 ? NaN : (cz - f.p.z) / (r * A);
+    };
+    const lerpF = (a: Frame, b: Frame, t: number): Frame => ({ p: a.p.clone().lerp(b.p, t), n: a.n.clone().lerp(b.n, t).normalize(), b: a.b.clone().lerp(b.b, t).normalize(), u: a.u + (b.u - a.u) * t });
+    const outF: Frame[] = [];
+    const outT: number[] = [];
+    for (let i = 0; i < frames0.length; i++) {
+      outF.push(frames0[i]);
+      outT.push(ts[i]);
+      if (i === frames0.length - 1) break;
+      const a = frames0[i];
+      const b = frames0[i + 1];
+      const ta = ts[i];
+      const tb = ts[i + 1];
+      const ka = kOf(a, roAt(ta));
+      const kb = kOf(b, roAt(tb));
+      if (!Number.isFinite(ka) || !Number.isFinite(kb)) continue;
+      const found: { m: number; f: Frame }[] = [];
+      for (const v of [-1, 1]) {
+        if ((ka - v) * (kb - v) >= 0) continue;
+        let lo = 0;
+        let hi = 1;
+        for (let it = 0; it < 32; it++) {
+          const m = (lo + hi) / 2;
+          const km = kOf(lerpF(a, b, m), roAt(ta + (tb - ta) * m));
+          if (Number.isFinite(km) && (km - v) * (ka - v) > 0) lo = m;
+          else hi = m;
+        }
+        const m = (lo + hi) / 2;
+        found.push({ m, f: lerpF(a, b, m) });
+      }
+      found.sort((x, y) => x.m - y.m);
+      for (const q of found) {
+        tips.add(q.f);
+        outF.push(q.f);
+        outT.push(ta + (tb - ta) * q.m);
+      }
+    }
+    frames = outF;
+    ts = outT;
+  }
   const F = frames.length;
-  const roOf = (i: number) => (typeof o.ro === 'number' ? o.ro : o.ro(i / Math.max(1, F - 1)));
-  const riOf = (i: number) => (o.ri === undefined ? 0 : typeof o.ri === 'number' ? o.ri : o.ri(i / Math.max(1, F - 1)));
+  const roOf = (i: number) => roAt(ts[i]);
+  const riOf = (i: number) => (o.ri === undefined ? 0 : typeof o.ri === 'number' ? o.ri : o.ri(ts[i]));
   const hollow = o.ri !== undefined && o.ri !== 0;
   const MF = Math.max(6, o.segs);
   const TAU = Math.PI * 2;
@@ -594,9 +646,11 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
       // a ring lying in the plane belongs to both halves (rounding would otherwise give it to one
       // side only and leave a one-segment gap in the other, e.g. in a torus crossing the plane)
       if (A * r < 1e-9) return dz >= -1e-7 ? { a0: base, a1: base + TAU, full: true, deg: true } : null;
-      const k = dz / (r * A);
+      let k = dz / (r * A);
+      // a tip ring touches the plane: clamp the rounding (a point on one side, whole on the other)
+      if (tips.has(f)) k = Math.max(-1, Math.min(1, k));
       if (k >= 1) return { a0: base, a1: base + TAU, full: true };
-      if (k <= -1) return null;
+      if (k < -1 || (k === -1 && !tips.has(f))) return null;
       const c = Math.acos(k);
       return { a0: base + c, a1: base + TAU - c, full: false };
     };
