@@ -40,6 +40,7 @@ export function bodySize(id: BodyId): { half: number; centreY: number } {
 const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
+const vSun = new THREE.Vector3();
 const q1 = new THREE.Quaternion();
 
 export interface Basis {
@@ -222,9 +223,11 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
       const d = P.d ?? 60;
       orbitAround(d, P.az ?? 150, P.el ?? 10, B);
       moonPosition(t, frame.tl?.moonPhase0 ?? 0, v2);
-      // look partly toward the Moon so it sits beyond the spacecraft
+      // look past the spacecraft toward the Moon from the sunlit side, so both the probe and the
+      // Moon's day side are lit (from straight behind, the probe was a silhouette on the night side)
       v3.subVectors(v2, centre).normalize();
-      out.pos.copy(centre).addScaledVector(v3, -d).addScaledVector(B.up, d * 0.15);
+      vSun.copy(v3).multiplyScalar(-0.6).addScaledVector(SUN_DIRECTION, 0.8).normalize();
+      out.pos.copy(centre).addScaledVector(vSun, d).addScaledVector(B.up, d * 0.15);
       out.target.copy(centre).addScaledVector(v3, d * 0.4);
       out.fov = P.fov ?? 45;
       return true;
