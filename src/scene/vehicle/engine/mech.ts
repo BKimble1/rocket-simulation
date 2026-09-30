@@ -135,8 +135,19 @@ export function buildMechanisms(k: Kit, d: Design, detail: EngineDetail, _segs: 
         l.translate(a.A.x + a.t.x * sgn * 0.024, a.A.y, a.A.z + a.t.z * sgn * 0.024);
         k.add(l, { ...G, node: 'fixed', front });
       }
-    // lower clevis lugs on the chamber attach band (engine side)
-    if (detail !== 'cluster') {
+    // lower clevis lugs on the chamber attach band (engine side); the light detail gets one plain
+    // block in the chamber's own material (no extra draw call) so the rod end is not left floating
+    // 5 cm off the jacket
+    if (detail === 'cluster') {
+      const rBand = d.rc + d.tw + d.hc + d.tj - 0.004;
+      const radial = V(Math.sin(a.phi), 0, Math.cos(a.phi));
+      const len = rB - rBand + 0.012;
+      const l = new THREE.BoxGeometry(len, 0.045, 0.05);
+      l.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V(1, 0, 0), radial));
+      const mid = radial.clone().multiplyScalar(rBand + len / 2);
+      l.translate(mid.x, yB, mid.z);
+      k.add(l, { part: 'tvc-actuators', mat: 'jacket' });
+    } else {
       const rBand = d.rc + d.tw + d.hc + d.tj + 0.006;
       const radial = V(Math.sin(a.phi), 0, Math.cos(a.phi));
       for (const sgn of [-1, 1]) {

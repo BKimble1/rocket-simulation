@@ -169,6 +169,69 @@ function tubeColor(): THREE.Texture {
   return t;
 }
 
+let niobiumTex: THREE.Texture | null = null;
+/**
+ * Mottling of the silicide-coated niobium extension (multiplies its colour, about +-6 %): a
+ * coating sprayed and fired by hand is never uniform, and faint streaks run down the bell from
+ * the joint (V: 0 at the joint, 1 at the exit). Without it the 2.8 m bell reads as flat plastic.
+ */
+function niobiumColor(): THREE.Texture | null {
+  if (!hasDOM) return null;
+  if (niobiumTex) return niobiumTex;
+  const W = 256;
+  const H = 512;
+  const [c, g] = canvas(W, H);
+  const img = g.createImageData(W, H);
+  const r = rng(71);
+  const grid = (nx: number, ny: number) => Array.from({ length: nx * ny }, () => r());
+  const oct = [
+    { nx: 6, ny: 5, a: 0.05, g: grid(6, 5) },
+    { nx: 24, ny: 20, a: 0.025, g: grid(24, 20) },
+    { nx: 96, ny: 64, a: 0.012, g: grid(96, 64) },
+  ];
+  const smooth = (t: number) => t * t * (3 - 2 * t);
+  const noise = (o: (typeof oct)[number], x: number, y: number) => {
+    const fx = (x / W) * o.nx;
+    const fy = (y / H) * (o.ny - 1);
+    const x0 = Math.floor(fx) % o.nx;
+    const x1 = (x0 + 1) % o.nx;
+    const y0 = Math.min(o.ny - 1, Math.floor(fy));
+    const y1 = Math.min(o.ny - 1, y0 + 1);
+    const u = smooth(fx - Math.floor(fx));
+    const v = smooth(fy - Math.floor(fy));
+    const a = o.g[y0 * o.nx + x0] * (1 - u) + o.g[y0 * o.nx + x1] * u;
+    const b = o.g[y1 * o.nx + x0] * (1 - u) + o.g[y1 * o.nx + x1] * u;
+    return (a * (1 - v) + b * v - 0.5) * 2;
+  };
+  // streaks: a smoothed random value per column, strongest near the joint
+  const col = Array.from({ length: W }, () => r() - 0.5);
+  const streak = col.map((_v, x) => {
+    let sum = 0;
+    for (let k = -3; k <= 3; k++) sum += col[(x + k + W) % W];
+    return sum / 7;
+  });
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      let m = 0.93;
+      for (const o of oct) m += o.a * noise(o, x, y);
+      m += streak[x] * 0.12 * (1 - (y / H) * 0.7);
+      const v = Math.max(0, Math.min(1, m));
+      const i = (y * W + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.round(v * 255);
+      img.data[i + 3] = 255;
+    }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  t.repeat.set(3, 1);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  t.flipY = false;
+  niobiumTex = t;
+  return t;
+}
+
 const hatchTex = new Map<HatchFamily, THREE.Texture>();
 const HATCH_STYLE: Record<HatchFamily, { base: string; line: string; angle: number; pattern: 'single' | 'double' | 'dash' | 'cross' }> = {
   cu: { base: '#e2a07a', line: '#8a4a2a', angle: 45, pattern: 'dash' },
@@ -401,7 +464,7 @@ export function baseMaterial(k: EMat): THREE.Material {
       return M('blackAnodized');
     case 'niobium':
       // silicide-coated niobium alloy: matte dark grey with a slight bronze tint
-      return once(k, () => std({ color: '#312d29', roughness: 0.72, metalness: 0.3, roughnessMap: roughnessNoise(43, 0.2) }));
+      return once(k, () => std({ color: '#35302b', map: niobiumColor(), roughness: 0.72, metalness: 0.3, roughnessMap: roughnessNoise(43, 0.2) }));
     case 'faceplate':
       return once(k, () => {
         const f = faceplate();

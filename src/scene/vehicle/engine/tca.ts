@@ -47,7 +47,16 @@ function xs(d: Design, x0: number, x1: number): number[] {
     // quad diagonal (V-shaped bands) unless the rings are close in radius
     const tubes = p[i][0] > d.xChamberEnd - 0.01 && p[i][0] < d.xRegenEnd + 0.01;
     const flare = tubes && Math.abs(Math.log(p[i + 1][1] / p[last][1])) > 0.06;
-    if (turn > sampleTurn || far || flare) {
+    // chord error: a long chord turns little even where it cuts a corner (the straight chamber
+    // cylinder into the converging arc became a cone, up to 1 cm inside the real wall)
+    let sag = 0;
+    const ax = p[last][0];
+    const ar = p[last][1];
+    const cx = p[i + 1][0] - ax;
+    const cr = p[i + 1][1] - ar;
+    const cl = Math.hypot(cx, cr) || 1;
+    for (let j = last + 1; j <= i; j++) sag = Math.max(sag, Math.abs((p[j][0] - ax) * cr - (p[j][1] - ar) * cx) / cl);
+    if (turn > sampleTurn || far || flare || sag > sampleTurn * 0.02) {
       out.push(p[i][0]);
       last = i;
     }
@@ -331,12 +340,16 @@ function chamber(k: Kit, d: Design, segs: number, detail: EngineDetail) {
     const xa = d.x(d.notch.yTop);
     const xb = d.x(d.notch.yBot);
     const [n0, n1] = [d.notch.phi0, d.notch.phi1];
-    for (const [loop, tag] of [
-      [hot, cu],
-      [jac, ni],
-    ] as [(a: number, b: number) => V2[], Tag][]) {
+    // the front half samples the wall at the same stations as the back half's three pieces, so
+    // the two halves meet vertex to vertex on the section plane (no crack showing the liner)
+    const X3 = [...xs(d, x0, xa), ...xs(d, xa, xb).slice(1), ...xs(d, xb, x1).slice(1)];
+    const loop3 = (dIn: number, dOut: number): V2[] => [...X3.map((x) => wallPt(d, x, dIn)), ...X3.map((x) => wallPt(d, x, dOut)).reverse()];
+    for (const [loop, tag, front] of [
+      [hot, cu, loop3(0, tw)],
+      [jac, ni, loop3(tw + hc, jOut)],
+    ] as [(a: number, b: number) => V2[], Tag, V2[]][]) {
       // front half
-      k.sweep(revolve([{ pts: loop(x0, x1) }], FRONT[0], FRONT[1], segs, { caps: true }), { ...tag, front: true });
+      k.sweep(revolve([{ pts: front }], FRONT[0], FRONT[1], segs, { caps: true }), { ...tag, front: true });
       // back half outside the notch sector, split along x so only the notch span gets a side cap
       for (const [a, b, capStart] of [
         [x0, xa, false],

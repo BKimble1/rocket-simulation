@@ -451,16 +451,17 @@ const GROUND: Species = {
       // a few puffs carry the flame's glow out of the trench for a moment at engine start
       hot = onMount && rnd(8) < 0.16 ? 1 : 0;
     } else if (onMount) {
-      // steam boiling up around the mount (deluge water flashing in the exhaust)
+      // steam boiling up around the mount (deluge water flashing in the exhaust), blasted out
+      // across the deck more than up: it climbs mostly by its own buoyancy
       const a = rnd(2) * Math.PI * 2;
       const r = MOUNT_HOLE.radius + rnd(3) * 9;
       x = Math.cos(a) * r;
       z = Math.sin(a) * r;
-      y = 3 + rnd(4) * 6;
-      const sp = 6 + 14 * rnd(5);
+      y = 3 + rnd(4) * 5;
+      const sp = 9 + 15 * rnd(5);
       ux = Math.cos(a) * sp;
       uz = Math.sin(a) * sp;
-      uy = 6 + 12 * rnd(6);
+      uy = 3 + 7 * rnd(6);
       rec.tau = 1.6 + 0.8 * rnd(7);
     } else {
       // plume striking the pad: a radial wall of steam and smoke
