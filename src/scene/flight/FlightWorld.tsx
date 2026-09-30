@@ -25,6 +25,7 @@ import type { BodyId, PartId } from '../../vehicle/parts';
 import { EARTH_AXIS, OMEGA_EARTH, R_EARTH } from '../../world/frames';
 import { atmosphere } from './atmosphere';
 import { usePlayback } from '../../state/playback';
+import { skyState } from '../space';
 
 /** Scene-wide handle to the vehicle shown in flight (for focus framing and inspection). */
 export const flightModels = {
@@ -281,6 +282,53 @@ const VS: VehicleVisualState = {
   s1Lox: 1, s1Rp1: 1, s2Lox: 1, s2Rp1: 1, s1GimbalPitch: 0, s1GimbalYaw: 0, s2GimbalPitch: 0, frost: 0, entryScorch: 0,
 };
 
+/**
+ * Docking floodlights, as real crew vehicles and stations carry for night-side approaches: a
+ * spotlight on the capsule's docking system along its docking axis and one at the station port
+ * looking down the approach corridor. They fade in only when the two are within a few kilometres
+ * and out of sunlight (only mounted on missions with a station, so other scenes pay nothing).
+ */
+function DockingLights({ vehicle, station }: { vehicle: VehicleModel; station: SpacecraftModel }) {
+  const lights = useMemo(() => {
+    const make = () => {
+      const l = new THREE.SpotLight('#fff3e2', 0, 120, 0.5, 0.6, 2);
+      l.castShadow = false;
+      return l;
+    };
+    return { cap: make(), st: make() };
+  }, []);
+  useEffect(() => {
+    const cap = vehicle.bodies.capsule;
+    const cd = vehicle.anchors.capsuleDock;
+    const st = station.bodies.station;
+    const sd = station.anchors.dockPort;
+    const added: THREE.Object3D[] = [];
+    if (cap && cd) {
+      lights.cap.position.copy(cd.pos);
+      lights.cap.target.position.copy(cd.pos).addScaledVector(cd.axis, 20);
+      cap.add(lights.cap, lights.cap.target);
+      added.push(lights.cap, lights.cap.target);
+    }
+    if (st && sd) {
+      lights.st.position.copy(sd.pos).addScaledVector(sd.axis, 1.5);
+      lights.st.target.position.copy(sd.pos).addScaledVector(sd.axis, 20);
+      st.add(lights.st, lights.st.target);
+      added.push(lights.st, lights.st.target);
+    }
+    return () => added.forEach((o) => o.removeFromParent());
+  }, [vehicle, station, lights]);
+  useFrame(() => {
+    const a = frame.bodies.capsule;
+    const b = frame.bodies.station;
+    const near = a.present && b.present ? a.pos.distanceTo(b.pos) < 3000 : false;
+    const dark = 1 - Math.min(1, Math.max(0, skyState.sunIntensity / 0.6));
+    const k = near ? dark : 0;
+    lights.cap.intensity = 9000 * k;
+    lights.st.intensity = 6000 * k;
+  }, 0);
+  return null;
+}
+
 export function FlightWorld({ children }: { children?: ReactNode }) {
   // re-render when the mission changes (frame.tl is not React state)
   const missionId = usePlayback((s) => s.mission);
@@ -364,6 +412,7 @@ export function FlightWorld({ children }: { children?: ReactNode }) {
         <LaunchSite />
         <Effects />
         <Ready onReady={markFlightReady} />
+        {vehicle && station && <DockingLights vehicle={vehicle} station={station} />}
       </Suspense>
       {vehicle && <primitive object={vehicle.root} />}
       {station && <primitive object={station.bodies.station!} />}

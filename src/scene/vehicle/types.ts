@@ -82,6 +82,8 @@ export interface VehicleAnchors {
   smEngine: { exit: THREE.Vector3; exitRadius: number } | null;
   lesNozzles: THREE.Vector3[];
   satApogee: { exit: THREE.Vector3; exitRadius: number } | null;
+  /** Crew capsule docking port centre and outward axis (model frame), for the docking lights. */
+  capsuleDock: { pos: THREE.Vector3; axis: THREE.Vector3 } | null;
   /** LOX vent points on the pad (boil-off). */
   vents: THREE.Vector3[];
   /** Centre of mass estimate per body at full load (model frame). */

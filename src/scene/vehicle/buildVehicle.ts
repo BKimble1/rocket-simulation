@@ -243,6 +243,7 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     smEngine: sc ? sc.anchors.smEngine : null,
     lesNozzles: sc ? sc.anchors.lesNozzles : [],
     satApogee: sc ? sc.anchors.satApogee : null,
+    capsuleDock: sc && config.payload === 'capsule' ? sc.anchors.dockPort : null,
     vents: ctx.vents,
     com: computeCom(config, sc, root),
   };
