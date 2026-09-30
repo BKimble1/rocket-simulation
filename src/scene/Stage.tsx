@@ -294,6 +294,7 @@ function Setup() {
       w.__rocketFrame = frame;
       w.__rocketDirector = director;
       w.__rocketGL = gl;
+      w.__rocketScenes = scenes;
       w.__rocketSceneCount = () => {
         let n = 0;
         scenes.flight.traverse(() => n++);
