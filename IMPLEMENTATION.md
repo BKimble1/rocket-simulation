@@ -68,7 +68,9 @@ origin** (the camera) so nothing near the camera has large float32 coordinates, 
 **logarithmic depth buffer** so a 5 cm bolt and the Moon share one depth range without
 z-fighting. The world is at true scale: the Earth is 6,371 km in radius and the Moon 384,400 km
 away. The orbital map is a separate location at 1 unit = 1 Earth radius with enlarged icons,
-labelled as such.
+labelled as such; its distance follows the followed craft's distance from Earth (a continuous
+function of mission time, so it zooms out as a transfer orbit climbs), and the user's zoom
+multiplies it.
 
 ## The mission timeline (source of truth)
 
@@ -107,7 +109,16 @@ orientations) so horizons stay level; the orientation is built once from the ble
 camera (drag, pinch, wheel, arrows) switches to Free starting exactly at the displayed pose;
 "Back to guided view" blends back. Shots follow their subject and never alter a trajectory.
 Changing location captures the displayed picture and dissolves it over the new location; a
-location that is not ready is not entered (the picture holds and the page says so).
+location that is not ready is not entered (the picture holds and the page says so). Rendezvous
+("approach") shots aim between the chaser and its target and widen the field of view until the
+chaser fits (its angle off the aim point plus its own size, with margin). The lunar encounter
+looks past the probe at the Moon, tilted toward its sunlit side.
+
+Lighting is physical (the Sun through the atmosphere, sky and Earth bounce, Earth's shadow), and
+no fill light is added for the camera's sake. The one exception with a real counterpart is the
+station docking, which happens in Earth's shadow: the capsule and the station carry docking
+floodlights, mounted off the docking axis, which switch on near the station out of sunlight
+(`DockingLights` in `src/scene/flight/FlightWorld.tsx`).
 
 Panels never hide the subject: a panel that covers part of the screen registers the area it
 hides (`useStageInset`: a sheet spanning the width at the bottom on phones, a tall panel at one
