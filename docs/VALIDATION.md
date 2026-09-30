@@ -82,9 +82,13 @@ Every test fails on any page error, console error, failed request or HTTP status
 **Results.** A full run (all three projects, one worker) passed 24 of 25 in 18.5 minutes; the
 one failure was a flaw in the seek test (below), fixed. After the fixes from the screenshot
 review (below) a deep-link test was added and the whole suite re-run on the final build:
-**26 of 26 pass** (19.6 minutes). The `/rocket/` base-path build passed the home, explore and watch tests (7 of 7) with
-no request errors, which checks that every asset, texture and narration file resolves under
-the sub-path.
+**26 of 26 pass** (19.6 minutes). The `/rocket/` base-path build passed the home, explore and watch tests on all three
+projects (**13 of 13**, re-run on the final build) with no request errors, which checks that
+every asset, texture and narration file resolves under the sub-path.
+
+**Packaging.** `npm run package` and `npm run package -- rocket` each produce a static-site ZIP
+of about 15.0 MB (both tiers' Earth and Moon maps and all narration included; a visitor
+downloads only what their tier and mode use). Nothing was deployed.
 
 **Defects the end-to-end tests found in the application (fixed):**
 
