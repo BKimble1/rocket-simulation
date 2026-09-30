@@ -44,7 +44,29 @@ before/after numbers are in [`V2_AUDIT.md`](V2_AUDIT.md). Summary of what was ch
   Settings has it at every width, and so does the page shown when WebGL is unavailable. The
   home card scrolls inside the room below the header instead of sliding under it (320 x 640 and
   phone landscape).
-- **Performance**: <!--PERF-->
+- **Performance** (`docs/v2/perf/`: the raw results and `run.sh`, which measures V1 `ec43e1f`
+  and V2 side by side with `scripts/perf.mjs`; 960 x 540, device pixel ratio 1, SwiftShader, a
+  40 s window after 15 s of settling; median real frame interval):
+
+  | Scene | V1 low | V1 medium | V1 high | V2 low | V2 medium | V2 high |
+  |---|---:|---:|---:|---:|---:|---:|
+  | Ignition (T-1 s, pad) | 3.32 s | 3.57 s | 4.33 s | **2.92 s** | 3.50 s | 4.48 s |
+  | Orbit (T+3330 s) | | | 1.36 s | **0.90 s** | | 1.37 s |
+  | Hangar (home) | | | | 1.39 s | | 1.41 s |
+
+  At the pad, V2's low tier costs 65 % of its high tier (V1: 77 %), and low is 12 % cheaper than
+  V1's low while showing more (the new ignition and tower cameras, the pad lighting: 335 draw
+  calls where V1 had 266); in orbit low costs 66 % of high. The hangar costs the same at every
+  tier at pixel ratio 1 (its cost is the hall and the vehicle, which the tiers do not reduce;
+  only its long frames drop, p95 2.7 s against 4.5 s): there the tiers differ by the pixel
+  ratio cap (1, 1.5, 2), which is what separates them on phones and high-density screens. Low
+  also downloads less at start (5.0 MB against 8.9 MB: textures capped at 2048 px). A phone
+  (390 x 844 at pixel ratio 2, automatic tier) starts on low on this renderer and draws the
+  ignition in 2.06 s per frame at 390 x 844; its shaders were warmed in 178 ms, before the
+  first mission frame. The V2 high tier is 3 % slower than V1's at the pad (the added
+  cameras' content), equal in orbit. CPU time to submit a frame is 7 to 16 ms in every scene;
+  the frame interval is the rasteriser's. First frames of a mission arrive 60 to 85 s after
+  the page is opened on this machine (shader compilation in SwiftShader's JIT dominates).
 
 What was not possible here, and is not claimed: any frame rate on a GPU, a phone or a tablet.
 The virtual-clock recordings prove continuity and framing, not real-time smoothness; wall-clock

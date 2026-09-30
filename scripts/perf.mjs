@@ -67,16 +67,17 @@ const r = await page.evaluate(
             renderer: dbg ? ctx.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : ctx.getParameter(ctx.RENDERER),
             location: window.__rocketFrame.location,
             missionTime: +window.__rocketFrame.missionTime.toFixed(1),
+            // (V1 builds, measured for a baseline, have no __rocketPerf: these are then null)
             cpuRenderMedianMs: (() => {
-              const c = [...window.__rocketPerf.recentCpu].slice(-60).sort((a, b) => a - b);
+              const c = [...(window.__rocketPerf?.recentCpu ?? [])].slice(-60).sort((a, b) => a - b);
               return c.length ? +c[c.length >> 1].toFixed(1) : null;
             })(),
             gpuMedianMs: (() => {
-              const g = [...window.__rocketPerf.recentGpu].slice(-60).sort((a, b) => a - b);
+              const g = [...(window.__rocketPerf?.recentGpu ?? [])].slice(-60).sort((a, b) => a - b);
               return g.length ? +g[g.length >> 1].toFixed(1) : null;
             })(),
-            missedFrames60: window.__rocketPerf.missedTotal,
-            stalls: window.__rocketPerf.stalls,
+            missedFrames60: window.__rocketPerf?.missedTotal ?? null,
+            stalls: window.__rocketPerf?.stalls ?? null,
             stallsOver1s: times.filter((x) => x > 1000).length,
             dpr: window.devicePixelRatio,
             canvas: [gl.domElement.width, gl.domElement.height],
@@ -88,9 +89,9 @@ const r = await page.evaluate(
   +secs * 1000,
 );
 const tier = await page.evaluate(() => document.querySelector('.diag')?.textContent ?? '');
-let commit = '';
+let commit = process.env.PERF_COMMIT ?? '';
 try {
-  commit = execSync('git rev-parse --short HEAD').toString().trim();
+  commit ||= execSync('git rev-parse --short HEAD').toString().trim();
 } catch {}
 console.log(JSON.stringify({ url, viewport: `${w}x${h}`, dprRequested: +dpr, commit, readyMs: ready, initialTransferMB: +(initialBytes / 1e6).toFixed(2), ...r, frameTimeMs: { median: +r.median.toFixed(1), p95: +r.p95.toFixed(1), p99: +r.p99.toFixed(1) }, tier, errors }, null, 1));
 await browser.close();

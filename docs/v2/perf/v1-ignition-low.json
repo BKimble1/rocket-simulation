@@ -1,0 +1,38 @@
+{
+ "url": "http://127.0.0.1:4175/?v=mission&m=leo&quality=low",
+ "viewport": "960x540",
+ "dprRequested": 1,
+ "commit": "ec43e1f",
+ "readyMs": 46991,
+ "initialTransferMB": 4.98,
+ "frames": 10,
+ "fps": 0.25,
+ "median": 3317.7999999988824,
+ "p95": 18475.5,
+ "p99": 18475.5,
+ "longFrames50": 9,
+ "calls": 266,
+ "triangles": 744015,
+ "geometries": 356,
+ "textures": 73,
+ "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+ "location": "flight",
+ "missionTime": -1,
+ "cpuRenderMedianMs": null,
+ "gpuMedianMs": null,
+ "missedFrames60": null,
+ "stalls": null,
+ "stallsOver1s": 7,
+ "dpr": 1,
+ "canvas": [
+  960,
+  540
+ ],
+ "frameTimeMs": {
+  "median": 3317.8,
+  "p95": 18475.5,
+  "p99": 18475.5
+ },
+ "tier": "low · initial: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device flight · render 16.1 ms (p95 6491.3) · calls 266 · tris 744k · geo 356 · tex 73ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+ "errors": []
+}

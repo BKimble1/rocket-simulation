@@ -73,3 +73,13 @@ How the baseline was measured:
 | Interrupted dissolve | black frames | continues from the displayed composite (test) |
 | Quality monitor at 4 fps | never judged | steps down after two 2 s windows (test) |
 | Narration under slow frames | re-seeked almost every frame | 0 re-seeks; the voice waits (test) |
+
+## Found while verifying V2, and fixed
+
+| Defect | How it showed | Fix |
+|---|---|---|
+| A paused deep link (`focus=booster`), or any mission opened paused, framed the upper stage | e2e: the Follow switch said Booster while the director followed the upper stage; pressing Play then started a transition in a held Chase camera | the storyline sync gave up when the stage had not sampled the bodies yet and only retried on the next playback snapshot; it now waits for the frame that shows the body (`ui/mission/MissionView.tsx`) |
+| With the hub link, the header did not fit a phone | FAB / ONE e2e and measurement: 454 px of header at 320 to 430 px wide (Settings off screen); 693 px at 481 px | below 960 px the link is a back button placed first (full label as its name), with the labelled link on the home card, in Settings and on the no-WebGL page; measured to fit from 320 to 1440 px |
+| The no-WebGL page had no way back to FAB / ONE | review of the fallback page | the link is on it |
+| The home card slid under the header on short screens | 320 x 640 and phone landscape stills | it scrolls inside the room below the header |
+| The favicon was linked relative to the page (`./brand/...`) | resolved to `/brand/...` at `/rocket` (no trailing slash) | linked from the base, which Vite rewrites to `/rocket/brand/...` |
