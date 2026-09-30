@@ -231,7 +231,7 @@ function Main() {
     installAudio();
     if (quality !== 'auto') setManualTier(quality);
     if (r.view === 'mission' || r.view === 'watch') {
-      if (r.view === 'mission') openMissionAt(r.mission ?? 'leo', routeExtras.chapter);
+      if (r.view === 'mission') openMissionAt(r.mission ?? 'leo', routeExtras.chapter, false, { cam: r.cam, focus: r.focus });
       else loadMission(r.mission ?? 'leo');
     }
     hangarHome();

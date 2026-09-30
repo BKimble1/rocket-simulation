@@ -1,5 +1,6 @@
 /** Cross-mode navigation helpers (inspect a part from a mission, open a mission at a phase). */
 import { useApp } from '../state/store';
+import type { CamMode } from '../state/store';
 import { loadMission, playback, seekPres } from '../state/playback';
 import { missionToPres } from '../timeline/sample';
 import type { MissionId } from '../timeline/types';
@@ -10,10 +11,13 @@ import { watchRef } from '../state/playback';
 import { OUTLINES } from '../timeline/missions/outline';
 import { inConfig } from './explore/config';
 
-/** Open the Mission explorer at the start of a phase (paused, so the learner can look). */
-export function openMissionAt(mission: MissionId, phase: string | null, play = false) {
+/**
+ * Open the Mission explorer at the start of a phase (paused, so the learner can look). A deep
+ * link passes its own camera and followed body in `keep`; otherwise they reset.
+ */
+export function openMissionAt(mission: MissionId, phase: string | null, play = false, keep: { cam?: CamMode; focus?: 'main' | 'booster' } = {}) {
   const app = useApp.getState();
-  app.go('mission', { mission, inspect: null, part: null, cam: 'auto', focus: 'main' });
+  app.go('mission', { mission, inspect: null, part: null, cam: keep.cam ?? 'auto', focus: keep.focus ?? 'main' });
   const tl = loadMission(mission);
   if (!tl) return;
   let start = tl.phases.find((p) => p.id === phase)?.start;

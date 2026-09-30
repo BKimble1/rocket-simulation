@@ -77,6 +77,18 @@ test('booster storyline: switching focus keeps the shared mission time', async (
   await page.getByRole('radio', { name: 'Upper stage' }).click();
 });
 
+test('deep links keep their camera and followed body', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(withHooks('?v=mission&m=gto&cam=map'));
+  await waitForLocation(page, 'map');
+  await expect(page.getByRole('radio', { name: 'Map', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await page.goto(withHooks('?v=mission&m=leo&focus=booster'));
+  await waitForLocation(page, 'flight');
+  await page.evaluate(() => (window as unknown as { __rocketSeekMission: (t: number) => void }).__rocketSeekMission(300));
+  await expect(page.getByRole('radio', { name: 'Booster' })).toHaveAttribute('aria-checked', 'true', { timeout: 60_000 });
+  expect(errors).toEqual([]);
+});
+
 for (const [m, last] of [
   ['suborbital', 'Splashdown and recovery'],
   ['gto', 'Apogee burns to geostationary orbit'],
