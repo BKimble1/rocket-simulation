@@ -43,6 +43,11 @@ export const frame = {
   decor: 0,
   /** Real frame delta (s), clamped. */
   dt: 1 / 60,
+  /**
+   * The hangar is static apart from its animations, so its shadow map is rendered only when
+   * something moved (the scene sets this); flight locations update shadows every frame.
+   */
+  shadowDirty: true,
   /** Which location is on screen (and which one is being dissolved to). */
   location: 'hangar' as Location,
   /** Frame counter. */

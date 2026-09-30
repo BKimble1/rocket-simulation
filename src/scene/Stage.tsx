@@ -150,6 +150,14 @@ function Loop() {
     const t0 = performance.now();
     gl.setRenderTarget(null);
     gl.autoClear = true;
+    // static hangar: re-render its shadows only on frames where something moved
+    if (frame.location === 'hangar') {
+      gl.shadowMap.autoUpdate = false;
+      if (frame.shadowDirty) {
+        gl.shadowMap.needsUpdate = true;
+        frame.shadowDirty = false;
+      }
+    } else gl.shadowMap.autoUpdate = true;
     gl.render(scenes[frame.location], cam);
     // entering another location: capture this picture as displayed and dissolve from it
     const want = director.wantLocation;
@@ -164,6 +172,7 @@ function Loop() {
         gl.copyFramebufferToTexture(overlay.tex);
         director.dissolve = { from: frame.location, start: frame.decor, dur: director.reduced ? 0.3 : 0.55 };
         frame.location = want;
+        frame.shadowDirty = true;
         director.waiting = null;
       } else director.waiting = want;
     }

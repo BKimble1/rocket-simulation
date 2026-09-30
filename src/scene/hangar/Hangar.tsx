@@ -92,15 +92,25 @@ export function Hangar() {
   const engines = useMemo(() => {
     const e = buildEngine('E-1', 'hangar');
     const v = buildEngine('E-1V', 'hangar');
+    // light stand-ins shown while the camera is far from the stands (full inspection detail
+    // costs about a hundred draw calls per engine and only matters up close)
+    const ef = buildEngine('E-1', 'flight');
+    const vf = buildEngine('E-1V', 'flight');
     // gimbal pivot height so each nozzle exit sits just above its plinth
-    e.root.position.copy(ENGINE_STANDS['E-1']).setY(0.3 - e.exitY + 0.05);
-    v.root.position.copy(ENGINE_STANDS['E-1V']).setY(0.3 - v.exitY + 0.05);
-    for (const m of [e, v])
+    for (const [m, stand] of [
+      [e, ENGINE_STANDS['E-1']],
+      [v, ENGINE_STANDS['E-1V']],
+      [ef, ENGINE_STANDS['E-1']],
+      [vf, ENGINE_STANDS['E-1V']],
+    ] as const) {
+      m.root.position.copy(stand).setY(0.3 - m.exitY + 0.05);
       m.root.traverse((o) => {
         const mesh = o as THREE.Mesh;
         if (mesh.isMesh) mesh.receiveShadow = true; // casting is the module's choice
       });
-    return { e, v };
+    }
+    ef.root.visible = vf.root.visible = false;
+    return { e, v, ef, vf };
   }, []);
   useEffect(() => {
     hangar.engine = engines.e;
@@ -108,8 +118,11 @@ export function Hangar() {
     return () => {
       engines.e.dispose();
       engines.v.dispose();
+      engines.ef.dispose();
+      engines.vf.dispose();
     };
   }, [engines]);
+  const standsNear = useRef(true);
 
   // ready once built (models are procedural: nothing to download)
   useEffect(() => {
@@ -157,6 +170,8 @@ export function Hangar() {
   const shaft = useRef(0);
   const idle = useRef(0);
   const demoFramed = useRef<string | null>(null);
+  const lastAmount = useRef(-1);
+  const lastEpoch = useRef(-1);
   useFrame(() => {
     if (frame.location !== 'hangar' && director.wantLocation !== 'hangar') return;
     const dt = frame.dt;
@@ -224,6 +239,21 @@ export function Hangar() {
     v.setOperating({ shaftAngle: shaft.current, flow: 0, gg: false, pitch: 0, yaw: 0, ignite: 0 });
     e.setFlowOverlay(overlays.flow || engineDemo === 'regen-cooling' || engineDemo === 'combustion');
     void E1V;
+    // full-detail display engines up close, light ones from afar (with hysteresis)
+    const camPos = director.hangarPose.pos;
+    const dStand = Math.min(camPos.distanceTo(ENGINE_STANDS['E-1']), camPos.distanceTo(ENGINE_STANDS['E-1V']));
+    const needNear = !!engineDemo || !!partOnStand || (part !== null && VACUUM_DISPLAY_PARTS.includes(part)) || overlays.flow || overlays.thermal;
+    const near = needNear || (standsNear.current ? dStand < 40 : dStand < 32);
+    if (near !== standsNear.current) {
+      standsNear.current = near;
+      e.root.visible = v.root.visible = near;
+      engines.ef.root.visible = engines.vf.root.visible = !near;
+      frame.shadowDirty = true;
+    }
+    // shadows are re-rendered only while something moves (the camera orbiting does not count)
+    if (va.amount !== lastAmount.current || (demo && demoClock.playing) || cutNext !== cutNow || spinning || tvc !== 0 || hangar.epoch !== lastEpoch.current) frame.shadowDirty = true;
+    lastAmount.current = va.amount;
+    lastEpoch.current = hangar.epoch;
   });
 
   const onClick = (ev: ThreeEvent<MouseEvent>) => {
@@ -258,6 +288,8 @@ export function Hangar() {
       <primitive object={vehicle.root} onClick={onClick} onPointerMissed={onMissed} />
       <primitive object={engines.e.root} onClick={onClick} />
       <primitive object={engines.v.root} onClick={onClick} />
+      <primitive object={engines.ef.root} onClick={onClick} />
+      <primitive object={engines.vf.root} onClick={onClick} />
       <HangarOverlays />
     </>
   );
