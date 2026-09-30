@@ -1,0 +1,1 @@
+virtual-time render: 180 frames at 1/30 s, 960x540, url http://127.0.0.1:4173/?v=explore&part=turbopump&view=cutaway&ui=0
