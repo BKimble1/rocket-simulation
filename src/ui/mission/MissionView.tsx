@@ -241,6 +241,8 @@ export function MissionView() {
   const [chapters, setChapters] = useState(false);
   const [card, setCard] = useState(true);
   const pb = usePlayback();
+  const focus = useApp((s) => s.focus);
+  const phase = focus === 'booster' && pb.branchPhase ? pb.branchPhase : pb.phase;
   const dock = useRef<HTMLDivElement>(null);
   useDockHeight(dock);
   return (
@@ -248,7 +250,7 @@ export function MissionView() {
       <div className="mission-top">
         <div className="mission-title panel">
           <div className="eyebrow">{OUTLINES[mission].title}</div>
-          <div className="mission-title__phase">{pb.phase?.title ?? 'Loading'}</div>
+          <div className="mission-title__phase">{phase?.title ?? 'Loading'}</div>
         </div>
         <FocusSwitch />
       </div>

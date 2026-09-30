@@ -177,7 +177,7 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
         vA.subVectors(centre, out.pos);
         vB.subVectors(out.target, out.pos);
         const reach = vA.angleTo(vB) + Math.atan(size.half / Math.max(1, vA.length()));
-        const need = 2 * Math.atan((Math.tan(Math.min(reach, 1.3)) * 1.2) / Math.min(1, ctx.aspect));
+        const need = 2 * Math.atan((Math.tan(Math.min(reach, 1.2)) * 1.5) / Math.min(1, ctx.aspect));
         out.fov = clamp(Math.max(out.fov, THREE.MathUtils.radToDeg(need)), 1, 70);
       }
       if (kind === 'orbit' || shot.also === 'earth') {
