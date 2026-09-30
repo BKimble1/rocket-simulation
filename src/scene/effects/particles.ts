@@ -245,6 +245,11 @@ export interface SpeciesCtx {
   alphaK: number;
   /** Mission time until which the launch pad's own effects run (ground vents); -Infinity: no pad. */
   padUntil: number;
+  /**
+   * Window species: size of this spawn relative to the pool's mean (the schedule is denser at
+   * the start of the window, where the young cloud needs finer puffs, and sparser later).
+   */
+  winSize: number;
 }
 
 interface Species {
@@ -496,8 +501,8 @@ const GROUND: Species = {
     rec.floor = 0;
     rec.spreadK = 0.6;
     horizontal(rec.up, rnd(11) * Math.PI * 2, rec.horiz);
-    rec.size0 = (4.5 + 5 * rnd(12)) * ctx.sizeK;
-    rec.size1 = (20 + 24 * rnd(13)) * ctx.sizeK;
+    rec.size0 = (4.5 + 5 * rnd(12)) * ctx.sizeK * ctx.winSize;
+    rec.size1 = (20 + 24 * rnd(13)) * ctx.sizeK * ctx.winSize;
     rec.tauS = 6 + 7 * rnd(14);
     rec.sizeLin = 0.1;
     // persists for one to three minutes, drifting with the wind and thinning as it spreads
@@ -768,12 +773,20 @@ export const SPECIES: Species[] = [GROUND, TRAIL, TAIL, VENT, WATER, PUFF];
 
 // ───────────────────────────── pools ─────────────────────────────
 
+/**
+ * Window schedule warp: slot u in [0, 1] spawns at WIN_A u + (1 - WIN_A) u^2 of the window, so
+ * the first seconds after engine start (a few isolated puffs would read as cotton balls) get
+ * about three times the mean rate and the end of the window about 0.6 times.
+ */
+const WIN_A = 0.35;
+
 class Pool {
   recs: Rec[];
   n: number;
   dtT: number;
-  /** Window species: first spawn tick and the count actually scheduled. */
+  /** Window species: first spawn tick, span (ticks) and the count actually scheduled. */
   winStart = 0;
+  winSpan = 0;
   winCount = 0;
   winKey = '';
 
@@ -807,9 +820,25 @@ class Pool {
     }
     const s = Math.ceil(start * TICK);
     const e = Math.floor(end * TICK);
-    this.dtT = Math.max(1, Math.ceil((e - s) / this.n));
     this.winStart = s;
-    this.winCount = Math.min(this.n, Math.floor((e - s) / this.dtT) + 1);
+    this.winSpan = e - s;
+    // the densest gap (at the start, WIN_A x the mean) stays at least one tick
+    this.winCount = Math.max(1, Math.min(this.n, Math.floor((e - s) * WIN_A) + 1));
+    this.dtT = Math.max(1, Math.round((e - s) / this.winCount));
+  }
+
+  /** Spawn tick of window slot i (strictly increasing in i). */
+  winTick(i: number): number {
+    if (this.winCount <= 1) return this.winStart;
+    const u = i / (this.winCount - 1);
+    return this.winStart + Math.round(this.winSpan * (WIN_A * u + (1 - WIN_A) * u * u));
+  }
+
+  /** Size of window slot i's puff relative to the mean: the cube root of its local spacing. */
+  winSize(i: number): number {
+    if (this.winCount <= 1) return 1;
+    const u = i / (this.winCount - 1);
+    return Math.cbrt(WIN_A + 2 * (1 - WIN_A) * u);
   }
 }
 
@@ -819,7 +848,7 @@ export class ParticleSystem {
   /** Evaluated live particles (valid after update, `count` of them). */
   out: Particle[] = [];
   count = 0;
-  ctx: SpeciesCtx = { budget: 1, sizeK: 1, alphaK: 1, padUntil: -Infinity };
+  ctx: SpeciesCtx = { budget: 1, sizeK: 1, alphaK: 1, padUntil: -Infinity, winSize: 1 };
   private lastT = NaN;
   private lastEpoch = -1;
   /** Spawn computations done by the last update (diagnostics, tests). */
@@ -831,7 +860,7 @@ export class ParticleSystem {
 
   setBudget(b: number) {
     const budget = Math.min(2, Math.max(0.1, b));
-    this.ctx = { budget, sizeK: Math.pow(budget, -0.3), alphaK: Math.pow(budget, -0.2), padUntil: this.ctx?.padUntil ?? -Infinity };
+    this.ctx = { budget, sizeK: Math.pow(budget, -0.3), alphaK: Math.pow(budget, -0.2), padUntil: this.ctx?.padUntil ?? -Infinity, winSize: 1 };
     this.pools = SPECIES.map((s) => new Pool(s, budget));
     this.lastT = NaN;
   }
@@ -881,7 +910,7 @@ export class ParticleSystem {
     const tick = t * TICK;
     if (sp.window) {
       for (let i = 0; i < p.winCount; i++) {
-        const kTick = p.winStart + i * p.dtT;
+        const kTick = p.winTick(i);
         const ts = kTick / TICK;
         const age = t - ts;
         if (age < 0 || age > sp.life) continue;
@@ -914,6 +943,7 @@ export class ParticleSystem {
     this.spawned++;
     const salt = p.sp.salt;
     const rnd = (j: number) => hash01(kTick, salt, j);
+    this.ctx.winSize = p.sp.window ? p.winSize(k) : 1;
     r.active = p.sp.spawn(k, ts, p.dtT / TICK, snap, r, rnd, this.ctx);
   }
 

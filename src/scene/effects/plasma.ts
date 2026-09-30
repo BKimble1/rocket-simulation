@@ -135,17 +135,19 @@ vec3 field(vec3 p) {
     float x = yr - y;
     float conv = smoothstep(0.0, uNeck, x);
     float rsl = R * (1.02 - 0.8 * conv) + max(0.0, x - uNeck) * 0.05;
-    float w = 0.12 * R + 0.07 * x;
+    float w = 0.1 * R + 0.045 * x;
     float nz = fxNoise(vec3(p.x * 1.3, (y + uTime * 60.0) * 0.35, p.z * 1.3) / R);
     // fades out before the end of the bounding volume (no visible cut)
     float tailFade = 1.0 - smoothstep(0.55, 0.95, x / max(yr - uY0, 1e-3));
     // windowed to zero inside the bounding frustum (no visible wall when seen from the wake)
     float rb = mix(uRb0, uRb1, clamp((y - uY0) / (uY1 - uY0), 0.0, 1.0));
     float win = 1.0 - smoothstep(0.5 * rb, 0.92 * rb, r);
-    float sl = exp(-pow((r - rsl) / w, 2.0)) * exp(-x / uWake) * (0.6 + 0.8 * nz) * tailFade * win;
+    // (squared by hand: GLSL pow() is undefined for a negative base, inside the shear layer)
+    float q = (r - rsl) / w;
+    float sl = exp(-q * q) * exp(-x / uWake) * (0.6 + 0.8 * nz) * tailFade * win;
     // faint beside the shock layer: the ionised wake glows far less than the gas at the shield
     // (seen along its length, from a camera following the capsule, it adds up over tens of metres)
-    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 0.18;
+    e += mix(uColRim, uColWake, clamp(x / (uWake * 0.6), 0.0, 1.0)) * sl * 0.06;
   }
   // soft glow around the stagnation region (the eye sees the bright layer bleed)
   float hd = length(vec2(r, y - uDelta * 0.5)) / (0.9 * R);
@@ -282,7 +284,7 @@ export class PlasmaVolume {
       u.uBodyLen.value = 1.62 * R;
       u.uBodyR1.value = 0.36 * R;
       u.uNeck.value = 2.4 * R;
-      u.uWake.value = 7 * R;
+      u.uWake.value = 5 * R;
       (u.uColHot.value as THREE.Color).setRGB(1.0, 0.7, 0.46);
       (u.uColRim.value as THREE.Color).setRGB(1.0, 0.46, 0.36);
       (u.uColWake.value as THREE.Color).setRGB(0.95, 0.34, 0.52);

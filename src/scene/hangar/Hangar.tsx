@@ -22,6 +22,12 @@ import { E1, E1V } from '../../vehicle/spec';
 import { HangarOverlays } from './HangarOverlays';
 import { applyThermal } from './thermal';
 
+/** Viewing angles for demonstrations whose section plane faces one way (hangar orbit degrees). */
+const DEMO_ANGLE: Partial<Record<string, { az: number; el: number }>> = {
+  'heat-shield-stack': { az: 70, el: -12 },
+};
+const demoBox = new THREE.Box3();
+
 function configFor(c: 'satellite' | 'capsule'): VehicleConfig {
   // the crew configuration is the station flight's: the crew stack needs the whole booster, so it flies without recovery hardware
   return c === 'capsule' ? { payload: 'capsule', recovery: false, stack: 'full', detail: 'hangar' } : { payload: 'leoSat', recovery: true, stack: 'full', detail: 'hangar' };
@@ -150,6 +156,7 @@ export function Hangar() {
 
   const shaft = useRef(0);
   const idle = useRef(0);
+  const demoFramed = useRef<string | null>(null);
   useFrame(() => {
     if (frame.location !== 'hangar' && director.wantLocation !== 'hangar') return;
     const dt = frame.dt;
@@ -179,6 +186,17 @@ export function Hangar() {
         demoClock.t = demo.duration;
         demoClock.playing = false;
       }
+    }
+    // a demonstration frames its subject when it starts and keeps it centred while the view
+    // animates (an exploded view moves parts); section views get an angle that shows the cut
+    if (demo && demo.on === 'vehicle' && demoFramed.current !== demo.id) {
+      demoFramed.current = demo.id;
+      const b = hangarPartBox(demo.frame, demoBox);
+      if (b && !b.isEmpty()) frameHangarBox(b, { tight: 1.6, ...(DEMO_ANGLE[demo.id] ?? {}) });
+    } else if (!demo && demoFramed.current) demoFramed.current = null;
+    if (demo && demo.on === 'vehicle' && !director.input.active && va.amount > 0 && va.amount < 1) {
+      const b = hangarPartBox(demo.frame, demoBox);
+      if (b && !b.isEmpty()) b.getCenter(director.hangarGoal.target);
     }
     const p = demoProgress();
     const id = demoClock.id;

@@ -8,6 +8,7 @@ import { LessonPanel } from './LessonPanel';
 import { MaterialPanel } from './MaterialPanel';
 import { DemoBar } from './DemoBar';
 import { Hotspots } from './Hotspots';
+import { DemoLabels } from './DemoLabels';
 import { ContextIndicator } from './ContextIndicator';
 import { returnToMission } from '../nav';
 import { OUTLINES } from '../../timeline/missions/outline';
@@ -34,6 +35,7 @@ export function Explore() {
   return (
     <>
       <Hotspots />
+      <DemoLabels />
       {inspect && (
         <div className="inspect-chip panel" role="status">
           <span>

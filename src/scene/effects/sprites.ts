@@ -233,7 +233,9 @@ void main() {
   vView = mv.xyz;
   vTile = iShape.w;
   float d = -(viewMatrix * vec4(iPos, 1.0)).z;
-  vFade = smoothstep(radius * 0.15, radius * 1.1, d);
+  // fade out the puffs around the camera: a camera at the pad (or riding along the trail) sees
+  // through the cloud it sits in instead of a flat grey wall (and draws far fewer pixels)
+  vFade = smoothstep(radius * 0.3, radius * 1.6, d);
 }
 `;
 
@@ -609,7 +611,7 @@ export class SpriteRenderer {
       const z = p.pos.z - oz - cw[14];
       const d = x * fwd.x + y * fwd.y + z * fwd.z;
       // behind the camera, or so close that the near fade (vFade) hides it
-      if (d < p.radius * 0.18) continue;
+      if (d < p.radius * 0.32) continue;
       // nearly transparent: skip
       if (p.alpha < 0.01 && p.emit.r + p.emit.g + p.emit.b < 0.01) continue;
       this.depth[i] = d;
