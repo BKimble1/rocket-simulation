@@ -11,25 +11,26 @@ import { usePlayback, playback, seekPres } from '../../state/playback';
 import { PHASE_CARDS } from '../../content/phaseCards';
 import { EQUATIONS } from '../../content/equations';
 import { PARTS } from '../../vehicle/parts';
-import { OUTLINES } from '../../timeline/missions/outline';
+import { MISSION_ORDER, OUTLINES } from '../../timeline/missions/outline';
 import { missionToPres } from '../../timeline/sample';
-import { director, setFocus, setMode, goLocation } from '../../director/director';
+import { director, setFocus, setMode, goLocation, jumpWithDissolve, resetFlightCamera } from '../../director/director';
 import { frame } from '../../scene/frame';
 import { PlaybackBar } from './PlaybackBar';
+import { inspectionLight } from '../../scene/flight/FlightWorld';
 import { Telemetry } from './Telemetry';
-import { inspectPart } from '../nav';
+import { inspectPart, openMissionAt } from '../nav';
 import { formatMissionTime } from '../format';
 import { useProgress, exploredKey } from '../../state/progress';
 import { syncChapter } from '../../state/route';
 import { Icon } from '../icons';
 
-const CAMS: [CamMode, string][] = [
-  ['auto', 'Auto'],
-  ['ground', 'Ground'],
-  ['chase', 'Chase'],
-  ['onboard', 'Onboard'],
-  ['free', 'Free'],
-  ['map', 'Map'],
+const CAMS: [CamMode, string, string][] = [
+  ['auto', 'Auto', 'Guided shots chosen for each moment'],
+  ['ground', 'Ground', 'Cameras on the ground: the pad, the tracking site, the landing zone'],
+  ['chase', 'Chase', 'A camera flying behind the vehicle'],
+  ['onboard', 'Onboard', 'A camera mounted on the vehicle, looking back along it'],
+  ['free', 'Free', 'Drag to orbit, scroll or pinch to zoom'],
+  ['map', 'Map', 'The orbit on a schematic map'],
 ];
 
 export function PhaseCardPanel({ onClose }: { onClose?: () => void }) {
@@ -122,7 +123,8 @@ export function ChaptersList({ onPick }: { onPick?: () => void }) {
   if (!tl) return null;
   const o = OUTLINES[tl.id];
   const jump = (start: number, booster = false) => {
-    seekPres(missionToPres(tl.pres, start) + 0.001);
+    // the new moment appears through a short dissolve from the picture on screen
+    jumpWithDissolve(() => seekPres(missionToPres(tl.pres, start) + 0.001));
     set({ focus: booster ? 'booster' : 'main' });
     onPick?.();
   };
@@ -175,11 +177,16 @@ export function CameraBar() {
   }, [cam]);
   return (
     <div className="cambar panel" role="radiogroup" aria-label="Camera">
-      {CAMS.map(([k, label]) => (
-        <button key={k} role="radio" aria-checked={cam === k} className="seg__btn" onClick={() => set({ cam: k })}>
+      {CAMS.map(([k, label, hint]) => (
+        <button key={k} role="radio" aria-checked={cam === k} className="seg__btn" title={hint} onClick={() => set({ cam: k })}>
           {label}
         </button>
       ))}
+      {cam === 'free' && (
+        <button className="btn btn--sm btn--quiet" onClick={resetFlightCamera} title="Back to a comfortable view of the vehicle">
+          Reset view
+        </button>
+      )}
       {took && cam === 'free' && (
         <button className="btn btn--sm btn--accent" onClick={() => set({ cam: 'auto' })}>
           Back to guided view
@@ -223,36 +230,115 @@ export function FocusSwitch() {
   const tl = playback.player?.tl;
   const branch = tl?.branches[0];
   if (!branch || pb.t < branch.start - 1) return null;
+  const mainName = OUTLINES[tl!.id].payload === 'researchCapsule' ? 'Capsule' : 'Upper stage';
+  const pick = (f: 'main' | 'booster') => {
+    if (f === focus) return;
+    // say what changed: the storyline, not the moment
+    set({
+      focus: f,
+      toast: f === 'booster' ? `Following the booster back to Earth. Same mission clock: the ${mainName.toLowerCase()} flies on.` : `Following the ${mainName.toLowerCase()} again. Same mission clock.`,
+    });
+  };
   return (
-    <div className="seg seg--inline focus-switch panel" role="radiogroup" aria-label="Follow">
-      <button role="radio" aria-checked={focus === 'main'} className="seg__btn" onClick={() => set({ focus: 'main' })}>
-        {OUTLINES[tl!.id].payload === 'researchCapsule' ? 'Capsule' : 'Upper stage'}
+    <div className="focus-switch panel" role="group" aria-label="Which vehicle to follow">
+      <span className="focus-switch__label">Follow</span>
+      <div className="seg seg--inline" role="radiogroup" aria-label="Follow">
+        <button role="radio" aria-checked={focus === 'main'} className="seg__btn" onClick={() => pick('main')} title={`The ${mainName.toLowerCase()} and its payload: the main story`}>
+          {mainName}
+        </button>
+        <button role="radio" aria-checked={focus === 'booster'} className="seg__btn" onClick={() => pick('booster')} title="The first stage returning to land: a parallel story on the same clock">
+          Booster
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Another mission, one click away from the mission on screen. */
+function MissionSwitcher() {
+  const mission = useApp((s) => s.mission);
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mswitch">
+      <button className="mswitch__btn eyebrow" aria-expanded={open} onClick={() => setOpen((o) => !o)} title="Choose another mission">
+        {OUTLINES[mission].title} <Icon.chevron size={12} />
       </button>
-      <button role="radio" aria-checked={focus === 'booster'} className="seg__btn" onClick={() => set({ focus: 'booster' })}>
-        Booster
+      {open && (
+        <ul className="mswitch__menu panel" role="menu">
+          {MISSION_ORDER.map((id) => (
+            <li key={id} role="none">
+              <button
+                role="menuitem"
+                aria-current={id === mission ? 'true' : undefined}
+                onClick={() => {
+                  setOpen(false);
+                  if (id !== mission) openMissionAt(id, null, true);
+                }}
+              >
+                {OUTLINES[id].short}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Says when the optional inspection light is on (a spacecraft in Earth's shadow). */
+export function InspectionChip() {
+  const [on, setOn] = useState(false);
+  const set = useApp((s) => s.set);
+  useEffect(() => {
+    const h = window.setInterval(() => setOn(inspectionLight.active > 0.5), 300);
+    return () => window.clearInterval(h);
+  }, []);
+  if (!on) return null;
+  return (
+    <div className="inspect-light panel" role="status">
+      <span>Earth's shadow: inspection light on</span>
+      <button className="linklike" onClick={() => set({ inspectLight: false })}>
+        Turn off
       </button>
     </div>
   );
 }
 
+/** While an omitted (skipped) interval passes: the picture before the gap is held, and this says why. */
+export function TimeSkip({ note, omitted }: { note?: string | null; omitted?: boolean } = {}) {
+  const pb = usePlayback();
+  const on = omitted ?? pb.omitted;
+  const text = note ?? pb.note;
+  if (!on || !text) return null;
+  return (
+    <div className="timeskip panel" role="status">
+      <span className="eyebrow">Time skipped</span>
+      <span>{text}</span>
+    </div>
+  );
+}
+
 export function MissionView() {
-  const mission = useApp((s) => s.mission);
   const telemetry = useApp((s) => s.telemetry);
   const [chapters, setChapters] = useState(false);
   const [card, setCard] = useState(true);
   const pb = usePlayback();
   const dock = useRef<HTMLDivElement>(null);
   useDockHeight(dock);
+  // the playback dock covers the bottom of the picture: frame the subject above it
+  useStageInset('dock', dock, true, 8);
   return (
     <>
       <div className="mission-top">
         <div className="mission-title panel">
-          <div className="eyebrow">{OUTLINES[mission].title}</div>
+          <MissionSwitcher />
           <div className="mission-title__phase">{pb.phase?.title ?? 'Loading'}</div>
         </div>
         <FocusSwitch />
       </div>
       {pb.error && <div className="loading-note">This mission could not be built: {pb.error}</div>}
+      <TimeSkip />
+      <InspectionChip />
       {card ? <PhaseCardPanel onClose={() => setCard(false)} /> : (
         <button className="btn btn--sm reopen-card" onClick={() => setCard(true)}>
           Phase notes

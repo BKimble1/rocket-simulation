@@ -1,5 +1,5 @@
 /** KIMBLE identity components for the interface (same paths as the SVG files and the decals). */
-import { MARK, WORD_KIMBLE, WORD_ONEFAB } from './logoPaths';
+import { MARK, WORD_KIMBLE, WORD_FABONE } from './logoPaths';
 
 export function KimbleMark({ size = 28, accent = true, className }: { size?: number; accent?: boolean; className?: string }) {
   return (
@@ -24,13 +24,14 @@ export function KimbleLogo({ height = 26, accent = true, title = 'KIMBLE' }: { h
   );
 }
 
-export function OneFab({ height = 11 }: { height?: number }) {
+/** The FAB / ONE wordmark: the simulation hub this rocket belongs to. */
+export function FabOne({ height = 11 }: { height?: number }) {
   const cap = 40;
-  const s = cap * WORD_ONEFAB.scale;
-  const w = WORD_ONEFAB.width * cap;
+  const s = cap * WORD_FABONE.scale;
+  const w = WORD_FABONE.width * cap;
   return (
-    <svg height={height} viewBox={`0 0 ${w.toFixed(1)} 44`} role="img" aria-label="ONE / FAB" className="onefab">
-      <path transform={`translate(0 42) scale(${s})`} d={WORD_ONEFAB.d} fill="currentColor" />
+    <svg height={height} viewBox={`0 0 ${w.toFixed(1)} 44`} role="img" aria-label="FAB / ONE" className="onefab">
+      <path transform={`translate(0 42) scale(${s})`} d={WORD_FABONE.d} fill="currentColor" />
     </svg>
   );
 }

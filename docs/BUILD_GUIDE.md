@@ -61,7 +61,7 @@ overexposed white, and z-fighting (offset decals by millimetres and use polygonO
 
 ## Identity and branding
 
-Only the original **KIMBLE** mark and wordmark and the **ONE / FAB** secondary mark appear
+Only the original **KIMBLE** mark and wordmark and the **FAB / ONE** wordmark (the collection this simulation belongs to) appear
 on hardware (`src/brand/logoPaths.ts`, `public/brand/*.svg`). No NASA, ESA, SpaceX or other
 agency or company names, logos, flags or liveries. Do not copy any proprietary vehicle's
 exact shape. Livery: white, graphite, one restrained violet accent (`ACCENT` in materials.ts).

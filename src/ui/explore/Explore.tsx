@@ -16,8 +16,10 @@ import { formatMissionTime } from '../format';
 import { presToMission } from '../../timeline/sample';
 import { playback } from '../../state/playback';
 import { startDemo } from '../../scene/demos';
+import type { DemoId } from '../../content/types';
 import { Icon } from '../icons';
 import { THERMAL_CLASSES } from '../../scene/hangar/thermal';
+import { LESSONS } from '../../content/parts';
 
 export function Explore() {
   const part = useApp((s) => s.part);
@@ -32,6 +34,9 @@ export function Explore() {
   useEffect(() => () => startDemo(null), []);
   const pausedAt = inspect && playback.player ? presToMission(playback.player.tl.pres, inspect.from.p) : null;
   const phase = inspect && playback.player && pausedAt !== null ? playback.player.tl.phases.filter((p) => pausedAt >= p.start).pop() : null;
+  // the mechanism of the part being inspected, when it has a demonstration
+  const lesson = inspect ? LESSONS[inspect.part] : undefined;
+  const inspectDemo: DemoId | null = lesson && 'demo' in lesson && lesson.demo ? (lesson.demo as DemoId) : null;
   return (
     <>
       <Hotspots />
@@ -42,6 +47,11 @@ export function Explore() {
             Mission paused at <b>{formatMissionTime(pausedAt ?? 0)}</b>
             {phase ? ` · ${phase.title}` : ''} · {OUTLINES[inspect.from.mission].short}
           </span>
+          {inspectDemo && (
+            <button className="btn btn--sm btn--accent" onClick={() => startDemo(inspectDemo)} title="Run the demonstration of this part's mechanism">
+              Show how it works
+            </button>
+          )}
           <button className="btn btn--primary btn--sm" onClick={returnToMission}>
             <Icon.back size={14} /> Return to mission
           </button>

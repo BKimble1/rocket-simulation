@@ -11,7 +11,9 @@ import type { MissionId } from '../../timeline/types';
 import { startFilm, stopFilm, useWatch, watch, seekFilm, publishWatch, NARRATION } from '../../watch/watchState';
 import { watchRef } from '../../state/playback';
 import { formatMissionTime } from '../format';
-import { goLocation, setMode, setFocus, director } from '../../director/director';
+import { goLocation, setMode, setFocus, director, jumpWithDissolve } from '../../director/director';
+import { InspectionChip, TimeSkip } from '../mission/MissionView';
+import { useStageInset } from '../hooks/useStageInset';
 import { frame } from '../../scene/frame';
 import { Icon } from '../icons';
 import { inspectPart } from '../nav';
@@ -50,6 +52,9 @@ export function WatchView() {
   const bar = useRef<HTMLDivElement>(null);
   const dock = useRef<HTMLDivElement>(null);
   useDockHeight(dock, w.mission);
+  // the dock, and the caption area above it (reserved while captions are on, so the picture does
+  // not move with each caption), cover the bottom of the picture: frame the subject above them
+  useStageInset('dock', dock, !!w.mission, captions ? 76 : 8);
   useEffect(() => {
     watchRef.active = true;
     watchRef.publish = () => publishWatch();
@@ -106,6 +111,8 @@ export function WatchView() {
           Other films
         </button>
       </div>
+      <TimeSkip note={w.note} omitted={w.omitted} />
+      <InspectionChip />
       {captions && w.cue && (
         <div className="caption" role="status" aria-live="polite">
           {w.cue}
@@ -134,7 +141,7 @@ export function WatchView() {
               <ol>
                 {film.chapters.map((c) => (
                   <li key={c.id}>
-                    <button className="chapter" aria-current={w.chapter === c.id ? 'true' : undefined} onClick={() => seekFilm(c.start + 0.001)}>
+                    <button className="chapter" aria-current={w.chapter === c.id ? 'true' : undefined} onClick={() => jumpWithDissolve(() => seekFilm(c.start + 0.001))}>
                       <span className="chapter__t">{formatMissionTime(frame.tl?.phases.find((p) => p.id === c.id)?.start ?? 0)}</span>
                       <span>{c.title}</span>
                     </button>

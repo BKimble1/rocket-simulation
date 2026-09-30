@@ -173,6 +173,6 @@ down, eight fast windows and a 30 s cool-down to step up). Tiers never change co
 ## Identity
 
 `tools/brand/build_logo.py` writes the KIMBLE symbol (a K whose upper arm is an ascent arc
-turning horizontal: orbit needs sideways speed), lockups, the ONE / FAB wordmark and
+turning horizontal: orbit needs sideways speed), lockups, the FAB / ONE wordmark and
 `src/brand/logoPaths.ts`; the interface and the decals (painted on canvases, mapped on curved
 bands) use the same paths.

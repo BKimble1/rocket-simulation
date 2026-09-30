@@ -571,7 +571,7 @@ export function buildCapsule(kit: Kit, nadir: number, crewed: boolean): CapsuleB
       place(kit.mesh(f, P.ti(), 'capsule', 'titanium', cap), phi);
     }
 
-  // ── identity decal on the +Z side: KIMBLE mark and wordmark with ONE / FAB (never mirrored)
+  // ── identity decal on the +Z side: KIMBLE mark and wordmark with FAB / ONE (never mirrored)
   {
     const sC = 1.24;
     const rC = OML.p2r - sC * SIN;

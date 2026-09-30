@@ -6,7 +6,7 @@ export function Credits() {
     <div className="credits">
       <p>
         <b>KIMBLE Rocket Engineering</b> is an educational simulator. The K-1 is a generic, original launch vehicle with illustrative values chosen to be physically consistent; it is not
-        any company’s vehicle, and no agency or company endorses this project. KIMBLE and ONE / FAB are the project’s own marks.
+        any company’s vehicle, and no agency or company endorses this project. KIMBLE is the project’s own mark; FAB / ONE is the name of the simulation collection it belongs to.
       </p>
       <h3>Imagery</h3>
       <ul className="plain small">

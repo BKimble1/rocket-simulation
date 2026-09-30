@@ -19,7 +19,7 @@ import { PAYLOAD_COM, boosterDry, sumMass } from '../physics/vehicle';
 import { comFrom } from '../physics/ascent';
 import { DEG, qaxisY, qdelta, v3, vlen, vscale, vadd } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, branchFrom, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, branchFrom, contiguous, phasesFrom, rateNote, shot, tidyShots, launchShots } from './common';
 import { ascentFacts, flyOrbitalAscent, s2Channels } from './flight';
 
 const START = -60;
@@ -165,11 +165,7 @@ export function buildLeo(): MissionTimeline {
   // ── shots (main storyline)
   const shots = tidyShots(
     [
-      shot('pad-wide', START, -14, 'booster', undefined, { look: 0.4 }),
-      shot('pad-close', -14, 5, 'booster', undefined, { look: -0.7, fov: 30 }),
-      shot('tower', 5, T.towerClear + 3, 'booster'),
-      shot('pad-wide', T.towerClear + 3, T.towerClear + 16, 'booster'),
-      shot('ground-track', T.towerClear + 16, T.throttleDown, 'booster'),
+      ...launchShots(START, T.towerClear, T.throttleDown),
       shot('chase', T.throttleDown, T.meco - 8, 'booster', undefined, { d: 110, az: 25, el: 6 }),
       shot('staging', T.meco - 8, T.ses1 + 14, 'upper', 'booster', { d: 75, az: 100, el: 8 }),
       shot('chase', T.ses1 + 14, T.fairingSep - 4, 'upper', undefined, { d: 60, az: 30, el: 10 }),

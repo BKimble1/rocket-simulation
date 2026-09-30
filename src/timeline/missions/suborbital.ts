@@ -24,7 +24,7 @@ import { flyBoosterReturn, padLocal, type RtlsResult } from '../physics/landing'
 import { RESEARCH_CAPSULE_ITEM, areaOf, boosterDry, sumMass } from '../physics/vehicle';
 import { DEG, qaxisY, v3, vadd, vcross, vnorm, vscale, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, branchFrom, contiguous, num, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, branchFrom, contiguous, num, phasesFrom, rateNote, shot, tidyShots, launchShots } from './common';
 import { landedBooster } from './flight';
 
 const START = -60;
@@ -243,11 +243,7 @@ export function buildSuborbital(): MissionTimeline {
   // ── shots
   const shots = tidyShots(
     [
-      shot('pad-wide', START, -14, 'booster', undefined, { look: 0.4 }),
-      shot('pad-close', -14, 5, 'booster', undefined, { look: -0.7, fov: 30 }),
-      shot('tower', 5, h.s1.towerClear + 4, 'booster'),
-      shot('pad-wide', h.s1.towerClear + 4, h.s1.towerClear + 18, 'booster'),
-      shot('ground-track', h.s1.towerClear + 18, meco - 12, 'booster'),
+      ...launchShots(START, h.s1.towerClear, meco - 12),
       shot('chase', meco - 12, tSep - 3, 'booster', undefined, { d: 90, az: 30, el: -8 }),
       shot('staging', tSep - 3, tSep + 16, 'capsule', 'booster', { d: 45, az: 100, el: 8 }),
       shot('orbit', tSep + 16, d.apogee.t - 30, 'capsule', 'earth', { d: 40, az: 30, el: 20 }),

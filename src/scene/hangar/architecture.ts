@@ -1,6 +1,7 @@
 /**
- * The hangar: a light, architectural high bay (bright, calm, a reference-grade studio for
- * engineering inspection). Procedural, built once: polished concrete floor with slab joints,
+ * The hangar: an architectural high bay lit like a studio for engineering inspection: mid-grey,
+ * warm surroundings a little darker than the vehicle's white paint (so its silhouette and
+ * materials read against them), a polished floor that picks up soft reflections, calm light. Procedural, built once: polished concrete floor with slab joints,
  * a ribbed circular wall, a ceiling of trusses and light strips, a tall door opening with
  * daylight, an integration stand under the vehicle, engine display stands, a few figures for
  * scale. Also builds the reflection environment (PMREM) from the same hall.
@@ -17,7 +18,7 @@ function floorTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#d4d2cc';
+  g.fillStyle = '#b4b1aa';
   g.fillRect(0, 0, S, S);
   // subtle mottling
   for (let i = 0; i < 2600; i++) {
@@ -86,7 +87,7 @@ export function buildHangarArchitecture(): HangarArchitecture {
   // floor
   const ftex = keep(floorTexture());
   ftex.repeat.set((HALL_R * 2) / 64, (HALL_R * 2) / 64);
-  const floorMat = keep(new THREE.MeshStandardMaterial({ map: ftex, roughness: 0.32, metalness: 0, envMapIntensity: 0.8 }));
+  const floorMat = keep(new THREE.MeshStandardMaterial({ map: ftex, roughness: 0.28, metalness: 0, envMapIntensity: 0.75 }));
   const floor = new THREE.Mesh(keep(new THREE.CircleGeometry(HALL_R, 128)), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
@@ -98,7 +99,7 @@ export function buildHangarArchitecture(): HangarArchitecture {
   group.add(mark);
 
   // ribbed circular wall with a tall door opening toward +Z (daylight)
-  const wallMat = keep(new THREE.MeshStandardMaterial({ color: '#e9e8e4', roughness: 0.85, side: THREE.BackSide }));
+  const wallMat = keep(new THREE.MeshStandardMaterial({ color: '#c3c1bb', roughness: 0.85, side: THREE.BackSide }));
   const doorHalf = 0.34; // radians of opening
   const wallGeo = keep(new THREE.CylinderGeometry(HALL_R, HALL_R, HALL_H, 160, 1, true, Math.PI / 2 + doorHalf, Math.PI * 2 - doorHalf * 2));
   const wall = new THREE.Mesh(wallGeo, wallMat);
@@ -124,12 +125,12 @@ export function buildHangarArchitecture(): HangarArchitecture {
     g.translate(0, h, 0);
     ribs.push(g);
   }
-  const ribMesh = new THREE.Mesh(keep(mergeGeometries(ribs)), keep(new THREE.MeshStandardMaterial({ color: '#d9d8d3', roughness: 0.7 })));
+  const ribMesh = new THREE.Mesh(keep(mergeGeometries(ribs)), keep(new THREE.MeshStandardMaterial({ color: '#b1b0aa', roughness: 0.7 })));
   ribs.forEach((g) => g.dispose());
   group.add(ribMesh);
 
   // ceiling: trusses and light strips
-  const ceil = new THREE.Mesh(keep(new THREE.CircleGeometry(HALL_R, 96)), keep(new THREE.MeshStandardMaterial({ color: '#dcdcd8', roughness: 0.9, side: THREE.DoubleSide })));
+  const ceil = new THREE.Mesh(keep(new THREE.CircleGeometry(HALL_R, 96)), keep(new THREE.MeshStandardMaterial({ color: '#a4a4a0', roughness: 0.9, side: THREE.DoubleSide })));
   ceil.rotation.x = Math.PI / 2;
   ceil.position.y = HALL_H;
   group.add(ceil);
@@ -145,7 +146,7 @@ export function buildHangarArchitecture(): HangarArchitecture {
     l.translate(x + 12, HALL_H - 6.5, 0);
     lights.push(l);
   }
-  const trussMesh = new THREE.Mesh(keep(mergeGeometries(truss)), keep(new THREE.MeshStandardMaterial({ color: '#b9bbbf', roughness: 0.6, metalness: 0.5 })));
+  const trussMesh = new THREE.Mesh(keep(mergeGeometries(truss)), keep(new THREE.MeshStandardMaterial({ color: '#8e9196', roughness: 0.6, metalness: 0.5 })));
   const lightMesh = new THREE.Mesh(keep(mergeGeometries(lights)), keep(new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#fffaf0', emissiveIntensity: 2.2 })));
   truss.forEach((g) => g.dispose());
   lights.forEach((g) => g.dispose());
@@ -234,8 +235,8 @@ export function buildHangarEnvScene(): THREE.Scene {
     const y = pos.getY(i) / 100;
     const z = pos.getZ(i) / 100;
     // floor warm grey, walls light, ceiling brighter; the door side (+Z) brightest
-    let v = y < -0.05 ? 0.55 : y > 0.6 ? 0.95 : 0.78;
-    if (z > 0.75 && y > -0.05 && y < 0.7) v = 1.6;
+    let v = y < -0.05 ? 0.42 : y > 0.6 ? 0.8 : 0.62;
+    if (z > 0.75 && y > -0.05 && y < 0.7) v = 1.5;
     col[i * 3] = v;
     col[i * 3 + 1] = v * 0.995;
     col[i * 3 + 2] = v * 0.98;

@@ -23,6 +23,13 @@ export const LANDING_ZONE = { x: -600, z: 8600, radius: 45 };
 export const GROUND_CAMS = {
   padWide: { x: -260, y: 18, z: 330 },
   padClose: { x: -48, y: 4, z: 58 },
+  // ignition and liftoff: south-south-east, ~220 m out and a little above the hardstand, so the
+  // whole vehicle stands on its mount with the tower behind it; the flame trench runs away from
+  // this camera (north-north-east), so the ground cloud rolls out behind the pad, not over the lens
+  ignition: { x: 60, y: 6, z: 210 },
+  // tower clearance: south-east, 410 m out; the tower stands beside the vehicle (to its left) as
+  // it climbs past the top, and the line of sight clears the integration hangar and the tanks
+  towerSide: { x: 160, y: 20, z: 380 },
   towerTop: { x: -16, y: 82, z: -14 },
   // on scrubland about 5 km south-south-west of the pad (1.3 km from the nearest water in the
   // coastline map): a side-on view of the eastward climb

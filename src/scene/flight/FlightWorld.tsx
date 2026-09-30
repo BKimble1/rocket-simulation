@@ -26,6 +26,7 @@ import { EARTH_AXIS, OMEGA_EARTH, R_EARTH } from '../../world/frames';
 import { atmosphere } from './atmosphere';
 import { usePlayback } from '../../state/playback';
 import { skyState } from '../space';
+import { useApp } from '../../state/store';
 
 /** Scene-wide handle to the vehicle shown in flight (for focus framing and inspection). */
 export const flightModels = {
@@ -329,6 +330,52 @@ function DockingLights({ vehicle, station }: { vehicle: VehicleModel; station: S
   return null;
 }
 
+/** How strongly the inspection light is on now (0..1), for the on-screen label. */
+export const inspectionLight = { active: 0 };
+
+/**
+ * Inspection light (optional, on by default, labelled on screen while on). In Earth's shadow a
+ * spacecraft is, truthfully, a dark silhouette: nothing lights it but faint earthshine. So its
+ * shape can still be studied there, a soft light from the camera's side lights the followed body
+ * while it is in eclipse, in space. It is never on in sunlight, in the atmosphere or on the pad.
+ */
+function InspectionLight() {
+  const light = useMemo(() => {
+    const l = new THREE.DirectionalLight('#dde6f5', 0);
+    l.castShadow = false;
+    return l;
+  }, []);
+  const right = useMemo(() => new THREE.Vector3(), []);
+  const up = useMemo(() => new THREE.Vector3(), []);
+  const c = useMemo(() => new THREE.Vector3(), []);
+  useFrame(() => {
+    const sub = director.subject ?? director.focus;
+    const s = frame.bodies[sub];
+    const enabled = useApp.getState().inspectLight;
+    const inSpace = !!s?.present && s.pos.length() - R_EARTH > 90_000;
+    const dark = 1 - Math.min(1, Math.max(0, skyState.sunIntensity / 0.8));
+    const k = enabled && inSpace && frame.location === 'flight' ? dark : 0;
+    inspectionLight.active = k;
+    light.visible = k > 1e-3;
+    if (!light.visible) return;
+    light.intensity = 2.1 * k;
+    // from the camera, raised and to the right, toward the subject
+    c.copy(s.pos).sub(frame.origin);
+    const d = Math.max(10, c.length());
+    right.set(1, 0, 0).applyQuaternion(frame.camQuat);
+    up.set(0, 1, 0).applyQuaternion(frame.camQuat);
+    light.position.set(0, 0, 0).addScaledVector(right, d * 0.45).addScaledVector(up, d * 0.55);
+    light.target.position.copy(c);
+    light.target.updateMatrixWorld();
+  }, 0);
+  return (
+    <>
+      <primitive object={light} />
+      <primitive object={light.target} />
+    </>
+  );
+}
+
 export function FlightWorld({ children }: { children?: ReactNode }) {
   // re-render when the mission changes (frame.tl is not React state)
   const missionId = usePlayback((s) => s.mission);
@@ -413,6 +460,7 @@ export function FlightWorld({ children }: { children?: ReactNode }) {
         <Effects />
         <Ready onReady={markFlightReady} />
         {vehicle && station && <DockingLights vehicle={vehicle} station={station} />}
+        <InspectionLight />
       </Suspense>
       {vehicle && <primitive object={vehicle.root} />}
       {station && <primitive object={station.bodies.station!} />}

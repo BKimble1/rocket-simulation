@@ -1,5 +1,5 @@
 /**
- * Livery decals. The KIMBLE mark and wordmark and the ONE / FAB mark are painted from the brand
+ * Livery decals. The KIMBLE mark and wordmark and the FAB / ONE mark are painted from the brand
  * paths (src/brand/logoPaths.ts, via Path2D) onto a mask canvas, then mapped onto a thin curved
  * "decal band": a cylinder segment 2.5 mm outside the skin, so lettering follows the curvature
  * without stretching or mirroring. U runs with increasing azimuth, which is the viewer's right
@@ -10,7 +10,7 @@
  * when far away.
  */
 import * as THREE from 'three';
-import { MARK, WORD_KIMBLE, WORD_ONEFAB } from '../../brand/logoPaths';
+import { MARK, WORD_KIMBLE, WORD_FABONE } from '../../brand/logoPaths';
 import { withHook, type VehicleMats } from './mats';
 
 export type DecalItem =
@@ -51,7 +51,7 @@ const SHARPEN = /* glsl */ `
 `;
 
 export function wordWidth(kind: 'kimble' | 'onefab', cap: number) {
-  return (kind === 'kimble' ? WORD_KIMBLE.width : WORD_ONEFAB.width) * cap;
+  return (kind === 'kimble' ? WORD_KIMBLE.width : WORD_FABONE.width) * cap;
 }
 
 function paint(spec: DecalSpec): HTMLCanvasElement {
@@ -83,7 +83,7 @@ function paint(spec: DecalSpec): HTMLCanvasElement {
       g.fill(new Path2D(MARK.body));
       g.fill(new Path2D(MARK.arm));
     } else {
-      const w = it.kind === 'kimble' ? WORD_KIMBLE : WORD_ONEFAB;
+      const w = it.kind === 'kimble' ? WORD_KIMBLE : WORD_FABONE;
       const k = it.cap * w.scale * ppm;
       g.translate(X(it.s), Y(it.y));
       if (it.vertical) g.rotate(-Math.PI / 2);

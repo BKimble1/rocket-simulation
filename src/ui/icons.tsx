@@ -88,6 +88,11 @@ export const Icon = {
       <path d="M10 6l-6 6 6 6M4 12h16" />
     </I>
   ),
+  chevron: (p: { size?: number }) => (
+    <I {...p}>
+      <path d="M6 9l6 6 6-6" />
+    </I>
+  ),
   arrow: (p: { size?: number }) => (
     <I {...p}>
       <path d="M5 12h14M13 6l6 6-6 6" />

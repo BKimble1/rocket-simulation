@@ -9,7 +9,7 @@ test('first screen: rocket scene, title and three actions @phone', async ({ page
   await expect(page.getByRole('button', { name: /Explore a mission/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Watch and learn/ })).toBeVisible();
   await expect(page.getByRole('img', { name: 'KIMBLE' }).first()).toBeVisible();
-  await expect(page.getByRole('img', { name: 'ONE / FAB' }).first()).toBeAttached();
+  await expect(page.getByRole('img', { name: 'FAB / ONE' }).first()).toBeAttached();
   await waitForLocation(page, 'hangar');
   expect(errors).toEqual([]);
 });

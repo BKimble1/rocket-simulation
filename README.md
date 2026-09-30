@@ -25,8 +25,8 @@ inspect, reveal cutaways and compare; nothing you do changes a mission's outcome
   with explanations (explored and checked-understanding progress are tracked separately).
 
 The vehicle is a generic, original design with illustrative values chosen to be physically
-consistent (see [`ACCURACY.md`](ACCURACY.md)). **KIMBLE** and **ONE / FAB** are this project's
-own marks; no agency or company endorses it.
+consistent (see [`ACCURACY.md`](ACCURACY.md)). **KIMBLE** is this project's own mark and **FAB / ONE** the name of the simulation collection it
+belongs to; no agency or company endorses it.
 
 ## Run it
 

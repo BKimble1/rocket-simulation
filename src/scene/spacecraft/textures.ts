@@ -5,7 +5,7 @@
  * blankets and parachute fabric. Every texture is cached; materials share them.
  */
 import * as THREE from 'three';
-import { MARK, WORD_KIMBLE, WORD_ONEFAB } from '../../brand/logoPaths';
+import { MARK, WORD_KIMBLE, WORD_FABONE } from '../../brand/logoPaths';
 import { ACCENT, GRAPHITE } from '../materials';
 import { tierSpec } from '../quality';
 
@@ -688,7 +688,7 @@ export function ablatorTex(): { map: THREE.Texture; normal: THREE.Texture; char:
 // ───────────────────────────── identity decal ─────────────────────────────
 
 /**
- * KIMBLE mark + wordmark with a small ONE / FAB beneath, on a transparent canvas, from the
+ * KIMBLE mark + wordmark with a small FAB / ONE beneath, on a transparent canvas, from the
  * brand paths (never mirrored: the canvas is drawn upright and mapped with u to the right).
  * Layout units follow the interface lockup (src/brand/Logo.tsx): mark 100 units tall, wordmark
  * cap height 50 at x = 124. Returns the texture and its aspect (width / height).
@@ -718,9 +718,9 @@ export function kimbleDecal(): THREE.Texture {
     g.save();
     const cap2 = 17;
     g.translate(126, 128);
-    g.scale(cap2 * WORD_ONEFAB.scale, cap2 * WORD_ONEFAB.scale);
+    g.scale(cap2 * WORD_FABONE.scale, cap2 * WORD_FABONE.scale);
     g.fillStyle = '#4a4e56';
-    g.fill(new Path2D(WORD_ONEFAB.d));
+    g.fill(new Path2D(WORD_FABONE.d));
     g.restore();
     g.restore();
     const t = tex(c, true, false);

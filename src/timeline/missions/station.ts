@@ -30,7 +30,7 @@ import { absState, angleIn, circularOrbit, cwPropagate, cwTarget, lvlh, lvlhAtti
 import { CAPSULE_DOCK_Y, ENG_SM, SM_DRY, SM_PROP_FULL, STATION_DOCK, STATION_MASS, areaOf, sumMass } from '../physics/vehicle';
 import { DEG, qaxisY, qdelta, v3, vadd, vcross, vlen, vnorm, vscale, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, contiguous, phasesFrom, rateNote, shot, tidyShots, launchShots } from './common';
 import { ascentFacts, flyOrbitalAscent, s2Channels } from './flight';
 
 const START = -60;
@@ -323,11 +323,7 @@ export function buildStation(): MissionTimeline {
   const tLes = E('les-jettison');
   const shots = tidyShots(
     [
-      shot('pad-wide', START, -14, 'booster', undefined, { look: 0.4 }),
-      shot('pad-close', -14, 5, 'booster', undefined, { look: -0.7, fov: 30 }),
-      shot('tower', 5, T.towerClear + 3, 'booster'),
-      shot('pad-wide', T.towerClear + 3, T.towerClear + 16, 'booster'),
-      shot('ground-track', T.towerClear + 16, T.throttleDown, 'booster'),
+      ...launchShots(START, T.towerClear, T.throttleDown),
       shot('chase', T.throttleDown, T.meco - 8, 'booster', undefined, { d: 110, az: 25, el: 6 }),
       shot('staging', T.meco - 8, T.ses1 + 4, 'upper', 'booster', { d: 75, az: 100, el: 8 }),
       shot('staging', T.ses1 + 4, tLes + 16, 'upper', 'les', { d: 60, az: 70, el: 12 }),

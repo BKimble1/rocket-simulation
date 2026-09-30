@@ -3,6 +3,7 @@
  * titles exactly as in outline.ts, times from the trajectory's events), active parts per
  * phase, the presentation map builder and shot helpers.
  */
+import { GROUND_CAMS } from '../../world/site';
 import type { BodyId, PartId } from '../../vehicle/parts';
 import type { Branch, MissionId, Phase, PresSegment, Shot, ShotKind } from '../types';
 import { OUTLINES, type PhaseOutline } from './outline';
@@ -179,6 +180,26 @@ export function shot(kind: ShotKind, from: number, to: number, subject: BodyId, 
   if (also) s.also = also;
   if (params) s.params = params;
   return s;
+}
+
+/**
+ * The launch coverage every mission from the pad shares (V2): a few strong, held ground angles.
+ *   prelaunch      the wide pad camera: the whole vehicle, the tower, the pad, venting
+ *   ignition       a camera on the whole vehicle on its mount (engines light, the exhaust develops,
+ *                  the vehicle leaves the mount), held until it is clearly flying
+ *   tower clear    side-on, the tower beside the vehicle for scale as it climbs past the top
+ *   climb          the long-lens tracking camera, until the chase camera takes over
+ * The cuts between them are short dissolves (the director never flies between ground sites).
+ */
+export function launchShots(start: number, towerClear: number, until: number): Shot[] {
+  const ign = GROUND_CAMS.ignition;
+  const side = GROUND_CAMS.towerSide;
+  return [
+    shot('pad-wide', start, -12, 'booster', undefined, { look: 0.12, frame: 1.05 }),
+    shot('pad-close', -12, 6, 'booster', undefined, { e: ign.x, n: -ign.z, u: ign.y, look: -0.12, frame: 1.12 }),
+    shot('pad-wide', 6, towerClear + 12, 'booster', undefined, { e: side.x, n: -side.z, u: side.y, look: 0, frame: 1.25 }),
+    shot('ground-track', towerClear + 12, until, 'booster'),
+  ];
 }
 
 /**

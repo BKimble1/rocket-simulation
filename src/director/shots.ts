@@ -463,9 +463,16 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
       const ts = also ? (shot.also as BodyId) : null;
       const maxFov = kind === 'staging' || kind === 'deploy' ? 62 : 70;
       let aB: Basis = B;
+      let keep = alsoW;
       if (also && ts) {
         bodyCentre(ts, also, v2);
         const sep = v2.distanceTo(centre);
+        if (kind === 'staging' || kind === 'deploy') {
+          // a departing part is kept in frame while it separates, then let go once it is clear
+          // (a few body lengths away): the camera holds the subject instead of backing off
+          const L = size.half + bodySize(ts).half;
+          keep *= 1 - smooth(3 * L, 10 * L, sep);
+        }
         if (kind === 'approach') {
           // rendezvous: angles are measured around the approach line (az 0: behind the chaser,
           // looking along the line to the target; 90: beside it), so the target stays ahead
@@ -474,7 +481,7 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
           // two bodies parting: back off once the lens is wide, so both stay in frame
           // (at most 4x the authored range: beyond that the departing part is let go, and the
           // subject stays the subject)
-          d = Math.min(d * 4, Math.max(d, backOff((sep * 0.62 + bodySize(ts).half) * alsoW + size.half * 0.5, maxFov * 0.92)));
+          d = Math.min(d * 4, Math.max(d, backOff((sep * 0.62 + bodySize(ts).half) * keep + size.half * 0.5, maxFov * 0.92)));
         }
       }
       orbitAround(d, az, el, aB);
@@ -485,7 +492,7 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
         out.upHint.copy(B.fwd);
       }
       if (also && ts) {
-        const mix = (P.mix ?? (kind === 'approach' ? 0.5 : kind === 'staging' ? 0.45 : 0.5)) * alsoW;
+        const mix = (P.mix ?? (kind === 'approach' ? 0.5 : kind === 'staging' ? 0.45 : 0.5)) * keep;
         const ra = ts === 'station' ? 28 : bodySize(ts).half;
         out.fov = P.fov ?? aimTwo(out.pos, centre, size.half * (P.frame ?? 1.05), v2, ra, mix, ctx.aspect, maxFov, out.target);
       } else out.fov = P.fov ?? fitFov(size.half * (P.frame ?? 1.1), d, ctx.aspect, 1.25, 8, 75);

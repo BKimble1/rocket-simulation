@@ -57,6 +57,9 @@ export function Settings() {
         <input type="checkbox" checked={s.telemetry} onChange={() => s.set({ telemetry: !s.telemetry })} /> Reference telemetry in missions
       </label>
       <label className="check">
+        <input type="checkbox" checked={s.inspectLight} onChange={() => s.set({ inspectLight: !s.inspectLight })} /> Inspection light in Earth's shadow (a spacecraft there is otherwise a dark silhouette; labelled on screen when on)
+      </label>
+      <label className="check">
         <input
           type="checkbox"
           checked={s.reducedMotion}

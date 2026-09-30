@@ -36,7 +36,7 @@ import { apsidesKm, incToEquator, progradeAttitude } from '../physics/orbit';
 import { sumMass } from '../physics/vehicle';
 import { DEG, qaxisY, v3, vadd, vdot, vlen, vnorm, vscale, vsub, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, contiguous, num, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, contiguous, num, phasesFrom, rateNote, shot, tidyShots, launchShots } from './common';
 import { ascentFacts, coastSettleBurn, flyOrbitalAscent, s2Channels } from './flight';
 
 const START = -60;
@@ -227,11 +227,7 @@ export function buildLunar(): MissionTimeline {
   // ── shots
   const shots: Shot[] = tidyShots(
     [
-      shot('pad-wide', START, -14, 'booster', undefined, { look: 0.4 }),
-      shot('pad-close', -14, 5, 'booster', undefined, { look: -0.7, fov: 30 }),
-      shot('tower', 5, T.towerClear + 3, 'booster'),
-      shot('pad-wide', T.towerClear + 3, T.towerClear + 16, 'booster'),
-      shot('ground-track', T.towerClear + 16, T.throttleDown, 'booster'),
+      ...launchShots(START, T.towerClear, T.throttleDown),
       shot('chase', T.throttleDown, T.meco - 8, 'booster', undefined, { d: 110, az: 25, el: 6 }),
       shot('staging', T.meco - 8, T.ses1 + 14, 'upper', 'booster', { d: 75, az: 100, el: 8 }),
       shot('chase', T.ses1 + 14, T.fairingSep - 4, 'upper', undefined, { d: 60, az: 30, el: 10 }),

@@ -1,6 +1,6 @@
 import { Component, useEffect, useState, type ReactNode } from 'react';
-import { Stage } from './scene/Stage';
-import { KimbleLogo, KimbleMark, OneFab } from './brand/Logo';
+import { Stage, setContextListener } from './scene/Stage';
+import { KimbleLogo, KimbleMark, FabOne } from './brand/Logo';
 import { useApp, type View } from './state/store';
 import { director, goLocation, hangarHome } from './director/director';
 import { devName } from './dev/index';
@@ -49,7 +49,7 @@ function Header() {
         <KimbleMark size={26} className="brand__mark" />
         <span className="brand__sub">
           <span>Rocket Engineering</span>
-          <OneFab height={8} />
+          <FabOne height={8} />
         </span>
       </button>
       <nav className="nav" aria-label="Modes">
@@ -61,8 +61,12 @@ function Header() {
       </nav>
       <span className="header__spacer" />
       {HUB.url && (
-        <a className="btn btn--sm btn--quiet hub-link" href={HUB.url}>
-          {HUB.label}
+        <a className="btn btn--sm btn--quiet hub-link" href={HUB.url} aria-label={HUB.label}>
+          <Icon.back size={14} />
+          <span className="hub-link__long">{HUB.label}</span>
+          <span className="hub-link__short" aria-hidden>
+            FAB / ONE
+          </span>
         </a>
       )}
       <button className="icon-btn" onClick={() => set({ drawer: 'learn' })} aria-label="Learning path, glossary and checks">
@@ -96,6 +100,49 @@ function Drawers() {
     <Drawer title={title} onClose={close} wide={drawer === 'checks' || drawer === 'why'}>
       {body}
     </Drawer>
+  );
+}
+
+/** Shown while the WebGL context is lost; offers a reload if the browser does not restore it. */
+function ContextNotice() {
+  const [lost, setLost] = useState(false);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    setContextListener((l) => {
+      setLost(l);
+      if (!l) setStuck(false);
+      playback.player?.hold('loading', l);
+    });
+    return () => setContextListener(null);
+  }, []);
+  useEffect(() => {
+    if (!lost) return;
+    const h = window.setTimeout(() => setStuck(true), 8000);
+    return () => window.clearTimeout(h);
+  }, [lost]);
+  if (!lost) return null;
+  return (
+    <div className="loading-note loading-note--warn" role="alert">
+      {stuck ? 'The graphics could not be restored.' : 'The graphics were interrupted by the browser. Restoring…'}{' '}
+      {stuck && (
+        <button className="btn btn--sm btn--primary" onClick={() => location.reload()}>
+          Reload
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Clears a toast a few seconds after it appears. */
+function Toast({ text }: { text: string }) {
+  useEffect(() => {
+    const h = window.setTimeout(() => useApp.getState().toast === text && useApp.setState({ toast: null }), 3600);
+    return () => window.clearTimeout(h);
+  }, [text]);
+  return (
+    <div className="toast" role="status">
+      {text}
+    </div>
   );
 }
 
@@ -207,11 +254,11 @@ export function App() {
 /** The identity alone, for the poster and the muted preview clip (?ui=brand). */
 function PosterBrand() {
   return (
-    <div className="poster-brand" aria-label="KIMBLE Rocket Engineering, ONE / FAB">
+    <div className="poster-brand" aria-label="KIMBLE Rocket Engineering, FAB / ONE">
       <KimbleLogo height={30} />
       <span className="poster-brand__sub">
         <span>Rocket Engineering</span>
-        <OneFab height={9} />
+        <FabOne height={9} />
       </span>
     </div>
   );
@@ -267,7 +314,8 @@ function Main() {
             {view === 'watch' && <WatchView />}
           </main>
           <LoadingNote />
-          {toast && <div className="toast">{toast}</div>}
+          {toast && <Toast text={toast} />}
+          <ContextNotice />
           <Drawers />
         </>
       )}

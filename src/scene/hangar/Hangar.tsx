@@ -61,7 +61,7 @@ export function Hangar() {
     const envScene = buildHangarEnvScene();
     const rt = pm.fromScene(envScene, 0.02);
     scene.environment = rt.texture;
-    scene.background = new THREE.Color('#e6e6e2');
+    scene.background = new THREE.Color('#c4c3be');
     envScene.traverse((o) => {
       const m = o as THREE.Mesh;
       m.geometry?.dispose();
@@ -266,11 +266,11 @@ export function Hangar() {
 
   return (
     <>
-      <hemisphereLight args={['#fbfbf8', '#b7b2a8', 0.85]} />
+      <hemisphereLight args={['#fbfbf8', '#a8a398', 0.62]} />
       <directionalLight
         ref={key}
         position={[38, 110, 70]}
-        intensity={2.4}
+        intensity={2.75}
         color="#fffaf2"
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -283,7 +283,9 @@ export function Hangar() {
         shadow-bias={-0.0004}
         shadow-normalBias={0.03}
       />
-      <directionalLight position={[-60, 40, -30]} intensity={0.55} color="#e8eef6" />
+      <directionalLight position={[-60, 40, -30]} intensity={0.4} color="#e8eef6" />
+      {/* rim light from behind: separates the vehicle's silhouette from the hall */}
+      <directionalLight position={[-25, 75, -120]} intensity={1.3} color="#eef3ff" />
       <primitive object={arch.group} />
       <primitive object={vehicle.root} onClick={onClick} onPointerMissed={onMissed} />
       <primitive object={engines.e.root} onClick={onClick} />

@@ -13,6 +13,7 @@ import { getTimeline } from '../state/playback';
 import { frame } from '../scene/frame';
 import { effects } from '../scene/effects/input';
 import { snapFlight } from '../director/director';
+import { setHold } from '../scene/dissolve';
 
 interface RawSeg {
   id: string;
@@ -56,6 +57,8 @@ interface WatchSnap {
   ended: boolean;
   rate: number;
   hiddenPause: boolean;
+  /** Inside an omitted (skipped) interval. */
+  omitted: boolean;
 }
 
 export const useWatch = create<WatchSnap>(() => ({
@@ -74,6 +77,7 @@ export const useWatch = create<WatchSnap>(() => ({
   ended: false,
   rate: 1,
   hiddenPause: false,
+  omitted: false,
 }));
 
 export const watch = {
@@ -103,6 +107,7 @@ export function publishWatch(force = false) {
     ended: pl.ended,
     rate: pl.rate,
     hiddenPause: pl.pausedWhileHidden,
+    omitted: !!seg?.omitted,
   });
 }
 
@@ -141,6 +146,9 @@ export function seekFilm(p: number) {
   const pl = watch.player;
   if (!pl) return;
   pl.seek(p);
+  // a seek shows the chosen moment itself, even inside a skipped interval
+  setHold(false, frame.clock);
+  frame.omitted = false;
   frame.missionTime = pl.missionTime;
   effects.seekEpoch++;
   snapFlight();

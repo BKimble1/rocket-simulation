@@ -1,4 +1,4 @@
-"""Build the KIMBLE / ONE / FAB identity artwork (original vector design).
+"""Build the KIMBLE identity artwork and the FAB / ONE wordmark (original vector design).
 
 The symbol: a custom K. Its stem is the vehicle on the pad; its upper arm is an ascent arc
 that leaves the stem steeply and pitches over until it runs horizontal at the tip (the
@@ -32,7 +32,7 @@ def glyphs(text, wght, wdth, track):
 
 
 word = glyphs('KIMBLE', 720, 125, 0.075)
-onefab = glyphs('ONE / FAB', 600, 112, 0.2)
+fabone = glyphs('FAB / ONE', 600, 112, 0.2)
 sub = glyphs('ROCKET ENGINEERING', 560, 112, 0.22)
 
 CAP = word['capHeight']  # font units
@@ -79,11 +79,11 @@ def lockup(fill, arm=None, with_sub=False):
 (out / 'kimble-logo-light.svg').write_text(lockup(WHITE))
 (out / 'kimble-logo-accent.svg').write_text(lockup(GRAPHITE, ACCENT))
 
-# ONE / FAB secondary wordmark
-og, ow = word_group(onefab, 40, 0, 44, GRAPHITE)
-(out / 'one-fab.svg').write_text(svg(ow, 48, og, 'ONE / FAB'))
-og2, _ = word_group(onefab, 40, 0, 44, WHITE)
-(out / 'one-fab-light.svg').write_text(svg(ow, 48, og2, 'ONE / FAB'))
+# FAB / ONE wordmark (the hub the simulation belongs to)
+og, ow = word_group(fabone, 40, 0, 44, GRAPHITE)
+(out / 'fab-one.svg').write_text(svg(ow, 48, og, 'FAB / ONE'))
+og2, _ = word_group(fabone, 40, 0, 44, WHITE)
+(out / 'fab-one-light.svg').write_text(svg(ow, 48, og2, 'FAB / ONE'))
 
 # path data for the runtime decal painter
 def scaled(g, height):
@@ -97,7 +97,7 @@ ts.write_text(
     f'export const MARK = {{ body: {json.dumps(STEM + " " + LEG)}, arm: {json.dumps(ARM)}, size: 100 }};\n'
     '/** Glyph runs: path in font units (y down, baseline 0); scale converts to a cap height of 1 unit * capHeight. */\n'
     f'export const WORD_KIMBLE = {json.dumps(scaled(word, 1))};\n'
-    f'export const WORD_ONEFAB = {json.dumps(scaled(onefab, 1))};\n'
+    f'export const WORD_FABONE = {json.dumps(scaled(fabone, 1))};\n'
     f'export const WORD_SUB = {json.dumps(scaled(sub, 1))};\n'
 )
 print('ok', ow, word['width'])

@@ -55,6 +55,8 @@ export interface AppState {
   narration: boolean;
   sound: SoundMode;
   telemetry: boolean;
+  /** Light spacecraft softly from the camera's side while they are in Earth's shadow (labelled). */
+  inspectLight: boolean;
   drawer: Drawer;
   /** A message shown briefly (seek, loading, mode change). */
   toast: string | null;
@@ -80,6 +82,7 @@ function loadSettings(): Partial<AppState> {
       sound: s.sound,
       telemetry: s.telemetry,
       depth: s.depth,
+      inspectLight: s.inspectLight,
     };
   } catch {
     return {};
@@ -109,6 +112,7 @@ export const useApp = create<AppState>((set) => ({
   narration: saved.narration ?? true,
   sound: saved.sound ?? 'realistic',
   telemetry: saved.telemetry ?? true,
+  inspectLight: saved.inspectLight ?? true,
   drawer: null,
   toast: null,
   set: (p) => set(p),
@@ -119,11 +123,11 @@ export const useApp = create<AppState>((set) => ({
 
 // persist settings
 useApp.subscribe((s, prev) => {
-  if (s.quality === prev.quality && s.reducedMotion === prev.reducedMotion && s.captions === prev.captions && s.narration === prev.narration && s.sound === prev.sound && s.telemetry === prev.telemetry && s.depth === prev.depth) return;
+  if (s.quality === prev.quality && s.reducedMotion === prev.reducedMotion && s.captions === prev.captions && s.narration === prev.narration && s.sound === prev.sound && s.telemetry === prev.telemetry && s.depth === prev.depth && s.inspectLight === prev.inspectLight) return;
   try {
     localStorage.setItem(
       'kimble.settings',
-      JSON.stringify({ quality: s.quality, reducedMotion: s.reducedMotion, captions: s.captions, narration: s.narration, sound: s.sound, telemetry: s.telemetry, depth: s.depth }),
+      JSON.stringify({ quality: s.quality, reducedMotion: s.reducedMotion, captions: s.captions, narration: s.narration, sound: s.sound, telemetry: s.telemetry, depth: s.depth, inspectLight: s.inspectLight }),
     );
   } catch {
     /* storage unavailable: settings last for this visit */

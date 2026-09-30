@@ -7,7 +7,12 @@
 import { useEffect, type RefObject } from 'react';
 import { setViewInset } from '../../director/director';
 
-export function useStageInset(key: string, ref: RefObject<HTMLElement | null>, enabled = true) {
+/**
+ * `bottomExtra` (px): a bottom bar (the playback dock) is always registered as covering the bottom,
+ * plus this much above it (the caption area in Watch, reserved whether or not a caption shows, so
+ * the picture does not move each time one appears).
+ */
+export function useStageInset(key: string, ref: RefObject<HTMLElement | null>, enabled = true, bottomExtra: number | null = null) {
   useEffect(() => {
     const el = ref.current;
     if (!el || !enabled) return;
@@ -16,6 +21,10 @@ export function useStageInset(key: string, ref: RefObject<HTMLElement | null>, e
       const W = window.innerWidth;
       const H = window.innerHeight;
       if (r.width === 0 || r.height === 0) return setViewInset(key, null);
+      if (bottomExtra !== null) {
+        const header = document.querySelector('.header')?.getBoundingClientRect().bottom ?? 0;
+        return setViewInset(key, { top: Math.max(0, header), bottom: Math.max(0, H - r.top + bottomExtra) });
+      }
       if (r.width > W * 0.7 && r.bottom > H * 0.75 && r.top > H * 0.15) {
         const header = document.querySelector('.header')?.getBoundingClientRect().bottom ?? 0;
         return setViewInset(key, { top: Math.max(0, header), bottom: Math.max(0, H - r.top) });
@@ -35,5 +44,5 @@ export function useStageInset(key: string, ref: RefObject<HTMLElement | null>, e
       window.removeEventListener('resize', update);
       setViewInset(key, null);
     };
-  }, [key, ref, enabled]);
+  }, [key, ref, enabled, bottomExtra]);
 }

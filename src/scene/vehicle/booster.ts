@@ -838,7 +838,7 @@ function interstage(ctx: Ctx) {
   kit.cap(s, band, 'stage-separation', 'al-2219');
   const stripe = rectPoly(R + 0.0006, R + 0.0016, y1 - 0.34, y1 - 0.26, 0.0003);
   kit.add(s.group, lathe(stripe, { seg: kit.seg.body, closed: true, smooth: 80, v: 'y' }), { part: 'interstage', mat: 'cfrp-sandwich', look: 'accent', cut: true });
-  // ONE / FAB (white on graphite), small
+  // FAB / ONE (white on graphite), small
   const cap = 0.15;
   const w = wordWidth('onefab', cap);
   const d = makeDecal(ctx.mats, {
