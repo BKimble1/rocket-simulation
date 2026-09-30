@@ -111,8 +111,8 @@ function tubeNormal(): THREE.Texture {
   const H = 64;
   const [c, g] = canvas(W, H);
   const img = g.createImageData(W, H);
-  const r = rng(5);
-  const rowNoise = Array.from({ length: H }, () => (r() - 0.5) * 0.06);
+  // (no per-row noise along the tubes: at the anisotropic mip level the bell is sampled at, it
+  // aliased into dotted highlights along every braze line)
   const per = W / 8;
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
@@ -123,7 +123,7 @@ function tubeNormal(): THREE.Texture {
       const nz = Math.sqrt(Math.max(0.05, 1 - nx * nx));
       const i = (y * W + x) * 4;
       img.data[i] = Math.round((nx * 0.5 + 0.5) * 255);
-      img.data[i + 1] = Math.round((rowNoise[y] * 0.5 + 0.5) * 255);
+      img.data[i + 1] = 128;
       img.data[i + 2] = Math.round(nz * 255);
       img.data[i + 3] = 255;
     }
@@ -461,10 +461,23 @@ function patchTubes(m: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
         'mapN.xy *= normalScale;',
         // 8 tubes per texture repeat across u
         'mapN.xy *= normalScale * (1.0 - smoothstep(0.1, 0.26, fwidth(vNormalMapUv.x) * 8.0));',
-      ),
+      ) +
+        `
+      {
+        // braze groove between neighbouring tubes: a dark crevice (the filtered normal map turns
+        // flat right at the seam and would otherwise draw a thin bright line there), widened by
+        // one pixel for antialiasing and faded out with the relief when tubes get too small
+        float u8 = vNormalMapUv.x * 8.0;
+        float fwT = fwidth(u8);
+        float e = fract(u8);
+        float edge = min(e, 1.0 - e);
+        float groove = smoothstep(0.0, 0.06 + fwT, edge);
+        float amt = 0.5 * (1.0 - smoothstep(0.1, 0.26, fwT));
+        diffuseColor.rgb *= 1.0 - amt * (1.0 - groove);
+      }`,
     );
   };
-  m.customProgramCacheKey = () => 'engine-tubes-aa-t';
+  m.customProgramCacheKey = () => 'engine-tubes-aa-g';
   return m;
 }
 

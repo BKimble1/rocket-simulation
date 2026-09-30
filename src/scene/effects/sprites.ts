@@ -195,6 +195,7 @@ attribute vec3 iAxis;
 attribute vec4 iAlb;    // albedo, opacity
 attribute vec4 iEmit;   // emission, sun shadow
 varying vec2 vUv;
+varying float vCap;
 varying vec2 vRot;
 varying vec4 vAlb;
 varying vec4 vEmit;
@@ -221,7 +222,11 @@ void main() {
   mv.xy += X * c.x * lx + Y * c.y * radius;
   gl_Position = projectionMatrix * mv;
   #include <logdepthbuf_vertex>
-  vUv = c;
+  // a streak is a capsule: the puff's two halves at its ends, a flat run between them
+  // (successive streaks overlap into one continuous column instead of a string of beads)
+  float cap = (lx - radius) / radius;
+  vUv = vec2(c.x * (1.0 + cap), c.y);
+  vCap = cap;
   vRot = X;
   vAlb = iAlb;
   vEmit = iEmit;
@@ -248,6 +253,7 @@ uniform float uHazeDensity;
 uniform vec3 uFlamePos[2];
 uniform vec3 uFlameCol[2];
 varying vec2 vUv;
+varying float vCap;
 varying vec2 vRot;
 varying vec4 vAlb;
 varying vec4 vEmit;
@@ -262,10 +268,11 @@ void main() {
   float thinMedium = step(3.5, tile);
   tile = mod(tile, 4.0);
   vec2 base = vec2(mod(tile, 2.0), floor(tile / 2.0)) * 0.5;
-  vec2 uvT = base + (vUv * 0.5 + 0.5) * 0.5;
+  vec2 uv = vec2(sign(vUv.x) * max(0.0, abs(vUv.x) - vCap), vUv.y);
+  vec2 uvT = base + (uv * 0.5 + 0.5) * 0.5;
   vec4 tx = texture2D(uAtlas, uvT);
   // an old, diffuse puff: its outline fades out gradually instead of ending at the lobe rims
-  float dens = tx.r * mix(1.0, 1.0 - smoothstep(0.15, 0.95, length(vUv)), soft);
+  float dens = tx.r * mix(1.0, 1.0 - smoothstep(0.15, 0.95, length(uv)), soft);
   float a = dens * vAlb.a * vFade;
   vec3 emitT = vEmit.rgb * dens * dens * vFade;
   if (a < 0.002 && dot(emitT, vec3(1.0)) < 0.002) discard;
