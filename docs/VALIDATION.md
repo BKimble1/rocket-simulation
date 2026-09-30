@@ -3,6 +3,54 @@
 What was tested, how, and what was measured, with the limits of each result stated. Dates:
 29 to 30 September 2026. Commit: see `git log` on the working branch.
 
+## V2 (30 September 2026)
+
+The V2 pass (camera, clocks, dissolves, quality adaptation, shot sequence, lighting, interface,
+FAB / ONE integration) was verified on the same kind of machine as V1 (below): 4 CPU cores, no GPU,
+Chromium with SwiftShader. The defects it fixes, how each was reproduced and measured, and the
+before/after numbers are in [`V2_AUDIT.md`](V2_AUDIT.md). Summary of what was checked:
+
+- **Unit and model tests** (`npm test`): 448 tests in 33 files, all passing.
+- **Camera trace** (no rendering, real timelines, 60 frames per second, real-time playback): all
+  six missions in Auto have no per-frame turn or roll over 4 degrees outside intentional cuts,
+  no field-of-view step over 8 %, no frame with the subject outside the frustum, no camera below
+  1.5 m above the ground, and at most three transitions on the stack; manual modes start no
+  transition while held; the booster's heading does not flip through boostback; a Free subject
+  change ends centred on the new body, also while paused; seeks equal direct evaluation.
+- **End-to-end** (`npx playwright test`, production build; desktop 1440 x 900, phone portrait
+  390 x 844, phone landscape 844 x 390): 29 tests. The full run (1.1 h) passed 26 and failed 3,
+  all fixed: (1) a deep link with `focus=booster` still followed the upper stage while paused,
+  and (2) a held Chase camera started one transition when Play was pressed; both had one cause,
+  the storyline sync gave up when the stage had not yet sampled the bodies and only tried again
+  when the playback snapshot changed, so it now waits for the frame that shows the body; (3) the
+  full satellite walkthrough ran out of its 5-minute budget under load (4.4 minutes alone), now
+  given 8 minutes. The three were then run again and passed, and after the phone-header change
+  the home, WebGL-fallback, reduced-motion and phone tests (8 on the three projects) passed.
+- **Visual review**: stills of every mission's key moments rendered on the virtual clock and
+  reviewed (launch, tower clearance, max-Q, staging, fairing, deployment in eclipse, booster
+  boostback, entry and landing, capsule separation, entry, parachutes and splashdown, station
+  approach and capture, GTO and lunar deployment, lunar encounter and closest approach, hangar,
+  explore, phone portrait and landscape). Issues found this way and fixed: the ignition camera
+  cropping the vehicle and the ground cloud filling the lens, the tower-clearance camera behind
+  the integration hangar (now covered by a line-of-sight test), the capsule framed without its
+  parachutes, a far secondary body pulling the camera kilometres back, the lunar encounter
+  framed on the night side, the hangar washed out, phone-landscape telemetry overlapping the
+  title, and deep links losing `focus=booster`. Before/after pairs are in `docs/v2/`.
+- **Header on phones, with the way back to FAB / ONE**: measured at 320, 341, 355, 359, 360,
+  375, 390, 414, 430, 481, 600, 720, 812 (landscape), 844 (landscape), 959, 960 and 1440 px wide
+  on a build with `VITE_HUB_URL` set: every header control on screen, nothing overlapping, no
+  horizontal scroll. Below 960 px the header link is a back button placed first (its accessible
+  name is the full label, "Back to FAB / ONE"), and the home card carries the labelled link;
+  Settings has it at every width, and so does the page shown when WebGL is unavailable. The
+  home card scrolls inside the room below the header instead of sliding under it (320 x 640 and
+  phone landscape).
+- **Performance**: <!--PERF-->
+
+What was not possible here, and is not claimed: any frame rate on a GPU, a phone or a tablet.
+The virtual-clock recordings prove continuity and framing, not real-time smoothness; wall-clock
+frame intervals on this machine are SwiftShader's (a CPU rasteriser) and are reported only as
+relative measurements between scenes and tiers.
+
 ## The test machine (read this first)
 
 All tests, measurements, screenshots and recordings were made in a cloud container with

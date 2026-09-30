@@ -61,15 +61,12 @@ function Header() {
       </nav>
       <span className="header__spacer" />
       {HUB.url && (
-        <a className="btn btn--sm btn--quiet hub-link" href={HUB.url} aria-label={HUB.label}>
-          <Icon.back size={14} />
-          <span className="hub-link__long">{HUB.label}</span>
-          <span className="hub-link__short" aria-hidden>
-            FAB / ONE
-          </span>
+        <a className="btn btn--sm btn--quiet hub-link" href={HUB.url} aria-label={HUB.label} title={HUB.label}>
+          <Icon.back size={15} />
+          <span className="hub-link__label">{HUB.label}</span>
         </a>
       )}
-      <button className="icon-btn" onClick={() => set({ drawer: 'learn' })} aria-label="Learning path, glossary and checks">
+      <button className="icon-btn learn-btn" onClick={() => set({ drawer: 'learn' })} aria-label="Learning path, glossary and checks">
         <Icon.book size={17} />
       </button>
       <button className="icon-btn" onClick={() => set({ drawer: 'settings' })} aria-label="Settings">
@@ -194,6 +191,13 @@ function NoWebGL() {
   return (
     <div className="fallback">
       <KimbleLogo height={28} />
+      {HUB.url && (
+        <p>
+          <a className="btn btn--sm" href={HUB.url}>
+            <Icon.back size={14} /> {HUB.label}
+          </a>
+        </p>
+      )}
       <h1>3D is not available on this device or browser</h1>
       <p>KIMBLE Rocket Engineering draws the vehicle and missions with WebGL 2, which this browser did not provide (it may be disabled, or the graphics driver is blocked).</p>
       <p>Try a current version of Chrome, Edge, Firefox or Safari, or enable hardware acceleration. The lessons remain available below as text.</p>

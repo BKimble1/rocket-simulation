@@ -8,6 +8,7 @@ import { useStageInset } from './hooks/useStageInset';
 import { openMissionAt } from './nav';
 import { KimbleLogo, KimbleMark, FabOne } from '../brand/Logo';
 import { Icon } from './icons';
+import { HUB } from '../config';
 
 export function Home() {
   const go = useApp((s) => s.go);
@@ -27,6 +28,11 @@ export function Home() {
             <FabOne height={8} />
           </span>
         </div>
+        {HUB.url && (
+          <a className="home__hub" href={HUB.url}>
+            <Icon.back size={14} /> {HUB.label}
+          </a>
+        )}
         <h1 id="home-title">Understand a rocket, part by part and phase by phase.</h1>
         <p className="lead">A two-stage launch vehicle you can open up, and six missions you can watch unfold: what every part does, why it is there, what it is made of, and when it matters.</p>
         <div className="home__actions">

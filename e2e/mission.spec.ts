@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { bodies, frames, missionTime, playerTime, waitForLocation, watchErrors, withHooks } from './helpers';
 
 test('satellite walkthrough: start, inspect the engine, return to the same point, switch cameras, finish, replay', async ({ page }) => {
+  // the longest journey in the suite: 4 to 5 minutes on a software renderer
+  test.setTimeout(480_000);
   const errors = watchErrors(page);
   await page.goto(withHooks(''));
   await page.getByRole('button', { name: /Explore a mission/ }).click();

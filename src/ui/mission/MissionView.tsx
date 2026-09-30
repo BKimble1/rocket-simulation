@@ -218,7 +218,15 @@ export function MissionDirectorSync() {
   useEffect(() => {
     if (!tl) return;
     const target = focus === 'booster' && branch ? branch.focus : main;
-    if (frame.bodies[target]?.present || !frame.tl) setFocus(target);
+    // the bodies are sampled by the stage loop, not by React: a paused deep link renders no new
+    // playback snapshot, so wait for the frame that shows the body instead of giving up
+    let raf = 0;
+    const apply = () => {
+      if (frame.bodies[target]?.present || !frame.tl) setFocus(target);
+      else raf = requestAnimationFrame(apply);
+    };
+    apply();
+    return () => cancelAnimationFrame(raf);
   }, [focus, main, tl, branch, pb.t]);
   return null;
 }

@@ -339,6 +339,36 @@ h3 {
   box-shadow: var(--shadow-1);
 }
 
+/* the way back to the hub stays on screen at every width: below 960 px a back button first in
+   the header (its name is the full label), with the labelled link on the home card and in Settings */
+@media (max-width: 959px) {
+  .header .hub-link {
+    order: -1;
+    width: 38px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0;
+    justify-content: center;
+    flex: none;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-1);
+  }
+  .hub-link__label {
+    display: none;
+  }
+  .home__hub {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 10px 0 0;
+    font-size: 13px;
+    font-weight: 540;
+    color: var(--accent-ink);
+  }
+}
+
 @media (max-width: 720px) {
   :root {
     --header-h: 52px;
@@ -528,9 +558,17 @@ ul.plain {
   left: calc(24px + var(--safe-left));
   bottom: calc(24px + var(--safe-bottom));
   max-width: 560px;
+  /* never under the header: a card taller than the room left scrolls inside itself */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100% - var(--header-h) - var(--safe-top) - var(--safe-bottom) - 36px);
 }
 .home__card {
   padding: 24px 24px 18px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 .home__mark {
   display: flex;
@@ -973,8 +1011,10 @@ code {
   gap: 6px;
   white-space: nowrap;
 }
-.hub-link__short {
-  display: none;
+@media (min-width: 960px) {
+  .home__hub {
+    display: none;
+  }
 }
 
 .inspect-light {
@@ -1561,6 +1601,7 @@ code {
     left: 8px;
     right: 8px;
     bottom: calc(8px + var(--safe-bottom));
+    max-height: calc(100% - var(--header-h) - var(--safe-top) - var(--safe-bottom) - 16px);
   }
   .home h1 {
     font-size: 23px;
@@ -1634,20 +1675,13 @@ code {
   .header .nav {
     display: flex;
   }
-  /* the way back to the hub stays visible on phones, in a compact form */
-  .hub-link__long {
-    display: none;
-  }
-  .hub-link__short {
-    display: inline;
-  }
-  .hub-link {
-    padding: 6px 9px;
-    font-size: 12px;
-    gap: 4px;
+  .header .hub-link {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
   }
   .header {
-    gap: 6px;
+    gap: 5px;
     padding-left: calc(10px + var(--safe-left));
     padding-right: calc(10px + var(--safe-right));
   }
@@ -1687,8 +1721,11 @@ code {
     width: 34px;
     height: 34px;
   }
+  .header .icon-btn {
+    flex: none;
+  }
   .nav button {
-    padding: 6px 9px;
+    padding: 6px 8px;
     font-size: 13px;
   }
   .seg__btn {
@@ -1696,6 +1733,47 @@ code {
     font-size: 12.5px;
   }
   .toolbar__sep {
+    display: none;
+  }
+}
+
+@media (max-width: 389px) {
+  .header {
+    gap: 4px;
+    padding-left: calc(6px + var(--safe-left));
+    padding-right: calc(6px + var(--safe-right));
+  }
+  .nav {
+    padding: 3px;
+    gap: 2px;
+  }
+  .nav button {
+    padding: 5px 6px;
+    font-size: 12.5px;
+  }
+  .header .icon-btn,
+  .header .hub-link {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+  }
+  .brand {
+    padding: 4px 5px;
+  }
+  /* no room beside the lockup; the labelled link to the hub sits right below it */
+  .home__onefab {
+    display: none;
+  }
+}
+
+/* the narrowest phones: the learning path moves off the header (home card and Settings) */
+@media (min-width: 360px) {
+  .settings__learn {
+    display: none;
+  }
+}
+@media (max-width: 359px) {
+  .header .learn-btn {
     display: none;
   }
 }
@@ -1715,6 +1793,10 @@ code {
   }
   .home__actions {
     grid-template-columns: repeat(3, 1fr);
+  }
+  /* the header carries the full lockup at this width */
+  .home__mark {
+    display: none;
   }
   .home .lead {
     display: none;
