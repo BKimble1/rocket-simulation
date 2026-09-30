@@ -6,7 +6,7 @@ import { useRef } from 'react';
 import { useApp } from '../state/store';
 import { useStageInset } from './hooks/useStageInset';
 import { openMissionAt } from './nav';
-import { KimbleLogo, KimbleMark } from '../brand/Logo';
+import { KimbleLogo, KimbleMark, OneFab } from '../brand/Logo';
 import { Icon } from './icons';
 
 export function Home() {
@@ -23,6 +23,9 @@ export function Home() {
             <KimbleLogo height={24} />
           </span>
           <span className="eyebrow">Rocket Engineering</span>
+          <span className="home__onefab">
+            <OneFab height={8} />
+          </span>
         </div>
         <h1 id="home-title">Understand a rocket, part by part and phase by phase.</h1>
         <p className="lead">A two-stage launch vehicle you can open up, and six missions you can watch unfold: what every part does, why it is there, what it is made of, and when it matters.</p>

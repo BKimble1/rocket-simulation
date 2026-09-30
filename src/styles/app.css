@@ -159,8 +159,13 @@ a {
   color: var(--ink-2);
 }
 .brand__mark,
-.home__word {
+.home__word,
+.home__onefab {
   display: none;
+}
+.home__onefab {
+  margin-left: auto;
+  color: var(--ink-3);
 }
 
 .nav {
@@ -340,6 +345,9 @@ h3 {
   }
   .brand__sub {
     display: none;
+  }
+  .home__onefab {
+    display: inline-flex;
   }
   .nav button {
     padding: 6px 10px;
