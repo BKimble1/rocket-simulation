@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { asset } from '../../config';
-import { tierSpec } from '../quality';
+import { tierSpec, whenTierKnown } from '../quality';
 
 export interface SpaceTextures {
   day: THREE.Texture;
@@ -133,7 +133,9 @@ let firstLoad: Promise<void> | null = null;
  */
 export function spaceTexturesSettled(maxAniso = 8, timeoutMs = 8000): Promise<void> {
   if (firstLoad) return firstLoad;
-  const load = loadSpaceTextures(maxAniso);
-  firstLoad = Promise.race([load, new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))]).catch(() => undefined);
+  // wait for the device tier first, so a low-tier device never downloads the 4K maps
+  firstLoad = whenTierKnown()
+    .then(() => Promise.race([loadSpaceTextures(maxAniso), new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))]))
+    .catch(() => undefined);
   return firstLoad;
 }

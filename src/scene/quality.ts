@@ -62,6 +62,25 @@ interface QualityState {
 
 export const useQuality = create<QualityState>(() => ({ tier: FORCED ?? 'high', reason: FORCED ? 'forced by ?quality' : 'default', renderer: '', manual: null }));
 
+/**
+ * Resolves once the device's tier is known (detected from the renderer, forced by ?quality, or
+ * set in settings), or after `timeoutMs`, so size-dependent downloads start at the right size.
+ */
+export function whenTierKnown(timeoutMs = 3000): Promise<void> {
+  if (useQuality.getState().reason !== 'default') return Promise.resolve();
+  return new Promise((resolve) => {
+    const stop = useQuality.subscribe((s) => {
+      if (s.reason !== 'default') done();
+    });
+    const timer = setTimeout(done, timeoutMs);
+    function done() {
+      stop();
+      clearTimeout(timer);
+      resolve();
+    }
+  });
+}
+
 export function setManualTier(t: Tier | null) {
   useQuality.setState((s) => ({ manual: t, tier: t ?? s.tier, reason: t ? 'set in settings' : 'automatic' }));
 }
