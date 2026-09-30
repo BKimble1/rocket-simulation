@@ -118,6 +118,14 @@ a trajectory, and picking and hotspots follow automatically because they use the
 In the hangar, a move between distant subjects keeps the destination in view (the camera pulls
 back while the target travels, then closes in) instead of passing close to empty floor.
 
+## Activity channels
+
+Channels that describe something switching on and off (thrusters, engines, plasma) are zero
+before their first key; tank levels and mechanisms hold their first value. In flight the live
+engine models follow the mission throttles (turbine spin, nozzle-extension glow), and every
+thruster channel with an anchor becomes an effects emitter (booster, upper stage, capsule,
+satellite, service module).
+
 ## Frame order (no per-frame React state)
 
 `useFrame` priorities: −30 player tick → −20 body sampling → −10 director → 0 scene components
@@ -131,7 +139,12 @@ Selecting a part (click/tap, the searchable list, keyboard, a lesson link) frame
 context indicator of where it sits on the vehicle. Intact / cutaway / exploded views animate
 the same objects (a view closes before the next opens). The materials lens recolours by
 material and links both ways between parts and the materials index. Demonstrations run on the
-stage clock and carry honesty labels (slowed, illustrative flow, section view).
+stage clock and carry honesty labels (slowed, illustrative flow, section view). A demonstration
+frames its subject when it starts and follows it while the view animates (an exploded view
+moves parts), with a viewing angle chosen for section planes; models that provide layer labels
+(the heat-shield stack) get them as a spaced column with leader lines. A part is shown on the
+configuration that carries it: the satellite stack with the recoverable booster, or the crew
+stack as flown to the station, where the booster is expended.
 
 ## Mission explorer and Watch
 

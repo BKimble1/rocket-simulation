@@ -78,7 +78,25 @@ node scripts/record-virtual.mjs <name> "<url>" 300             # frame-by-frame 
 
 Useful URL parameters: `?quality=high|medium|low`, `?diag=1` (frame times, draw calls),
 deep links such as `?v=explore&part=turbopump&view=cutaway`, `?v=mission&m=leo&ch=staging`,
-`?v=explore&lens=materials&mat=grcop`, `?v=watch&m=lunar`.
+`?v=explore&lens=materials&mat=grcop`, `?v=watch&m=lunar`, and for captures `?ui=0` (no
+interface) or `?ui=brand` (only the KIMBLE identity).
+
+Batch tools (run against `npm run build && npm run preview`):
+
+```sh
+scripts/record-all.sh virtual        # continuity clips on the virtual clock → docs/recordings/virtual
+scripts/record-all.sh realtime       # wall-clock clips of this machine → docs/recordings/realtime
+node scripts/hub-card.mjs            # public/og/poster.jpg and public/og/preview.mp4 (muted loop)
+node scripts/accuracy-facts.mjs      # regenerate the computed-facts tables in ACCURACY.md
+node scripts/mission-report.mjs      # every mission fact (add --about for units and meanings)
+```
+
+## Hub card
+
+`public/og/poster.jpg` (1200 × 630) and `public/og/preview.mp4` (960 × 540, 8 s, no audio,
+loops; `preview.jpg` is its first frame) are rendered from the app itself with only the
+identity shown. They are served with the app, so a hub card can reference them relative to
+the app's base path (for example `/rocket/og/poster.jpg`).
 
 ## Narration (optional, offline)
 
