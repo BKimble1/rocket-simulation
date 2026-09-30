@@ -154,6 +154,26 @@ function makeEffectsSource(tl: MissionTimeline, v: VehicleModel): EffectsSource 
           out.push(e);
         }
       }
+      // attitude thrusters of the satellite (hydrazine: a faint, quick puff) and the service module
+      if (sat) {
+        const rcs = chan(tl, 'sat.rcs', t);
+        if (rcs > 0.05)
+          for (const [i, p] of v.anchors.satRcs.entries()) {
+            const e = next();
+            fill(e, sat, p, 'cold-gas', 0.02, rcs, 0, `sat:rcs${i}`, tmp.set(p.x, 0, p.z).normalize().clone());
+            out.push(e);
+          }
+      }
+      const smR = st('service', t);
+      if (smR) {
+        const rcs = chan(tl, 'sm.rcs', t);
+        if (rcs > 0.05)
+          for (const [i, p] of v.anchors.smRcs.entries()) {
+            const e = next();
+            fill(e, smR, p, 'hypergolic', 0.025, rcs, 0, `sm:rcs${i}`, tmp.set(p.x, 0, p.z).normalize().clone());
+            out.push(e);
+          }
+      }
       const sm = st('service', t);
       if (sm && v.anchors.smEngine) {
         const th = chan(tl, 'sm.throttle', t);

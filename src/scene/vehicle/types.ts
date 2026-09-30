@@ -76,6 +76,9 @@ export interface VehicleAnchors {
   s1Rcs: THREE.Vector3[];
   s2Rcs: THREE.Vector3[];
   capsuleRcs: THREE.Vector3[];
+  /** Satellite and service-module attitude thrusters (from the spacecraft module). */
+  satRcs: THREE.Vector3[];
+  smRcs: THREE.Vector3[];
   smEngine: { exit: THREE.Vector3; exitRadius: number } | null;
   lesNozzles: THREE.Vector3[];
   satApogee: { exit: THREE.Vector3; exitRadius: number } | null;

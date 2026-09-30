@@ -238,6 +238,8 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
     s1Rcs: ctx.s1Rcs,
     s2Rcs: ctx.s2Rcs,
     capsuleRcs: sc ? sc.anchors.capsuleRcs : [],
+    satRcs: sc ? sc.anchors.satRcs : [],
+    smRcs: sc ? sc.anchors.smRcs : [],
     smEngine: sc ? sc.anchors.smEngine : null,
     lesNozzles: sc ? sc.anchors.lesNozzles : [],
     satApogee: sc ? sc.anchors.satApogee : null,

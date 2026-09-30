@@ -16,6 +16,9 @@ const TOL: Partial<Record<ChannelId, number>> = {
   's1.finDeflect': 0.05,
 };
 
+/** Channels that describe an activity switching on and off (zero before their first key). */
+const ACTIVITY = /\.(rcs|throttle|plasma)$/;
+
 export class Channels {
   private data = new Map<ChannelId, { t: number[]; v: number[] }>();
 
@@ -26,6 +29,12 @@ export class Channels {
     if (!c) {
       c = { t: [], v: [] };
       this.data.set(id, c);
+      // an on/off activity (thrusters, engines, plasma) is off until its first key: sampling
+      // holds the first value before the first key, so start from an explicit zero step
+      if (ACTIVITY.test(id) && v !== 0) {
+        c.t.push(t - 1e-3);
+        c.v.push(0);
+      }
     }
     const n = c.t.length;
     if (n && t < c.t[n - 1] - 1e-9) return;
