@@ -26,7 +26,7 @@ shot desktop-home                "${BASE}"                                      
 shot desktop-explore-turbopump   "${BASE}?v=explore&part=turbopump&view=cutaway"                  1440 900 120
 shot desktop-explore-materials   "${BASE}?v=explore&lens=materials&mat=al-li"                      1440 900 90
 shot desktop-explore-heat-shield "${BASE}?v=explore&cfg=capsule&part=heat-shield"                  1440 900 200 "$(click 'Heat-shield layers')"
-shot desktop-mission-liftoff     "${BASE}?v=mission&m=leo&hooks=1"                                 1440 900 40 "$(seek 6)"
+shot desktop-mission-liftoff     "${BASE}?v=mission&m=leo&hooks=1"                                 1440 900 40 "$(seek 17)"
 shot desktop-mission-staging     "${BASE}?v=mission&m=leo&hooks=1"                                 1440 900 40 "$(seek 152)"
 shot desktop-mission-orbit       "${BASE}?v=mission&m=leo&hooks=1"                                 1440 900 40 "$(seek 1500)"
 shot desktop-mission-landing     "${BASE}?v=mission&m=leo&focus=booster&hooks=1"                   1440 900 40 "$(seek 484)"

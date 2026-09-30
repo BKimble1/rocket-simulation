@@ -9,10 +9,14 @@ import { director } from '../../director/director';
 import { atmosphere } from '../../scene/flight/atmosphere';
 import { EARTH_AXIS, OMEGA_EARTH, R_EARTH, MU_EARTH } from '../../world/frames';
 import { km, speed } from '../format';
+import { bodyStateAt, makeBodyState } from '../../timeline/sample';
 
 const OMEGA = EARTH_AXIS.clone().multiplyScalar(OMEGA_EARTH);
 const tmp = new THREE.Vector3();
 const air = new THREE.Vector3();
+const sa = makeBodyState();
+const sb = makeBodyState();
+const DT = 0.5; // s, half-width of the difference
 
 interface T {
   alt: number;
@@ -28,8 +32,6 @@ interface T {
 export function Telemetry() {
   const [t, setT] = useState<T | null>(null);
   useEffect(() => {
-    let lastV: THREE.Vector3 | null = null;
-    let lastT = 0;
     const h = window.setInterval(() => {
       const s = frame.bodies[director.focus];
       if (!s?.present) return setT(null);
@@ -38,17 +40,14 @@ export function Telemetry() {
       air.copy(s.vel).sub(tmp.crossVectors(OMEGA, s.pos));
       const a = atmosphere(alt);
       const vAir = air.length();
-      // non-gravitational acceleration from the velocity change minus gravity (what is felt)
+      // felt (non-gravitational) acceleration, from the reference trajectory around this moment,
+      // so it reads the same whether the mission is playing or paused
       let g = 0;
-      if (lastV && frame.missionTime !== lastT) {
-        const dt = frame.missionTime - lastT;
-        const acc = tmp.copy(s.vel).sub(lastV).divideScalar(dt);
-        const grav = s.pos.clone().multiplyScalar(-MU_EARTH / (r * r * r));
-        g = acc.sub(grav).length() / 9.80665;
-        if (!Number.isFinite(g) || dt < 0 || dt > 30) g = 0;
+      if (frame.tl && bodyStateAt(frame.tl, director.focus, frame.missionTime - DT, sa) && bodyStateAt(frame.tl, director.focus, frame.missionTime + DT, sb)) {
+        const acc = tmp.copy(sb.vel).sub(sa.vel).divideScalar(2 * DT);
+        g = acc.addScaledVector(s.pos, MU_EARTH / (r * r * r)).length() / 9.80665;
+        if (!Number.isFinite(g) || !sa.present || !sb.present) g = 0;
       }
-      lastV = s.vel.clone();
-      lastT = frame.missionTime;
       // orbit from the state (two-body)
       const v2 = s.vel.lengthSq();
       const energy = v2 / 2 - MU_EARTH / r;
