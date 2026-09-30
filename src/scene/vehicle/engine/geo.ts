@@ -591,7 +591,9 @@ export function clippedTube(frames: Frame[], o: TubeOpts): ClippedTube {
       const th0 = A > 1e-9 ? Math.atan2(f.b.z, f.n.z) : 0;
       const base = side > 0 ? th0 : th0 + Math.PI;
       const dz = (o.clipZ - f.p.z) * side;
-      if (A * r < 1e-9) return dz >= 0 ? { a0: base, a1: base + TAU, full: true } : null;
+      // a ring lying in the plane belongs to both halves (rounding would otherwise give it to one
+      // side only and leave a one-segment gap in the other, e.g. in a torus crossing the plane)
+      if (A * r < 1e-9) return dz >= -1e-7 ? { a0: base, a1: base + TAU, full: true } : null;
       const k = dz / (r * A);
       if (k >= 1) return { a0: base, a1: base + TAU, full: true };
       if (k <= -1) return null;

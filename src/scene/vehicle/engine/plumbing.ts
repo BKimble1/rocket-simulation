@@ -219,7 +219,25 @@ export function buildPlumbing(k: Kit, d: Design, detail: EngineDetail, _segs: nu
   // ── fuel discharge, MFV (butterfly), down the bell to the coolant inlet manifold ──
   pipe(R.fuelDischarge, (_p, s) => TP.fuelLineR - 0.008 * Math.max(0, 1 - s * 14), eng('stainless'), { ri: (_p, s) => TP.fuelLineR - 0.004 - 0.008 * Math.max(0, 1 - s * 14), bend: 0.09, segs: hangar ? 24 : 12, step: 0.025 });
   const mfv = V(d.mfv.x, d.mfv.y, d.mfv.z);
-  pipe(R.fuelDown, TP.fuelLineR, { part: 'nozzle', mat: 'stainless', thermal: 1 }, { ri: TP.fuelLineR - 0.004, bend: 0.2, segs: hangar ? 24 : 12 });
+  // the line reduces to the manifold's size over its last few centimetres and enters a welded
+  // inlet boss on top of the torus
+  const yIn = R.pts.manifoldIn.y;
+  const reduce = (p: THREE.Vector3) => 0.009 * Math.min(1, Math.max(0, (yIn + 0.11 - p.y) / 0.05));
+  const fdTag: Tag = { part: 'nozzle', mat: 'stainless', thermal: 1 };
+  pipe(R.fuelDown, (p) => TP.fuelLineR - reduce(p), fdTag, { ri: (p) => TP.fuelLineR - 0.004 - reduce(p), bend: 0.2, segs: hangar ? 24 : 12 });
+  if (detail !== 'cluster') {
+    // (profile about the vertical axis through the inlet, s from the torus centre plane)
+    const rb = TP.fuelLineR - 0.009;
+    const boss: V2[] = [
+      [rb - 0.006, 0.004],
+      [rb + 0.007, 0.004],
+      [rb + 0.004, 0.016],
+      [rb + 0.004, 0.05],
+      [rb + 0.001, 0.054],
+      [rb - 0.006, 0.054],
+    ];
+    axisLathe(k, hangar ? roundPoly(boss, (i) => (i === 2 || i === 4 ? 0.003 : 0), 2) : boss, fdTag, V(R.pts.manifoldIn.x, yIn - 0.022, 0), V(0, 1, 0), hangar ? 32 : 16);
+  }
   flange(R.pts.mfvIn.clone().add(V(0, -0.004, 0)), V(0, 1, 0), TP.fuelLineR, mvTag, 10);
   flange(R.pts.mfvOut.clone().add(V(0, 0.004, 0)), V(0, 1, 0), TP.fuelLineR, mvTag, 10);
   const mfvBody: V2[] = roundPoly(

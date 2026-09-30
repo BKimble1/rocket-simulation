@@ -75,7 +75,7 @@ function Question({ c }: { c: KnowledgeCheck }) {
       ) : (
         <div className="check-q__choices">
           {c.choices.map((ch, i) => (
-            <button key={i} className={`choice${result && (i === c.answer ? ' choice--right' : result.pick === i ? ' choice--wrong' : '')}`} disabled={!!result} onClick={() => answer(i === c.answer, i)}>
+            <button key={i} className={`choice${!result ? '' : i === c.answer ? ' choice--right' : result.pick === i ? ' choice--wrong' : ''}`} disabled={!!result} onClick={() => answer(i === c.answer, i)}>
               {ch}
             </button>
           ))}

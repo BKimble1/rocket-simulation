@@ -471,13 +471,20 @@ function patchTubes(m: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
         float fwT = fwidth(u8);
         float e = fract(u8);
         float edge = min(e, 1.0 - e);
-        float groove = smoothstep(0.0, 0.06 + fwT, edge);
-        float amt = 0.5 * (1.0 - smoothstep(0.1, 0.26, fwT));
-        diffuseColor.rgb *= 1.0 - amt * (1.0 - groove);
+        float groove = smoothstep(0.0, 0.05 + 1.5 * fwT, edge);
+        float amt = 1.0 - smoothstep(0.1, 0.26, fwT);
+        diffuseColor.rgb *= 1.0 - 0.78 * amt * (1.0 - groove);
+        roughnessFactor = mix(roughnessFactor, 0.9, amt * (1.0 - groove));
+        // specular antialiasing: widen the highlight where the relief changes faster than the
+        // pixel grid can follow (thin, slanted highlights on the tube crowns break into dots)
+        vec3 ndx = dFdx(normal);
+        vec3 ndy = dFdy(normal);
+        float kernel = min(2.5 * (dot(ndx, ndx) + dot(ndy, ndy)), 0.3);
+        roughnessFactor = sqrt(min(1.0, roughnessFactor * roughnessFactor + kernel));
       }`,
     );
   };
-  m.customProgramCacheKey = () => 'engine-tubes-aa-g';
+  m.customProgramCacheKey = () => 'engine-tubes-aa-gs';
   return m;
 }
 

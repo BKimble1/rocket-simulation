@@ -79,32 +79,50 @@ export function buildGlow(d: Design, segs: number) {
   const ggGlow = new THREE.Mesh(ggGeo, ggMat);
   group.add(ggGlow);
 
-  // ignition flash at the exit: green TEA-TEB light filling the exit and a short puff below it.
+  // TEA-TEB ignition flash: the pyrophoric igniter fluid burns bright green. Seen through the
+  // exit, the nozzle fills with green light (a glowing disc a little way up the bell); below the
+  // exit a short, soft flame bulges out and closes (two nested shells, a paler core inside).
   // Normal blending with per-vertex alpha (additive light would wash out to white against the
-  // pale hangar), so it reads green on any background.
+  // pale hangar), and every shell fades toward its silhouette so no hard edge shows.
   const er = d.exitR;
-  const rgba = (g: THREE.BufferGeometry, alpha: (r: number, y: number) => number) => {
+  const rgba = (g: THREE.BufferGeometry, rgb: [number, number, number], alpha: (r: number, y: number) => number) => {
     const p = g.attributes.position;
     const c = new Float32Array(p.count * 4);
-    for (let i = 0; i < p.count; i++) {
-      const r = Math.hypot(p.getX(i), p.getZ(i));
-      c.set([0.36, 1.0, 0.52, alpha(r, p.getY(i))], i * 4);
-    }
+    for (let i = 0; i < p.count; i++) c.set([rgb[0], rgb[1], rgb[2], alpha(Math.hypot(p.getX(i), p.getZ(i)), p.getY(i))], i * 4);
     g.setAttribute('color', new THREE.BufferAttribute(c, 4));
     return g;
   };
-  const disc = rgba(revolve([{ pts: [[0.001, d.exitY + 0.02], [er * 0.97, d.exitY + 0.02]], open: true }], 0, Math.PI * 2, 48).surf!, (r) => 0.85 - 0.4 * (r / er));
-  const puffPts: V2[] = [];
-  for (let i = 0; i <= 8; i++) {
-    const t = i / 8;
-    puffPts.push([Math.max(0.001, er * (0.95 - 0.8 * t * t)), d.exitY - t * er * 0.75]);
-  }
-  const puff = rgba(revolve([{ pts: puffPts, open: true }], 0, Math.PI * 2, 48).surf!, (_r, y) => 0.5 * (1 - Math.min(1, (d.exitY - y) / (er * 0.75))));
+  const lathe = (pts: V2[], n: number) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(Math.max(0.001, r), y)), n);
+  // light filling the bell, a quarter of the exit radius above the exit plane
+  const yDisc = d.exitY + 0.25 * er;
+  const rDisc = radiusAt(d.contour, d.x(yDisc)) * 0.985;
+  const disc = rgba(lathe([[0.001, yDisc], [rDisc * 0.5, yDisc], [rDisc, yDisc]], 48), [0.1, 1.0, 0.3], (r) => 0.9 - 0.45 * (r / rDisc));
+  // the flame below the exit: out to about 1.05 exit radii, closed 0.6 exit radii below
+  const flame = (scaleR: number, len: number, n: number): V2[] => {
+    const out: V2[] = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      out.push([er * scaleR * (0.96 + 0.25 * Math.sin(Math.PI * Math.min(1, t * 1.35)) * (1 - t)) * Math.sqrt(1 - t * t * t), d.exitY + 0.01 - len * er * t]);
+    }
+    return out;
+  };
+  const along = (y: number, len: number) => Math.min(1, Math.max(0, (d.exitY - y) / (len * er)));
+  const outer = rgba(lathe(flame(1, 0.6, 14), 48), [0.06, 0.95, 0.2], (_r, y) => 0.8 * (1 - along(y, 0.6)) ** 1.4);
+  const inner = rgba(lathe(flame(0.62, 0.42, 10), 32), [0.45, 1.0, 0.55], (_r, y) => 0.75 * (1 - along(y, 0.42)) ** 1.2);
   // (mergeGeometries directly: the kit's merge() keeps only position, normal and uv)
-  const flashGeo = mergeGeometries([disc, puff], false)!;
-  disc.dispose();
-  puff.dispose();
+  const flashGeo = mergeGeometries([disc, outer, inner], false)!;
+  for (const g of [disc, outer, inner]) g.dispose();
   const flashMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+  // soft silhouettes: alpha falls off where a shell is seen edge-on
+  flashMat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vFlashN;\nvarying vec3 vFlashV;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvFlashN = normalMatrix * normal;\nvFlashV = -mvPosition.xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vFlashN;\nvarying vec3 vFlashV;')
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.a *= pow(abs(dot(normalize(vFlashN), normalize(vFlashV))), 1.6);');
+  };
+  flashMat.customProgramCacheKey = () => 'engine-tea-teb-flash';
   const flash = new THREE.Mesh(flashGeo, flashMat);
   flash.renderOrder = 6;
   group.add(flash);
@@ -126,7 +144,7 @@ export function buildGlow(d: Design, segs: number) {
   for (const m of [wall, core, ggGlow, flash, mouth]) m.visible = false;
 
   // TEA-TEB green, scaled up against the warm vertex tint of the gas glow (red > green > blue)
-  const green = new THREE.Color(0.5, 2.3, 1.1);
+  const green = new THREE.Color(0.15, 2.2, 1.6);
   const white = new THREE.Color(1, 1, 1);
   return {
     group,

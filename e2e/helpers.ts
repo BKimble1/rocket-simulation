@@ -39,3 +39,8 @@ export async function frames(page: Page, k = 2, timeout = 120_000) {
   const n0 = await page.evaluate(() => (window as unknown as { __rocketFrame: { n: number } }).__rocketFrame.n);
   await page.waitForFunction((n) => (window as unknown as { __rocketFrame: { n: number } }).__rocketFrame.n >= n, n0 + k, { timeout });
 }
+
+/** The mission player's own time (exact, independent of rendered frames). */
+export async function playerTime(page: Page): Promise<number> {
+  return page.evaluate(() => (window as unknown as { __rocketPlayback: { player: { missionTime: number } } }).__rocketPlayback.player.missionTime);
+}

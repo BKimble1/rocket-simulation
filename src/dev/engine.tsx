@@ -3,7 +3,8 @@
  * room environment) with the E-1 and E-1V on display stands, or seven cluster-detail E-1s in
  * the booster layout.
  *
- * URL: kind=E-1|E-1V|both, detail=hangar|flight|cluster, cut=0..1 (anim=1 loops the cut),
+ * URL: kind=E-1|E-1V|both, detail=hangar|flight|cluster (cluster: seven E-1s in the booster
+ * layout, or one E-1V with kind=E-1V), stand=0 (no display stands), cut=0..1 (anim=1 loops the cut),
  * flow=0|1 (flow overlay), run=0..1 (propellant flow: valves, glow), spin=<rpm shown>,
  * pitch=, yaw= (deg; tvc=1 sweeps them), gg=1, ignite=0..1, thermal=1 (thermal lens). Camera: the
  * parameters of dev/index.tsx, each overriding its part of the harness's own engine framing.
@@ -95,7 +96,7 @@ export default function Dev() {
   // land after this component mounts, so the harness re-applies its framing whenever the goal
   // drifts from it, until the viewer takes the camera.
   const framing = useMemo(() => {
-    const [az, el, dist, tx, ty] = detail === 'cluster' ? [30, 16, 8.5, 0, 1.9] : kind === 'both' ? [22, 7, 12.5, 0.1, 3.3] : kind === 'E-1V' ? [24, 6, 12, 0, 3.4] : [26, 8, 5.4, 0, 1.55];
+    const [az, el, dist, tx, ty] = detail === 'cluster' && kind !== 'E-1V' ? [30, 16, 8.5, 0, 1.9] : kind === 'both' ? [22, 7, 12.5, 0.1, 3.3] : kind === 'E-1V' ? [24, 6, 12, 0, 3.4] : [26, 8, 5.4, 0, 1.55];
     return { az: num('az', az), el: num('el', el), dist: num('dist', dist), tx: num('tx', tx), ty: num('ty', ty), tz: num('tz', 0), fov: num('fov', 36) };
   }, [kind, detail]);
   const touched = useMemo(() => ({ v: false }), []);
@@ -128,7 +129,7 @@ export default function Dev() {
         if (m.isMesh) m.castShadow = m.receiveShadow = true;
       });
       group.add(e.root);
-      if (withStand) {
+      if (withStand && q.get('stand') !== '0') {
         const s = stand(py, e.exitRadius + 0.35, engineDesign(k).topY);
         s.position.set(x, 0, z);
         group.add(s);
@@ -136,7 +137,10 @@ export default function Dev() {
       engines.push(e);
       return e;
     };
-    if (detail === 'cluster') {
+    if (detail === 'cluster' && kind === 'E-1V') {
+      // the upper stage's light E-1V (the flight scene uses this detail), alone on a stand
+      add('E-1V', 0, 0, true);
+    } else if (detail === 'cluster') {
       // seven engines in the booster layout under a plain thrust plate
       const py = CLEAR - engineDesign('E-1').exitY;
       // outer engines turn their powerheads (+X) outward, as on the booster

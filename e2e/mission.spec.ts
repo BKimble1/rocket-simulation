@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { bodies, frames, missionTime, waitForLocation, watchErrors, withHooks } from './helpers';
+import { bodies, frames, missionTime, playerTime, waitForLocation, watchErrors, withHooks } from './helpers';
 
 test('satellite walkthrough: start, inspect the engine, return to the same point, switch cameras, finish, replay', async ({ page }) => {
   const errors = watchErrors(page);
@@ -13,14 +13,18 @@ test('satellite walkthrough: start, inspect the engine, return to the same point
   await page.getByRole('button', { name: 'Chapters' }).click();
   await page.getByRole('button', { name: /Stage separation/ }).first().click();
   await expect(page.getByRole('heading', { name: 'Stage separation' })).toBeVisible();
-  const before = await missionTime(page);
+  // pause first so the comparison is exact (a playing mission resumes on return)
+  const pause = page.getByRole('button', { name: 'Pause mission' });
+  if (await pause.count()) await pause.click();
   // inspect a part from the phase card: the mission pauses and says so
   await page.getByRole('complementary', { name: 'What is happening' }).getByRole('button').filter({ hasText: /Stage separation|Interstage|E-1V/ }).first().click();
   await waitForLocation(page, 'hangar');
   await expect(page.getByText(/Mission paused at/)).toBeVisible();
+  const paused = await playerTime(page);
   await page.getByRole('button', { name: /Return to mission/ }).click();
   await waitForLocation(page, 'flight');
-  expect(Math.abs((await missionTime(page)) - before)).toBeLessThan(0.05);
+  // the same moment, exactly (the player is paused on return)
+  expect(Math.abs((await playerTime(page)) - paused)).toBeLessThan(0.001);
   // cameras
   for (const c of ['Ground', 'Chase', 'Onboard', 'Free', 'Map', 'Auto']) await page.getByRole('radio', { name: c, exact: true }).click();
   // finish: jump to the last chapter and play

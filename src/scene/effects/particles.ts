@@ -618,12 +618,13 @@ const WATER: Species = {
     windWorld(ts, 10, rec.wind).multiplyScalar(0.4);
     rec.dieBelow = cannon ? 0.6 : j.pos[1] - 3.5;
     rec.floor = -1e9;
-    rec.size0 = (cannon ? 0.35 : 0.25) * ctx.sizeK;
-    rec.size1 = (cannon ? 2.2 + 1.4 * rnd(5) : 1.2 + 0.8 * rnd(5)) * ctx.sizeK;
+    rec.size0 = (cannon ? 0.4 : 0.25) * ctx.sizeK;
+    rec.size1 = (cannon ? 2.6 + 1.6 * rnd(5) : 1.3 + 0.9 * rnd(5)) * ctx.sizeK;
     rec.tauS = 1.1;
     rec.sizeLin = 0;
     rec.life = 2.9;
-    rec.alpha0 = Math.min(1, (cannon ? 0.3 : 0.26) * ctx.alphaK);
+    // a solid jet of water breaking up into spray: white and dense near the muzzle
+    rec.alpha0 = Math.min(1, (cannon ? 0.5 : 0.36) * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.05;
     rec.fadeOut = 0.8;

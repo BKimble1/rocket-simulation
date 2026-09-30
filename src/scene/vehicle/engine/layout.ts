@@ -127,9 +127,9 @@ export function routes(d: Design): Routes {
   ];
   const ym = d.y(d.manifoldX);
   const manifoldR = d.manifoldR;
-  // the line drops onto an inlet boss on the upper outer quadrant of the torus
+  // the line drops onto an inlet boss on top of the torus (a little outboard of its centre line)
   const lineR = Math.min(manifoldR + 0.012, LINE_R_MAX);
-  const manifoldIn = v(-lineR, ym + 0.022, 0);
+  const manifoldIn = v(-Math.min(manifoldR + 0.004, LINE_R_MAX), ym + 0.022, 0);
   const fuelDown: THREE.Vector3[] = [mfvOut.clone()];
   const standoff = TP.fuelLineR + 0.008;
   for (let y = mfvOut.y - 0.12; y > ym + 0.16; y -= 0.1) {
@@ -161,7 +161,7 @@ export function routes(d: Design): Routes {
 
   // igniter cartridge (TEA-TEB) at the back, lines to the injector and to the gas generator
   const igniter = v(-0.2, -0.66, -0.3);
-  const igniterToInjector = [igniter.clone().add(v(0, 0.09, 0)), v(-0.12, -0.5, -0.31), v(-0.05, -0.34, d.domeR * -1 - 0.03), v(0, -0.308, -(d.domeR + 0.012))];
+  const igniterToInjector = [igniter.clone().add(v(0, 0.09, 0)), v(-0.12, -0.5, -0.28), v(-0.05, -0.34, d.domeR * -1 - 0.03), v(0, -0.308, -(d.domeR + 0.012))];
   const igniterToGG = [igniter.clone().add(v(0, -0.1, 0)), v(-0.16, -0.97, -0.26), v(0.2, -0.97, -0.2), v(x, -0.97, -0.04), v(x, TP.ggBottom - 0.004, 0)];
 
   // helium pressurant: heat-exchanger coil outlet and inlet up to a union below the stage
@@ -174,12 +174,16 @@ export function routes(d: Design): Routes {
 
   // harness: a junction box on the dome back, branches to the sensors and valve actuators
   const junction = v(-0.06, -0.16, -0.235);
+  // (the branches run between the dome and the LOX discharge loop, above the dome flange bolts,
+  // then outboard of the injector flanges (the GG branch also outboard of the fuel discharge
+  // before it turns in under it): no line passes
+  // through another; zz-clear.test.ts checks it)
   const harness = [
-    [junction.clone(), v(0.12, -0.15, -0.26), v(0.3, -0.2, -0.11), v(x - 0.066, -0.235, -0.03)], // turbopump speed pickup
+    [junction.clone(), v(0.1, -0.2, -0.245), v(0.2, -0.2, -0.185), v(0.3, -0.215, -0.1), v(x - 0.066, -0.235, -0.03)], // turbopump speed pickup
     [junction.clone(), v(-0.06, -0.3, -0.28), v(-0.08, -0.47, -0.25)], // chamber pressure
     [junction.clone(), v(-0.22, -0.1, -0.2), v(mov.x, -0.06, -0.08)], // MOV actuator
-    [junction.clone(), v(-0.25, -0.3, -0.3), v(-0.38, -0.5, -0.2), v(mfv.x, mfv.y, -0.11)], // MFV actuator
-    [junction.clone(), v(0.18, -0.35, -0.3), v(0.26, -0.7, -0.2), v(x - 0.05, -0.76, -0.035)], // GG
+    [junction.clone(), v(-0.16, -0.2, -0.2), v(-0.24, -0.21, -0.16), v(-0.27, -0.3, -0.14), v(-0.28, -0.5, -0.15), v(mfv.x, mfv.y, -0.11)], // MFV actuator
+    [junction.clone(), v(0.1, -0.2, -0.245), v(0.22, -0.26, -0.27), v(0.26, -0.45, -0.28), v(0.2, -0.6, -0.19), v(0.3, -0.72, -0.05), v(x - 0.05, -0.745, -0.035)], // GG
   ];
 
   return {
