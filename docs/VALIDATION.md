@@ -68,6 +68,18 @@ before/after numbers are in [`V2_AUDIT.md`](V2_AUDIT.md). Summary of what was ch
   the frame interval is the rasteriser's. First frames of a mission arrive 60 to 85 s after
   the page is opened on this machine (shader compilation in SwiftShader's JIT dominates).
 
+- **Proof clips** (`docs/recordings/v2/`, `scripts/record-proof.mjs` with the specs in
+  `scripts/proof/`; virtual clock, so they prove continuity and framing, not smoothness; each
+  has a contact sheet and a JSON with the camera trace): the launch from T-6 s past the tower
+  in one held framing; staging at 2x through cutoff, separation and upper-stage ignition;
+  showing a part from the phase card at T+2:33 and returning to the same moment and camera;
+  payload separation in Earth's shadow; the booster's landing burn, legs and touchdown. Two
+  side-by-sides with V1 at the same mission times: `compare-launch.mp4` (V1's pad camera crops
+  the vehicle and its cloud fills the lens) and `compare-landing.mp4` (V1, and V2 before this
+  pass, played the landing at x40, so the camera was already back on the upper stage). The
+  clips found two defects fixed in this pass (the landing's rate, and the inspection chip
+  covering the lesson title; `V2_AUDIT.md`).
+
 What was not possible here, and is not claimed: any frame rate on a GPU, a phone or a tablet.
 The virtual-clock recordings prove continuity and framing, not real-time smoothness; wall-clock
 frame intervals on this machine are SwiftShader's (a CPU rasteriser) and are reported only as

@@ -1,12 +1,22 @@
 {
   "name": "v2-orbit-deployment",
-  "about": "Payload separation in Earth's shadow, with the labelled inspection light (mission played at 2x).",
+  "about": "Payload separation in Earth's shadow (T+3328 s), lit by the inspection light (its on-screen label is hidden here with the interface), and the satellite drifting clear; mission played at 2x from T+3325 s.",
   "url": "/?v=mission&m=leo&ui=0",
-  "width": 640, "height": 360, "frames": 240,
+  "width": 640,
+  "height": 360,
+  "frames": 360,
   "setup": [
-    { "until": "window.__rocketFrame.location === 'flight'" },
-    { "eval": "window.__rocketPlayback.player.pause(); window.__rocketSeekMission(3318); window.__rocketPlayback.player.setRate(2)" },
-    { "advance": 30 },
-    { "eval": "window.__rocketPlayback.player.play()" }
+    {
+      "until": "window.__rocketFrame.location === 'flight'"
+    },
+    {
+      "eval": "window.__rocketPlayback.player.pause(); window.__rocketSeekMission(3325); window.__rocketPlayback.player.setRate(2)"
+    },
+    {
+      "advance": 30
+    },
+    {
+      "eval": "window.__rocketPlayback.player.play()"
+    }
   ]
 }
