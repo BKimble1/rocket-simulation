@@ -31,7 +31,7 @@ for (const st of JSON.parse(setupJson)) {
 const canvas = page.locator('canvas').first();
 for (let i = 0; i < +frames; i++) {
   await adv(1);
-  await page.screenshot({ path: join(tmp, `f${String(i).padStart(5, '0')}.png`) });
+  await page.screenshot({ path: join(tmp, `f${String(i).padStart(5, '0')}.png`), timeout: 300000 });
 }
 await browser.close();
 const ff = execFileSync('python3', ['-c', 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())']).toString().trim();
