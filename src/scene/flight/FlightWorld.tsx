@@ -283,19 +283,23 @@ const VS: VehicleVisualState = {
 };
 
 /**
- * Docking floodlights, as real crew vehicles and stations carry for night-side approaches: a
- * spotlight on the capsule's docking system along its docking axis and one at the station port
- * looking down the approach corridor. They fade in only when the two are within a few kilometres
- * and out of sunlight (only mounted on missions with a station, so other scenes pay nothing).
+ * Docking floodlights, as real crew vehicles and stations carry for night-side approaches. Each
+ * is mounted off the docking axis (on the axis they sit almost on top of each other at contact and
+ * light only a few centimetres): one on the station a few metres beside the port, aimed down the
+ * approach corridor at the arriving capsule, and one on the capsule's nose beside the docking
+ * system, aimed up at the port. Intensities are in the scene's light units (candela, inverse-square
+ * falloff), so at the working distances of the final approach they give about the irradiance of
+ * sunlight. They fade in only when the two are within a few kilometres and out of sunlight (and are
+ * only mounted on missions with a station, so other scenes pay nothing).
  */
 function DockingLights({ vehicle, station }: { vehicle: VehicleModel; station: SpacecraftModel }) {
   const lights = useMemo(() => {
-    const make = () => {
-      const l = new THREE.SpotLight('#fff3e2', 0, 120, 0.5, 0.6, 2);
+    const make = (angle: number) => {
+      const l = new THREE.SpotLight('#fff3e2', 0, 60, angle, 0.5, 2);
       l.castShadow = false;
       return l;
     };
-    return { cap: make(), st: make() };
+    return { cap: make(0.75), st: make(0.6) };
   }, []);
   useEffect(() => {
     const cap = vehicle.bodies.capsule;
@@ -303,15 +307,20 @@ function DockingLights({ vehicle, station }: { vehicle: VehicleModel; station: S
     const st = station.bodies.station;
     const sd = station.anchors.dockPort;
     const added: THREE.Object3D[] = [];
+    const side = (axis: THREE.Vector3) => {
+      const v = new THREE.Vector3().crossVectors(axis, new THREE.Vector3(0, 0, 1));
+      if (v.lengthSq() < 1e-6) v.set(1, 0, 0);
+      return v.normalize();
+    };
     if (cap && cd) {
-      lights.cap.position.copy(cd.pos);
-      lights.cap.target.position.copy(cd.pos).addScaledVector(cd.axis, 20);
+      lights.cap.position.copy(cd.pos).addScaledVector(cd.axis, -0.4).addScaledVector(side(cd.axis), 1.1);
+      lights.cap.target.position.copy(cd.pos).addScaledVector(cd.axis, 8);
       cap.add(lights.cap, lights.cap.target);
       added.push(lights.cap, lights.cap.target);
     }
     if (st && sd) {
-      lights.st.position.copy(sd.pos).addScaledVector(sd.axis, 1.5);
-      lights.st.target.position.copy(sd.pos).addScaledVector(sd.axis, 20);
+      lights.st.position.copy(sd.pos).addScaledVector(sd.axis, 1).addScaledVector(side(sd.axis), 3.5);
+      lights.st.target.position.copy(sd.pos).addScaledVector(sd.axis, 9);
       st.add(lights.st, lights.st.target);
       added.push(lights.st, lights.st.target);
     }
@@ -323,8 +332,8 @@ function DockingLights({ vehicle, station }: { vehicle: VehicleModel; station: S
     const near = a.present && b.present ? a.pos.distanceTo(b.pos) < 3000 : false;
     const dark = 1 - Math.min(1, Math.max(0, skyState.sunIntensity / 0.6));
     const k = near ? dark : 0;
-    lights.cap.intensity = 9000 * k;
-    lights.st.intensity = 6000 * k;
+    lights.cap.intensity = 45 * k;
+    lights.st.intensity = 160 * k;
   }, 0);
   return null;
 }

@@ -41,6 +41,8 @@ const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
 const vSun = new THREE.Vector3();
+const vA = new THREE.Vector3();
+const vB = new THREE.Vector3();
 const q1 = new THREE.Quaternion();
 
 export interface Basis {
@@ -169,6 +171,15 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
         }
       }
       out.fov = P.fov ?? fitFov(size.half * (P.frame ?? 1.1), d, ctx.aspect, 1.25);
+      if (kind === 'approach' && P.fov === undefined) {
+        // the aim point lies between the chaser and its target: widen the view until the chaser
+        // (its angle off the aim, plus its own angular size) fits, on the narrower screen axis
+        vA.subVectors(centre, out.pos);
+        vB.subVectors(out.target, out.pos);
+        const reach = vA.angleTo(vB) + Math.atan(size.half / Math.max(1, vA.length()));
+        const need = 2 * Math.atan((Math.tan(Math.min(reach, 1.3)) * 1.2) / Math.min(1, ctx.aspect));
+        out.fov = clamp(Math.max(out.fov, THREE.MathUtils.radToDeg(need)), 1, 70);
+      }
       if (kind === 'orbit' || shot.also === 'earth') {
         // aim a little below the subject so the Earth fills the lower part of the frame; the
         // offset is a share of the half field of view, so the subject always stays in frame

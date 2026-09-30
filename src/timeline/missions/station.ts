@@ -342,7 +342,7 @@ export function buildStation(): MissionTimeline {
       shot('orbit', pb2.end + 20, tH + 600, 'capsule', 'earth', { d: 40 }),
       shot('approach', tH + 600, tHold1 + H1, 'capsule', 'station', { d: 60, az: 180, el: -30, mix: 0.3 }),
       shot('approach', tHold1 + H1, tFinalStart, 'capsule', 'station', { d: 40, az: 90, el: -10, mix: 0.5 }),
-      shot('approach', tFinalStart, end, 'capsule', 'station', { d: 25, az: 80, el: 0, mix: 0.6 }),
+      shot('approach', tFinalStart, end, 'capsule', 'station', { d: 25, az: 80, el: 0, mix: 0.45 }),
     ],
     START,
     end,
