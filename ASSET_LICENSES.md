@@ -14,6 +14,7 @@ star maps contain no marks).
 | Livery and decal textures | generated at runtime from `src/brand/logoPaths.ts` | Painted onto canvases in the browser. |
 | Procedural material maps (brushed metal, weave, crinkle, noise) | `src/scene/materials.ts` | Generated at runtime. |
 | Sound effects | `src/audio/engine.ts` | Synthesized with the Web Audio API at runtime; no recordings. |
+| Hub card poster and preview clip | `public/og/poster.jpg`, `preview.mp4`, `preview.jpg` | Rendered from this application by `scripts/hub-card.mjs`. |
 | Narration audio | `public/narration/<version>/*.mp3` | Generated offline from the project's own script (`src/content/narration.json`) by the Kokoro-82M text-to-speech model (see below). |
 
 ## Third-party imagery (all public domain)
@@ -25,6 +26,7 @@ star maps contain no marks).
 | `public/textures/earth/night_2048.jpg` | Black Marble 2012 (Earth at night) | NASA Earth Observatory / NOAA NGDC (Suomi NPP VIIRS) | Public domain | `@nasaworldwind/worldwind@0.11.1` on npm, file `build/dist/images/dnb_land_ocean_ice_2012.png` | Re-encoded JPEG |
 | `public/textures/moon/lroc_4096.jpg`, `lroc_2048.jpg` | LRO LROC WAC Global Mosaic 100 m (June 2013) | NASA / GSFC / Arizona State University; hosted by USGS Astrogeology | Public domain | `asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif` (read by HTTP range requests) | Row-sampled and box-filtered to 4096 x 2048, JPEG |
 | `public/textures/sky/tycho_2880.jpg` | Tycho Star Map | NASA (NASA 3D Resources) | Public domain; NASA usage guidelines apply (no endorsement implied, no NASA insignia used) | `github.com/nasa/NASA-3D-Resources`, `Images and Textures/Tycho Star Map/` | Re-encoded JPEG |
+| `public/textures/site/coast_sdf.png`, `cover.png`, `src/scene/environment/generated/regionalMap.ts` | Natural Earth 1:10m physical vectors (land, lakes, river centre lines) | Natural Earth (naturalearthdata.com) | Public domain | `naturalearth.s3.amazonaws.com/10m_physical/` | Projected onto the pad's tangent plane and baked into a coast distance field and land-cover map by `tools/site/bake_site.py`; the coast is displaced near the illustrative pad so the local layout of `src/world/site.ts` holds, with added illustrative detail (fractal shorelines, a port channel, spoil islands, two lakes). Not a survey of any real launch complex. |
 
 Regeneration: `tools/textures/README.md`. NASA material is used under NASA's media usage
 guidelines: no NASA insignia, logotype or seal appears anywhere, and nothing states or implies
