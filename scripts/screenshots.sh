@@ -32,7 +32,7 @@ shot desktop-mission-orbit       "${BASE}?v=mission&m=leo&hooks=1"              
 shot desktop-mission-landing     "${BASE}?v=mission&m=leo&focus=booster&hooks=1"                   1440 900 40 "$(seek 484)"
 shot desktop-mission-docking     "${BASE}?v=mission&m=station&hooks=1"                             1440 900 40 "$(seek 30120)"
 shot desktop-mission-entry       "${BASE}?v=mission&m=return&hooks=1"                              1440 900 40 "$(seek 84870)"
-shot desktop-mission-lunar       "${BASE}?v=mission&m=lunar&hooks=1"                               1440 900 40 "$(seek 239170)"
+shot desktop-mission-lunar       "${BASE}?v=mission&m=lunar&hooks=1"                               1440 900 40 "$(seek 237600)"
 shot desktop-map                 "${BASE}?v=mission&m=gto&cam=map&hooks=1"                         1440 900 40 "$(seek 15000)"
 shot phone-home                  "${BASE}"                                                         390 844 90
 shot phone-explore-lesson        "${BASE}?v=explore&part=injector&view=cutaway"                    390 844 120

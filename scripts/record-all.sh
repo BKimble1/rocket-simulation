@@ -27,7 +27,7 @@ if [[ "$MODE" == virtual || "$MODE" == all ]]; then
   v booster-landing      "${BASE}?v=mission&m=leo&focus=booster&ui=0" 240 "$(seek 479)"
   v station-docking      "${BASE}?v=mission&m=station&ui=0" 180 "$(seek 30110)"
   v capsule-entry        "${BASE}?v=mission&m=return&ui=0" 180 "$(seek 84840)"
-  v lunar-encounter      "${BASE}?v=mission&m=lunar&ui=0" 180 "$(seek 239120)"
+  v lunar-encounter      "${BASE}?v=mission&m=lunar&ui=0" 180 "$(seek 237600)"
   v hangar-exterior      "${BASE}?ui=0" 180 '[]'
   v engine-cutaway       "${BASE}?v=explore&part=turbopump&view=cutaway&ui=0" 180 '[{"advance":60}]'
 fi

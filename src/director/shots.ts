@@ -223,11 +223,13 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
       const d = P.d ?? 60;
       orbitAround(d, P.az ?? 150, P.el ?? 10, B);
       moonPosition(t, frame.tl?.moonPhase0 ?? 0, v2);
-      // look past the spacecraft toward the Moon from the sunlit side, so both the probe and the
-      // Moon's day side are lit (from straight behind, the probe was a silhouette on the night side)
+      // look past the spacecraft at the Moon, tilted toward its sunlit side: on the approach the
+      // Moon reads half lit with the probe lit from the side; at closest approach, over the night
+      // side, the lit part is the crescent nearest the Sun and the probe is partly backlit
       v3.subVectors(v2, centre).normalize();
-      vSun.copy(v3).multiplyScalar(-0.6).addScaledVector(SUN_DIRECTION, 0.8).normalize();
-      out.pos.copy(centre).addScaledVector(vSun, d).addScaledVector(B.up, d * 0.15);
+      vSun.copy(SUN_DIRECTION).addScaledVector(v3, -SUN_DIRECTION.dot(v3));
+      if (vSun.lengthSq() > 1e-6) v3.addScaledVector(vSun.normalize(), Math.tan(THREE.MathUtils.degToRad(15))).normalize();
+      out.pos.copy(centre).addScaledVector(v3, -d).addScaledVector(B.up, d * 0.15);
       out.target.copy(centre).addScaledVector(v3, d * 0.4);
       out.fov = P.fov ?? 45;
       return true;
