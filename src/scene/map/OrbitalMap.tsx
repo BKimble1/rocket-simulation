@@ -16,7 +16,10 @@ import { bodyAt, makeBodyState } from '../../timeline/sample';
 
 const COLORS: Partial<Record<BodyId, string>> = { booster: '#e0662f', upper: '#6a5af9', satellite: '#16875a', capsule: '#c28a12', service: '#8a7f6a', station: '#2f7fe0' };
 
-const orbit = { az: 30, el: 25, dist: 5.5 };
+/** az / el (deg) around the Earth; zoom multiplies the automatic distance (user control). */
+const orbit = { az: 30, el: 25, zoom: 1 };
+const FOV = 40;
+const TAN = Math.tan(((FOV / 2) * Math.PI) / 180);
 
 export function OrbitalMap() {
   const { scene } = useThree();
@@ -78,16 +81,22 @@ export function OrbitalMap() {
     const inp = director.input;
     orbit.az -= inp.dx * 0.25;
     orbit.el = Math.max(-80, Math.min(85, orbit.el + inp.dy * 0.2));
-    orbit.dist = Math.max(1.6, Math.min(tl?.id === 'lunar' ? 140 : 14, orbit.dist * Math.exp(inp.zoom * 0.0015)));
+    orbit.zoom = Math.max(0.35, Math.min(3, orbit.zoom * Math.exp(inp.zoom * 0.0015)));
+    // automatic distance: the whole Earth plus the followed craft, however high it has climbed
+    // (a continuous function of mission time, so the map zooms out smoothly as the craft rises)
+    const track = tl?.bodies[director.focus];
+    const craft = track ? bodyAt(track, frame.missionTime, tmpState) : null;
+    const reach = craft?.present ? craft.pos.length() / R_EARTH : 1;
+    const dist = Math.max(1.6, Math.max(3.2, (reach * 1.25) / TAN) * orbit.zoom);
     const a = (orbit.az * Math.PI) / 180;
     const e = (orbit.el * Math.PI) / 180;
     const p = director.mapPose;
-    p.pos.set(Math.sin(a) * Math.cos(e) * orbit.dist, Math.sin(e) * orbit.dist, Math.cos(a) * Math.cos(e) * orbit.dist);
+    p.pos.set(Math.sin(a) * Math.cos(e) * dist, Math.sin(e) * dist, Math.cos(a) * Math.cos(e) * dist);
     p.target.set(0, 0, 0);
     p.up.set(0, 1, 0);
-    p.fov = 40;
+    p.fov = FOV;
     if (!tl) return;
-    const scale = orbit.dist * 0.012;
+    const scale = dist * 0.012;
     for (const [id, mesh] of Object.entries(icons) as [BodyId, THREE.Mesh][]) {
       const tr = tl.bodies[id];
       if (!tr) {
