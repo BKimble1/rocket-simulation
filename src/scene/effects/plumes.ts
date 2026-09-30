@@ -34,8 +34,10 @@ const COL = {
   balloonRim: C(1.0, 0.46, 0.26),
   vacCore: C(1.0, 0.55, 0.26),
   vacRim: C(0.42, 0.52, 1.0),
-  hypCore: C(1.0, 0.5, 0.42),
-  hypRim: C(1.0, 0.44, 0.52),
+  // (faint emission of a saturated orange over black space reads as a brown smudge: the
+  // hypergolic plume is pale, so its colours are desaturated)
+  hypCore: C(1.0, 0.74, 0.6),
+  hypRim: C(1.0, 0.68, 0.74),
   solidCore: C(1.0, 0.8, 0.55),
   solidA: C(1.0, 0.62, 0.26),
   solidB: C(1.0, 0.34, 0.08),

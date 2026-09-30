@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { ParticleSystem, type Particle } from './particles';
+import { Group, ParticleSystem, type Particle } from './particles';
 import { copyEmitter, buildClusters, SnapshotCache, type ClusterSnap, type EmitterSnap, type Snapshot } from './snapshot';
 import { MAX_VOLUMES, PlumeSet } from './plumes';
 import { TRENCH_DIR } from './pad';
 import { siteFrameQuaternion, sitePosition } from '../../world/frames';
-import type { Emitter } from './input';
+import type { Emitter, EffectsSource } from './input';
+import { R_EARTH } from '../../world/frames';
 import { SyntheticSource } from './synthetic';
 import { EXIT_PRESSURE, columnShape, makeColumnShape, pressureRatioAmb } from './physics';
 import { stdPressure } from './synthetic';
@@ -106,6 +107,34 @@ describe('stateless effects particles', () => {
       }
       expect(white / ground.length).toBeGreaterThan(0.7);
     }
+  });
+
+  it('keeps attitude thrusters quiet on the pad and while a first stage fires beside them', () => {
+    const up = new THREE.Vector3(0, 1, 0);
+    const source = (engine: boolean, alt: number): EffectsSource => ({
+      emittersAt(_t, out) {
+        out.length = 0;
+        const p = new THREE.Vector3(0, R_EARTH + alt, 0);
+        const air = new THREE.Vector3(0, 300, 0);
+        if (engine) out.push({ id: 'e0', kind: 'kerolox-sl', pos: p.clone(), dir: up.clone().negate(), exitRadius: 0.534, throttle: 1, ambientPressure: stdPressure(alt), altitude: alt, airVel: air, sinceIgnition: 20 });
+        out.push({ id: 'rcs', kind: 'cold-gas', pos: p.clone().addScaledVector(up, 45).add(new THREE.Vector3(1.85, 0, 0)), dir: new THREE.Vector3(1, 0, 0), exitRadius: 0.04, throttle: 1, ambientPressure: stdPressure(alt + 45), altitude: alt + 45, airVel: air, sinceIgnition: 0 });
+        return out;
+      },
+      plasmaAt: (_t, out) => ((out.length = 0), out),
+      padAt: (_t, out) => Object.assign(out, { venting: 0, deluge: 0, holddown: 0, arms: 0 }),
+      groundBlastStart: null,
+      groundBlastEnd: null,
+    });
+    const puffs = (src: EffectsSource) => {
+      const sys = new ParticleSystem(1);
+      sys.setSource(src);
+      sys.update(10, 0);
+      return sys.out.slice(0, sys.count).filter((p) => p.group === Group.Puff).length;
+    };
+    // a coasting stage at 20 km puffs; the same thruster beside a firing first stage, or on the pad, does not
+    expect(puffs(source(false, 20000))).toBeGreaterThan(5);
+    expect(puffs(source(true, 20000))).toBe(0);
+    expect(puffs(source(false, 40))).toBe(0);
   });
 
   it('diffuses the edges of old cloud puffs only', () => {

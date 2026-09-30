@@ -43,6 +43,16 @@ function markFlightReady() {
 
 const OMEGA = EARTH_AXIS.clone().multiplyScalar(OMEGA_EARTH);
 
+/**
+ * Spacecraft attitude control fires in short pulses, not continuously: while an attitude
+ * channel is active, each thruster fires for about 0.4 s every 2.2 s, staggered between
+ * thrusters (a pure function of mission time, so seeking reproduces it).
+ */
+function pulse(t: number, i: number): boolean {
+  const x = (((t * 0.45 + i * 0.618) % 1) + 1) % 1;
+  return x < 0.18;
+}
+
 /** Mission times at which a throttle channel lights (0 → >0), for start transients. */
 function ignitions(tl: MissionTimeline, id: ChannelId): number[] {
   const ch = tl.channels[id];
@@ -159,6 +169,7 @@ function makeEffectsSource(tl: MissionTimeline, v: VehicleModel): EffectsSource 
         const rcs = chan(tl, 'sat.rcs', t);
         if (rcs > 0.05)
           for (const [i, p] of v.anchors.satRcs.entries()) {
+            if (!pulse(t, i)) continue;
             const e = next();
             fill(e, sat, p, 'cold-gas', 0.02, rcs, 0, `sat:rcs${i}`, tmp.set(p.x, 0, p.z).normalize().clone());
             out.push(e);
@@ -169,6 +180,7 @@ function makeEffectsSource(tl: MissionTimeline, v: VehicleModel): EffectsSource 
         const rcs = chan(tl, 'sm.rcs', t);
         if (rcs > 0.05)
           for (const [i, p] of v.anchors.smRcs.entries()) {
+            if (!pulse(t, i)) continue;
             const e = next();
             fill(e, smR, p, 'hypergolic', 0.025, rcs, 0, `sm:rcs${i}`, tmp.set(p.x, 0, p.z).normalize().clone());
             out.push(e);
@@ -188,6 +200,7 @@ function makeEffectsSource(tl: MissionTimeline, v: VehicleModel): EffectsSource 
         const rcs = chan(tl, 'cap.rcs', t);
         if (rcs > 0.05)
           for (const [i, p] of v.anchors.capsuleRcs.entries()) {
+            if (!pulse(t, i)) continue;
             const e = next();
             fill(e, cap, p, 'hypergolic', 0.03, rcs, 0, `cap:rcs${i}`, tmp.set(p.x, 0, p.z).normalize().clone());
             out.push(e);

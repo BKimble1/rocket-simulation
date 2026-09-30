@@ -280,14 +280,22 @@ void main() {
   float ru = length(uv);
   // an old, diffuse puff: its outline fades out gradually instead of ending at the lobe rims
   float dens = tx.r * mix(1.0, 1.0 - smoothstep(0.15, 0.95, ru), soft);
+  // a long streak takes a smooth rounded profile across it: the tile's billows have a flat
+  // top and a crisp rim, which along a streak would draw straight hard sides (a box)
+  float sk = smoothstep(0.3, 1.5, vCap);
+  float gs = 1.0 - smoothstep(0.0, 1.0, ru);
+  dens = mix(dens, gs * (0.75 + 0.25 * tx.r), sk);
   // a distant sprite samples the coarse mip levels, where the tiles bleed into each other and
   // the density no longer reaches zero at the quad's edge: window it so no square outline shows
   dens *= 1.0 - smoothstep(0.78, 1.0, ru);
   float a = dens * vAlb.a * vFade;
-  vec3 emitT = vEmit.rgb * dens * dens * vFade;
+  vec2 nt = tx.gb * 2.0 - 1.0;
+  // glowing gas burns brightest in the thick middle of each lobe and dims into the creases
+  // between them (a uniform glow reads as a flat orange disc, not as fire)
+  float lobe = 1.0 - dot(nt, nt);
+  vec3 emitT = vEmit.rgb * dens * dens * vFade * (0.2 + 0.8 * lobe * lobe);
   if (a < 0.002 && dot(emitT, vec3(1.0)) < 0.002) discard;
   // tile-space normal rotated into view space
-  vec2 nt = tx.gb * 2.0 - 1.0;
   vec2 nxy = vRot * nt.x + vec2(-vRot.y, vRot.x) * nt.y;
   // thin media (gas puffs, vapour, spray) have no sharp lobes to shade: a flatter normal, or
   // a sunlit puff reads as dirty billowing smoke
