@@ -17,6 +17,7 @@ import { buildSpacecraft } from '../spacecraft/buildSpacecraft';
 import type { VehicleModel, VehicleVisualState } from '../vehicle/types';
 import type { SpacecraftModel } from '../spacecraft/types';
 import { frame, BODY_IDS } from '../frame';
+import { flightEpoch } from '../Stage';
 import { director } from '../../director/director';
 import { chan, bodyAt, makeBodyState, channelAt, type BodyState } from '../../timeline/sample';
 import type { ChannelId, MissionTimeline } from '../../timeline/types';
@@ -394,6 +395,7 @@ export function FlightWorld({ children }: { children?: ReactNode }) {
     }
     if (tl && vehicle) effects.source = makeEffectsSource(tl, vehicle);
     effects.seekEpoch++;
+    flightEpoch.value++;
     return () => {
       vehicle?.dispose();
       if (effects.source) effects.source = null;

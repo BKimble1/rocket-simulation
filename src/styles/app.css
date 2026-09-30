@@ -1202,6 +1202,9 @@ code {
   color: var(--accent-ink);
   font-weight: 600;
 }
+.note-chip--quiet {
+  opacity: 0.75;
+}
 .note-chip--warn {
   color: var(--warn);
 }

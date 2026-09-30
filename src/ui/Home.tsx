@@ -34,7 +34,7 @@ export function Home() {
             <span className="action__title">Explore the rocket</span>
             <span className="action__text">Rotate it, open cutaways, run the engine and the tanks, see materials.</span>
           </button>
-          <button className="action action--primary" onClick={() => openMissionAt('leo', null, true)}>
+          <button className="action action--primary" onClick={() => openMissionAt('leo', null, true, -22)}>
             <span className="action__title">
               Explore a mission <Icon.arrow size={16} />
             </span>

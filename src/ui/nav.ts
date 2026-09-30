@@ -1,5 +1,5 @@
 /** Cross-mode navigation helpers (inspect a part from a mission, open a mission at a phase). */
-import { useApp } from '../state/store';
+import { useApp, type CamMode } from '../state/store';
 import { loadMission, playback, seekPres } from '../state/playback';
 import { missionToPres } from '../timeline/sample';
 import type { MissionId } from '../timeline/types';
@@ -11,9 +11,10 @@ import { OUTLINES } from '../timeline/missions/outline';
 import { inConfig } from './explore/config';
 
 /** Open the Mission explorer at the start of a phase (paused, so the learner can look). */
-export function openMissionAt(mission: MissionId, phase: string | null, play = false) {
+export function openMissionAt(mission: MissionId, phase: string | null, play = false, startAt: number | null = null, view: { cam?: CamMode; focus?: 'main' | 'booster' } = {}) {
   const app = useApp.getState();
-  app.go('mission', { mission, inspect: null, part: null, cam: 'auto', focus: 'main' });
+  // a deep link's camera and storyline are kept; otherwise a mission opens guided, on the main story
+  app.go('mission', { mission, inspect: null, part: null, cam: view.cam ?? 'auto', focus: view.focus ?? 'main' });
   const tl = loadMission(mission);
   if (!tl) return;
   let start = tl.phases.find((p) => p.id === phase)?.start;
@@ -26,6 +27,9 @@ export function openMissionAt(mission: MissionId, phase: string | null, play = f
     }
   }
   routeExtras.chapter = phase;
+  // a quick start begins shortly before the action (the countdown's last seconds), not at the
+  // start of the lesson; every chapter stays one click away
+  if (start === undefined && startAt !== null) start = Math.max(tl.start, startAt);
   if (start !== undefined) seekPres(missionToPres(tl.pres, start) + 0.001);
   if (play) playback.player?.play();
 }

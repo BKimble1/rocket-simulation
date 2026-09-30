@@ -32,8 +32,11 @@ export interface TierSpec {
 
 export const TIERS: Record<Tier, TierSpec> = {
   high: { dprMax: 2, shadowMap: 2048, particles: 1, atmoSamples: [16, 6], cloudOctaves: 6, maxTexture: 8192, bloom: true, detail: 1 },
-  medium: { dprMax: 1.5, shadowMap: 1024, particles: 0.6, atmoSamples: [12, 4], cloudOctaves: 5, maxTexture: 4096, bloom: false, detail: 0.75 },
-  low: { dprMax: 1, shadowMap: 1024, particles: 0.35, atmoSamples: [8, 3], cloudOctaves: 4, maxTexture: 2048, bloom: false, detail: 0.5 },
+  medium: { dprMax: 1.5, shadowMap: 1024, particles: 0.6, atmoSamples: [12, 4], cloudOctaves: 5, maxTexture: 4096, bloom: false, detail: 0.7 },
+  // low is a genuinely lighter scene, not only fewer pixels: a quarter of high's shadow texels,
+  // a third of the particles and smoke overdraw, fewer ray-march and cloud samples, smaller maps,
+  // coarser terrain, a third of the vegetation, lighter site structures
+  low: { dprMax: 1, shadowMap: 512, particles: 0.35, atmoSamples: [8, 3], cloudOctaves: 4, maxTexture: 2048, bloom: false, detail: 0.35 },
 };
 
 const ORDER: Tier[] = ['low', 'medium', 'high'];

@@ -41,6 +41,9 @@ export const stageHooks = {
   afterRender: null as null | (() => void),
 };
 
+/** Bumped whenever the flight scene's models are rebuilt (a new mission): triggers a shader warm-up. */
+export const flightEpoch = { value: 0 };
+
 /** Set by the interface to show a notice while the WebGL context is lost. */
 export let onContextChange: null | ((lost: boolean) => void) = null;
 export function setContextListener(f: null | ((lost: boolean) => void)) {
@@ -104,6 +107,35 @@ export interface TraceRecord {
   dissolve: number;
 }
 export const cameraTrace: TraceRecord[] = [];
+
+/**
+ * Compile every material of a location's scene, including objects that are hidden now and shown
+ * later (plume and plasma volumes, parachutes, deployed legs, fins), so no shader compiles in the
+ * middle of the action. Uses the browser's parallel compilation where available.
+ */
+export const warm = { flight: '' as string, hangar: false, pending: false, ms: 0 };
+function prewarm(gl: THREE.WebGLRenderer, scene: THREE.Scene, cam: THREE.Camera): Promise<void> {
+  const hidden: THREE.Object3D[] = [];
+  scene.traverse((o) => {
+    if (!o.visible) {
+      hidden.push(o);
+      o.visible = true;
+    }
+  });
+  const t0 = performance.now();
+  let p: Promise<unknown>;
+  try {
+    p = typeof gl.compileAsync === 'function' ? gl.compileAsync(scene, cam) : Promise.resolve(gl.compile(scene, cam));
+  } finally {
+    for (const o of hidden) o.visible = false;
+  }
+  return p.then(
+    () => {
+      warm.ms = performance.now() - t0;
+    },
+    () => {},
+  );
+}
 
 /** A location can be entered: its scene is ready and, for flight, a mission is loaded. */
 function canEnter(loc: Location): boolean {
@@ -241,6 +273,13 @@ function Loop() {
 
   // 4. render (the director owns rendering: R3F's automatic render is off)
   useFrame(() => {
+    // compile a newly built flight scene (a mission's vehicle) before it is shown or launched
+    const key = frame.tl && director.ready.flight ? `${frame.tl.id}:${flightEpoch.value}` : '';
+    if (key && warm.flight !== key && !warm.pending) {
+      warm.pending = true;
+      warm.flight = key;
+      void prewarm(gl, scenes.flight, cam).finally(() => (warm.pending = false));
+    }
     const t0 = performance.now();
     gl.setRenderTarget(null);
     gl.autoClear = true;

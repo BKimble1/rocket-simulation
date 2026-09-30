@@ -61,7 +61,7 @@ export function Hangar() {
     const envScene = buildHangarEnvScene();
     const rt = pm.fromScene(envScene, 0.02);
     scene.environment = rt.texture;
-    scene.background = new THREE.Color('#c4c3be');
+    scene.background = new THREE.Color('#9e9d98');
     envScene.traverse((o) => {
       const m = o as THREE.Mesh;
       m.geometry?.dispose();
@@ -266,7 +266,7 @@ export function Hangar() {
 
   return (
     <>
-      <hemisphereLight args={['#fbfbf8', '#a8a398', 0.62]} />
+      <hemisphereLight args={['#fbfbf8', '#8a867d', 0.6]} />
       <directionalLight
         ref={key}
         position={[38, 110, 70]}

@@ -317,6 +317,14 @@ export class PlumeSet {
     return this.used;
   }
 
+  /** Create the first pooled volume now (hidden), so its shader can be compiled ahead of use. */
+  prewarm() {
+    if (this.vols.length) return;
+    const v = new Volume();
+    this.vols.push(v);
+    this.group.add(v.mesh);
+  }
+
   private take(): Volume | null {
     if (this.used >= MAX_VOLUMES) return null;
     let v = this.vols[this.used];

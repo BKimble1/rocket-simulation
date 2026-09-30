@@ -278,7 +278,7 @@ function Main() {
     installAudio();
     if (quality !== 'auto') setManualTier(quality);
     if (r.view === 'mission' || r.view === 'watch') {
-      if (r.view === 'mission') openMissionAt(r.mission ?? 'leo', routeExtras.chapter);
+      if (r.view === 'mission') openMissionAt(r.mission ?? 'leo', routeExtras.chapter, false, null, { cam: r.cam, focus: r.focus });
       else loadMission(r.mission ?? 'leo');
     }
     hangarHome();
@@ -297,6 +297,14 @@ function Main() {
   useEffect(() => {
     playback.player?.hold('dialog', !!drawer);
   }, [drawer]);
+  // Back/Forward (or any route change) to a mission other than the one loaded: load it, at the
+  // chapter the address names, keeping the address's camera and storyline
+  const mission = useApp((s) => s.mission);
+  useEffect(() => {
+    if (view !== 'mission' || !playback.player || playback.player.tl.id === mission) return;
+    const st = useApp.getState();
+    openMissionAt(mission, routeExtras.chapter, false, null, { cam: st.cam, focus: st.focus });
+  }, [view, mission]);
   void useQuality;
   return (
     <div className="app" data-view={view}>

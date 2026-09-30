@@ -34,7 +34,7 @@ import { Quadtree, triangulate, type Focus, type Leaf } from './lod';
  * grade, a few metres around the landing zone and the ground camera sites.
  */
 function terrainFoci(detail: number): Focus[] {
-  const s = detail >= 1 ? 1 : detail >= 0.75 ? 1.25 : 1.6;
+  const s = detail >= 1 ? 1 : detail >= 0.6 ? 1.3 : 1.9;
   const mouth = trenchXZ(TRENCH.sMouth - 4, 0);
   const C = GROUND_CAMS;
   return [

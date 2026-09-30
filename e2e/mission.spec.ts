@@ -106,3 +106,48 @@ test('mission playback on a phone @phone', async ({ page }) => {
   await page.waitForTimeout(1500);
   expect(errors).toEqual([]);
 });
+
+// ───────────────────────────── V2 camera and routing ─────────────────────────────
+
+type W = { __rocketDirector: { mode: string; focus: string; blends: unknown[]; autoKey: string }; __rocketFlightStats: { pushes: number; cuts: number } };
+
+test('a held manual camera starts no transitions while the mission plays (V1 restarted one every frame)', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(withHooks('?v=mission&m=leo&ch=maxq&cam=chase'));
+  await waitForLocation(page, 'flight');
+  await frames(page, 3);
+  const before = await page.evaluate(() => (window as unknown as W).__rocketFlightStats.pushes + (window as unknown as W).__rocketFlightStats.cuts);
+  await page.getByRole('button', { name: 'Play mission' }).click();
+  await frames(page, 8);
+  const after = await page.evaluate(() => {
+    const w = window as unknown as W;
+    return { n: w.__rocketFlightStats.pushes + w.__rocketFlightStats.cuts, blends: w.__rocketDirector.blends.length, key: w.__rocketDirector.autoKey };
+  });
+  expect(after.n).toBe(before);
+  expect(after.blends).toBe(1);
+  expect(after.key).toBe('chase:chase:booster');
+  expect(errors).toEqual([]);
+});
+
+test('a deep link keeps its camera mode and storyline (booster, chase)', async ({ page }) => {
+  await page.goto(withHooks('?v=mission&m=leo&ch=boostback&focus=booster&cam=chase'));
+  await waitForLocation(page, 'flight');
+  await frames(page, 3);
+  const d = await page.evaluate(() => {
+    const w = window as unknown as W;
+    return { mode: w.__rocketDirector.mode, focus: w.__rocketDirector.focus };
+  });
+  expect(d).toEqual({ mode: 'chase', focus: 'booster' });
+  await expect(page.getByRole('radio', { name: 'Booster' })).toHaveAttribute('aria-checked', 'true');
+});
+
+test('Back and Forward between missions load the mission the address names', async ({ page }) => {
+  await page.goto(withHooks('?v=mission&m=leo'));
+  await waitForLocation(page, 'flight');
+  await page.getByRole('button', { name: /Satellite to low Earth orbit/i }).first().click();
+  await page.getByRole('menuitem', { name: 'Suborbital hop' }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __rocketPlayback: { player: { tl: { id: string } } } }).__rocketPlayback.player.tl.id)).toBe('suborbital');
+  await page.goBack();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __rocketPlayback: { player: { tl: { id: string } } } }).__rocketPlayback.player.tl.id)).toBe('leo');
+  expect(new URL(page.url()).searchParams.get('m')).toBe('leo');
+});

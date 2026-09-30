@@ -75,22 +75,29 @@ export function routeOf(s: AppState, chapter?: string | null): string {
   return window.location.pathname + (str ? '?' + str : '');
 }
 
-let lastView: View | null = null;
+let lastPlace: string | null = null;
+
+/** A history entry per view, and per mission within the mission and watch views. */
+function placeOf(s: Pick<AppState, 'view' | 'mission'>): string {
+  return s.view === 'mission' || s.view === 'watch' ? `${s.view}:${s.mission}` : s.view;
+}
 
 /** Keep the address in sync with the state; restore state on Back/Forward. */
 export function installRouting(getChapter: () => string | null) {
-  lastView = useApp.getState().view;
+  lastPlace = placeOf(useApp.getState());
   useApp.subscribe((s) => {
     const url = routeOf(s, getChapter());
     if (url === window.location.pathname + window.location.search) return;
-    if (s.view !== lastView) window.history.pushState(null, '', url);
+    const place = placeOf(s);
+    if (place !== lastPlace) window.history.pushState(null, '', url);
     else window.history.replaceState(null, '', url);
-    lastView = s.view;
+    lastPlace = place;
   });
   window.addEventListener('popstate', () => {
     const r = parseRoute(window.location.search);
-    lastView = r.view ?? 'home';
-    useApp.setState({ view: 'home', part: null, ...r });
+    const next = { view: 'home' as View, part: null, ...r };
+    lastPlace = placeOf({ view: next.view, mission: next.mission ?? useApp.getState().mission });
+    useApp.setState(next);
   });
 }
 

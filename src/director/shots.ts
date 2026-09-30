@@ -20,7 +20,7 @@ import { frame } from '../scene/frame';
 import { R_EARTH, SUN_DIRECTION, sitePosition, siteFrameQuaternion, moonPosition } from '../world/frames';
 import { GROUND_CAMS, LANDING_ZONE, PAD } from '../world/site';
 import { clamp, fitFov, type CamPose } from './pose';
-import { bodyAt, type BodyState } from '../timeline/sample';
+import { bodyAt, channelAt, type BodyState } from '../timeline/sample';
 import { MOUNT_Y } from '../scene/spacecraft/types';
 
 /** Approximate half-length (m) of each body for framing, and its visual centre on the model axis. */
@@ -82,7 +82,7 @@ export function subjectExtent(id: BodyId, t: number, tl: MissionTimeline | null 
     if (b !== id && assemblyRoot(b, t, tl) !== root) continue;
     const s = bodySize(b);
     lo = Math.min(lo, s.centreY - s.half);
-    hi = Math.max(hi, s.centreY + s.half);
+    hi = Math.max(hi, s.centreY + s.half + (b === 'capsule' ? chuteReach(tl, t) : 0));
   }
   if (!(hi > lo)) {
     const s = bodySize(id);
@@ -93,6 +93,23 @@ export function subjectExtent(id: BodyId, t: number, tl: MissionTimeline | null 
   extent.half = (hi - lo) / 2;
   extent.centreY = (hi + lo) / 2;
   return extent;
+}
+
+/**
+ * How far deployed parachutes reach above the capsule (m): drogues ~35 m (riser, lines, canopy),
+ * mains ~66 m once open; so a framing of the capsule under chutes shows the canopies too.
+ */
+function chuteReachAt(tl: MissionTimeline, t: number): number {
+  const d = channelAt(tl.channels['cap.drogue'], t, 0);
+  const m = channelAt(tl.channels['cap.main'], t, 0);
+  return Math.max(35 * Math.min(1, d * 1.5), 66 * Math.min(1, m * 1.6));
+}
+/** Averaged over the last 4 s of mission time (still a pure function of t), so the framing opens up gently. */
+function chuteReach(tl: MissionTimeline, t: number): number {
+  if (!tl.channels['cap.drogue'] && !tl.channels['cap.main']) return 0;
+  let sum = 0;
+  for (let k = 0; k < 9; k++) sum += chuteReachAt(tl, t - k * 0.5);
+  return sum / 9;
 }
 
 const v1 = new THREE.Vector3();
@@ -483,6 +500,12 @@ export function evalShot(shot: Shot, t: number, ctx: ShotContext, out: CamPose):
           // subject stays the subject)
           d = Math.min(d * 4, Math.max(d, backOff((sep * 0.62 + bodySize(ts).half) * keep + size.half * 0.5, maxFov * 0.92)));
         }
+      }
+      if (!also && !P.fov) {
+        // a large assembly (the whole vehicle up close, a capsule under its parachutes): back off
+        // rather than open the lens past ~55 degrees (continuous as the assembly grows)
+        const halfNeed = size.half * (P.frame ?? 1.1) * 1.25;
+        d = Math.max(d, halfNeed / Math.tan((27.5 * Math.PI) / 180));
       }
       orbitAround(d, az, el, aB);
       if (aB === AB) {

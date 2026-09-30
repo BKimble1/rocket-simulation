@@ -36,9 +36,16 @@ export function PlaybackBar({ onChapters, compact = false }: { onChapters?: () =
         {pb.playing ? <Icon.pause size={18} /> : <Icon.play size={18} />}
       </button>
       <div className="playbar__time" aria-live="off">
-        <span className="playbar__t">{formatMissionTime(pb.t)}</span>
+        <span className="playbar__t" title="Mission time: seconds from liftoff (T-0)">
+          {formatMissionTime(pb.t)}
+        </span>
         {pb.note && <span className="note-chip">{pb.note}</span>}
         {!pb.note && pb.timeRate < 0.99 && <span className="note-chip">Slow motion ×{pb.timeRate.toFixed(1)}</span>}
+        {!pb.note && pb.timeRate >= 0.99 && pb.timeRate <= 1.01 && (
+          <span className="note-chip note-chip--quiet" title="One second of mission for each second of viewing (at 1× playback)">
+            Real time{pb.rate !== 1 ? ` · played at ${pb.rate}×` : ''}
+          </span>
+        )}
         {pb.held.includes('loading') && <span className="note-chip note-chip--warn">Loading the next view</span>}
       </div>
       <div
@@ -84,7 +91,7 @@ export function PlaybackBar({ onChapters, compact = false }: { onChapters?: () =
         )}
       </div>
       <label className="speed">
-        <span className="sr-only">Playback speed</span>
+        <span className="sr-only">Playback speed (on top of any time compression shown)</span>
         <select value={pb.rate} onChange={(e) => playback.player?.setRate(Number(e.target.value))}>
           {SPEEDS.map((s) => (
             <option key={s} value={s}>

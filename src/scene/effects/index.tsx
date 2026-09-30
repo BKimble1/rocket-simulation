@@ -89,6 +89,12 @@ export class EffectsSystem {
     this.flameLight.castShadow = false;
     this.auxLight.castShadow = false;
     this.root.matrixAutoUpdate = true;
+    // one of each pooled volume exists from the start (hidden), so the stage can compile their
+    // shaders while the vehicle waits on the pad instead of at ignition or at entry
+    this.plumes.prewarm();
+    const pv = (this.plasma[0] = new PlasmaVolume());
+    pv.hide();
+    this.root.add(pv.mesh);
   }
 
   update(camera: THREE.Camera) {

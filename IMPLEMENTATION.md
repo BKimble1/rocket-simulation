@@ -89,34 +89,76 @@ separation, so nothing teleports, and attached bodies share one pose. Each body'
 pose of the shared **model frame** (origin at the first-stage nozzle exit plane), so a separated
 upper stage keeps its geometry exactly where it was.
 
-Three clocks: **mission time** (physics, T-0 = liftoff), **presentation time** (what the
-scrubber shows; piecewise-linear to mission time, with accelerated coasts and omitted quiet
-intervals stated on screen), and the **stage clock** (wall time minus hidden time; decorative
-motion and subsystem demonstrations only).
+Clocks (V2, `src/scene/clock.ts`). One frame step drives everything that moves: the real interval
+since the previous frame, capped at 0.25 s (`?virt=1`: exactly 1/30 s). The **UI clock**
+(`frame.clock`, also `frame.decor`) is the sum of steps and runs camera transitions, dissolves,
+panel easing, hangar moves, demonstrations and decorative motion; **presentation time** advances by
+step × playback rate while playing and not held; **mission time** is its image through the
+presentation map, and bodies, effects, telemetry, phase and captions are pure functions of it. So
+under slow frames a camera move can never race ahead of the vehicle it follows (V1 ran transitions
+on wall-clock time while playback clamped at 0.1 s), a stall costs one capped step, pause stops only
+presentation time, the playback rate never changes camera or dissolve durations, and a seek sets
+presentation time directly. Omitted (quiet) intervals are entered at their first instant, the
+picture there is captured and held under a "Time skipped" card until the interval ends, then it
+dissolves to the new moment. Narration follows the film clock: small drift is corrected by nudging
+the audio rate, and when frames are too slow for real time the voice waits for the picture instead
+of being re-seeked (V1 re-seeked beyond 120 ms, which restarted it almost every slow frame).
 
 ## The camera authority
 
 `src/director/director.ts` is the only code that moves the camera. Locations: **hangar**
 (Explore: damped orbit parameters, framing a part's world-space box, log-space zoom, shortest
-azimuth path), **flight** (Auto shot list, Ground, Chase, Onboard, Free, and the Map), **map**.
-Every flight framing is a live function of mission time (`src/director/shots.ts`), evaluated
-each frame; a change of shot or mode pushes a new blend that eases in over the old one while
-**both keep being evaluated**, so a transition interrupted by another continues from what is
-displayed and the apparent velocity stays continuous. Framings blend look-at points (not
-orientations) so horizons stay level; the orientation is built once from the blend. Taking the
-camera (drag, pinch, wheel, arrows) switches to Free starting exactly at the displayed pose;
-"Back to guided view" blends back. Shots follow their subject and never alter a trajectory.
-Changing location captures the displayed picture and dissolves it over the new location; a
-location that is not ready is not entered (the picture holds and the page says so).
+azimuth path, never through the vehicle column), **flight** (Auto shot list, Ground, Chase,
+Onboard, Free, and the Map), **map**.
+
+Flight framings (V2) have a **stable identity**: the mode, the framing regime (pad camera or
+tracking camera, with hysteresis), the subject, and for Auto the shot's place in the list. Each
+framing is a live function of mission time (`src/director/shots.ts`), evaluated every frame so it
+follows its subject, but a transition starts only when the identity changes (V1 put the current
+time into the identity of manual modes and restarted their transition every frame). A transition is
+a live cross-blend: the framings on a bounded stack (three) keep being evaluated and each newer one
+eases in over the composite of the older ones, so every transition starts from the displayed pose,
+including one interrupted halfway, with continuous apparent motion; a burst of changes folds the
+stack into a hold of the displayed pose (fixed to the ground or moving with the subject) instead of
+evicting blends. Blending happens around the destination subject: the camera's offset is
+interpolated as a direction (shortest rotation) and a range (log space), the aim turns by angle from
+where the camera is, the lens is interpolated on log(tan(fov/2)) and widens just enough, eased in
+and out, to keep the new subject in view. Changes no camera move could plausibly connect (two ground
+sites, the ground and the air, the onboard camera, a subject kilometres away) are **dissolves**:
+the displayed picture is captured at the end of the frame (after any running dissolve is drawn, so
+an interrupted one continues from what is on screen) and faded over the new framing
+(`src/scene/dissolve.ts`). Chapter jumps dissolve too; seeks and scrubbing cut at once.
+
+Rules every framing follows: bodies that are not present are never framed (a visible stand-in is
+chosen: the body it rides on, the phase's subject, the main vehicle); the framing size is the whole
+assembly the subject belongs to at that moment; the travel frame is the mission plane (it does not
+flip when the booster's horizontal velocity reverses during boostback, as V1's did); two-body
+framings aim by angle and let a departing part go once it is clear rather than lose the subject;
+rendezvous framings use the station's docking axis; coast cameras swing to the sunlit side
+continuously; near the vertical the horizon turns toward a stable hint instead of spinning; the
+camera is kept out of the ground, the service tower and vehicle hulls. Manual modes are few strong,
+held angles: Chase is one framing whose range, height and Earth share follow the altitude; Ground
+changes site (by a dissolve) only between the pad, tracking, landing-zone and sea cameras, and never
+during a separation. Taking the camera (drag, pinch, wheel, arrows) switches to Free starting at the
+displayed pose; changing the followed body in Free re-expresses the orbit around it (far bodies by a
+dissolve), also while paused; "Reset view" and "Back to guided view" return. Reduced motion turns
+transitions into short dissolves.
 
 Panels never hide the subject: a panel that covers part of the screen registers the area it
 hides (`useStageInset`: a sheet spanning the width at the bottom on phones, a tall panel at one
-side on desktop and phone-landscape). The stage then moves the projection centre into the free
-area with `setViewOffset` (and, for a bottom sheet, widens the view to fit the free height),
-eased so opening and closing a panel glides. It changes the projection only, never a framing or
-a trajectory, and picking and hotspots follow automatically because they use the same camera.
-In the hangar, a move between distant subjects keeps the destination in view (the camera pulls
-back while the target travels, then closes in) instead of passing close to empty floor.
+side on desktop and phone-landscape, the playback dock and, in Watch, a reserved caption area). The
+stage then moves the projection centre into the free area with `setViewOffset` (and, for a bottom
+area, widens the view to fit the free height), eased so opening and closing a panel glides.
+
+**Launch coverage** (`launchShots` in `timeline/missions/common.ts`, shared by the five missions
+from the pad): the wide pad camera before launch; an ignition camera 220 m south-south-east that
+frames the whole vehicle on its mount, with the flame trench running away from it; a tower-clearance
+camera 410 m south-east with the tower beside the vehicle; the long-lens tracking camera. A unit
+test checks every ground site's line of sight past the tower, hangar and buildings.
+
+**Camera trace** (`src/director/trace.ts`): the director runs against real timelines without
+rendering; the regression tests (`director.test.ts`) and the audit report (`audit.report.test.ts`)
+use it; in the browser `?trace=1` records the same fields per frame on `window.__rocketTrace`.
 
 ## Activity channels
 
@@ -164,15 +206,31 @@ tab, and runs captions-only when narration is off or unavailable.
 
 ## Quality and performance
 
-`src/scene/quality.ts`: three tiers (DPR cap, shadow map size, particle budget, atmosphere
-samples, cloud octaves, texture size, geometry detail, optional bloom) chosen from the device
-and adjusted from measured frame times with hysteresis (three slow 2-second windows to step
-down, eight fast windows and a 30 s cool-down to step up). Tiers never change content or timing.
-`?quality=` forces a tier; `?diag=1` shows frame times and draw calls.
+`src/scene/quality.ts`: three tiers (DPR cap, shadow map size, particle budget and smoke overdraw,
+atmosphere and cloud samples, texture size, terrain resolution, vegetation count, site structure
+detail, optional bloom) chosen from the device, then adjusted from **measured frame intervals** (V2:
+the real time between frames, not the CPU time spent issuing one): a 2 s window is fast, ok, slow or
+severe; a window with fewer than 20 frames counts as severely slow (V1 skipped such windows, so a
+device at a few frames per second never stepped down); stalls over 1 s and hidden time end a window
+unjudged; three slow windows (two severe ones) step down; eight fast windows and a 30 s cool-down
+step up, and returning to a tier just left needs three minutes. Missed 60 Hz frames are counted;
+CPU render time and, where `EXT_disjoint_timer_query_webgl2` exists (`?diag=1`), GPU time are shown
+separately. Tiers never change content or timing. The flight scene's shaders, including hidden ones
+(plume and plasma volumes, parachutes), are compiled when a mission's scene is built
+(`compileAsync`), not at ignition. `?quality=` forces a tier; `?diag=1` shows the measurements.
+
+A lost WebGL context keeps the page, holds playback and says so; the browser's restore resumes
+drawing, and a reload is offered if it does not come back.
+
+**Inspection light.** In Earth's shadow a spacecraft is, truthfully, a dark silhouette. An
+optional light from the camera's side (on by default, labelled on screen while on, off in Settings)
+lights the followed body while it is in eclipse in space; it is never on in sunlight or in the
+atmosphere.
 
 ## Identity
 
 `tools/brand/build_logo.py` writes the KIMBLE symbol (a K whose upper arm is an ascent arc
-turning horizontal: orbit needs sideways speed), lockups, the FAB / ONE wordmark and
+turning horizontal: orbit needs sideways speed), lockups, the FAB / ONE wordmark (the simulation
+collection this belongs to) and
 `src/brand/logoPaths.ts`; the interface and the decals (painted on canvases, mapped on curved
 bands) use the same paths.

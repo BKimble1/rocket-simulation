@@ -18,7 +18,7 @@ function floorTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#b4b1aa';
+  g.fillStyle = '#8f8c86';
   g.fillRect(0, 0, S, S);
   // subtle mottling
   for (let i = 0; i < 2600; i++) {
@@ -99,7 +99,7 @@ export function buildHangarArchitecture(): HangarArchitecture {
   group.add(mark);
 
   // ribbed circular wall with a tall door opening toward +Z (daylight)
-  const wallMat = keep(new THREE.MeshStandardMaterial({ color: '#c3c1bb', roughness: 0.85, side: THREE.BackSide }));
+  const wallMat = keep(new THREE.MeshStandardMaterial({ color: '#a09e98', roughness: 0.85, side: THREE.BackSide }));
   const doorHalf = 0.34; // radians of opening
   const wallGeo = keep(new THREE.CylinderGeometry(HALL_R, HALL_R, HALL_H, 160, 1, true, Math.PI / 2 + doorHalf, Math.PI * 2 - doorHalf * 2));
   const wall = new THREE.Mesh(wallGeo, wallMat);
@@ -125,12 +125,12 @@ export function buildHangarArchitecture(): HangarArchitecture {
     g.translate(0, h, 0);
     ribs.push(g);
   }
-  const ribMesh = new THREE.Mesh(keep(mergeGeometries(ribs)), keep(new THREE.MeshStandardMaterial({ color: '#b1b0aa', roughness: 0.7 })));
+  const ribMesh = new THREE.Mesh(keep(mergeGeometries(ribs)), keep(new THREE.MeshStandardMaterial({ color: '#8e8d88', roughness: 0.7 })));
   ribs.forEach((g) => g.dispose());
   group.add(ribMesh);
 
   // ceiling: trusses and light strips
-  const ceil = new THREE.Mesh(keep(new THREE.CircleGeometry(HALL_R, 96)), keep(new THREE.MeshStandardMaterial({ color: '#a4a4a0', roughness: 0.9, side: THREE.DoubleSide })));
+  const ceil = new THREE.Mesh(keep(new THREE.CircleGeometry(HALL_R, 96)), keep(new THREE.MeshStandardMaterial({ color: '#7e7e7b', roughness: 0.9, side: THREE.DoubleSide })));
   ceil.rotation.x = Math.PI / 2;
   ceil.position.y = HALL_H;
   group.add(ceil);
@@ -235,7 +235,7 @@ export function buildHangarEnvScene(): THREE.Scene {
     const y = pos.getY(i) / 100;
     const z = pos.getZ(i) / 100;
     // floor warm grey, walls light, ceiling brighter; the door side (+Z) brightest
-    let v = y < -0.05 ? 0.42 : y > 0.6 ? 0.8 : 0.62;
+    let v = y < -0.05 ? 0.3 : y > 0.6 ? 0.62 : 0.46;
     if (z > 0.75 && y > -0.05 && y < 0.7) v = 1.5;
     col[i * 3] = v;
     col[i * 3 + 1] = v * 0.995;
