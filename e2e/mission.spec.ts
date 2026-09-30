@@ -43,22 +43,27 @@ test('seeking reconstructs state exactly and never duplicates bodies', async ({ 
       const w = window as unknown as { __rocketSeekMission: (t: number) => void };
       w.__rocketSeekMission(mt);
     }, t);
+  const count = () => page.evaluate(() => (window as unknown as { __rocketSceneCount: () => number }).__rocketSceneCount());
+  const cycle = async () => {
+    for (const t of [20, 600, 200]) {
+      await seek(t);
+      await frames(page);
+    }
+  };
   await seek(200);
   await frames(page);
   const a = await bodies(page);
-  const children = await page.evaluate(() => (window as unknown as { __rocketSceneCount: () => number }).__rocketSceneCount());
-  await seek(20);
-  await frames(page);
-  await seek(600);
-  await frames(page);
-  await seek(200);
-  await frames(page);
+  // a first pass fills bounded pools (plume volumes are created as engines first light)
+  await cycle();
   const b = await bodies(page);
   for (const k of Object.keys(a)) {
     expect(b[k].present).toBe(a[k].present);
     if (a[k].present) expect(Math.hypot(a[k].x - b[k].x, a[k].y - b[k].y, a[k].z - b[k].z)).toBeLessThan(0.01);
   }
-  expect(await page.evaluate(() => (window as unknown as { __rocketSceneCount: () => number }).__rocketSceneCount())).toBe(children);
+  // repeating the same seeks must not add anything: no duplicated bodies, no leaks
+  const warmed = await count();
+  await cycle();
+  expect(await count()).toBe(warmed);
 });
 
 test('booster storyline: switching focus keeps the shared mission time', async ({ page }) => {
