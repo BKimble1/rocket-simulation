@@ -26,6 +26,10 @@ before/after numbers are in [`V2_AUDIT.md`](V2_AUDIT.md). Summary of what was ch
   full satellite walkthrough ran out of its 5-minute budget under load (4.4 minutes alone), now
   given 8 minutes. The three were then run again and passed, and after the phone-header change
   the home, WebGL-fallback, reduced-motion and phone tests (8 on the three projects) passed.
+  On the final build (after the booster-landing rate and inspection-chip fixes), the whole
+  suite ran again: **29 passed, 0 failed** (54.6 minutes). In FAB / ONE, the site's own suite
+  (`npm run e2e` there: routes, deep links, refresh, Back to FAB / ONE on desktop and phone,
+  the card, types and caching) passed 42, skipped 8 by design, failed 0.
 - **Visual review**: stills of every mission's key moments rendered on the virtual clock and
   reviewed (launch, tower clearance, max-Q, staging, fairing, deployment in eclipse, booster
   boostback, entry and landing, capsule separation, entry, parachutes and splashdown, station
