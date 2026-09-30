@@ -171,11 +171,6 @@ export function CameraBar() {
     };
   }, []);
   useEffect(() => {
-    if (cam === 'map') goLocation('map');
-    else {
-      goLocation('flight');
-      setMode(cam);
-    }
     if (cam !== 'free') setTook(false);
   }, [cam]);
   return (
@@ -194,18 +189,39 @@ export function CameraBar() {
   );
 }
 
+/**
+ * Applies the mission explorer's camera mode and focus (store state, also set by deep links) to
+ * the director. Mounted by the app shell whenever the mission view is active, so it works with
+ * the interface hidden too (?ui=0 captures).
+ */
+export function MissionDirectorSync() {
+  const pb = usePlayback();
+  const cam = useApp((s) => s.cam);
+  const focus = useApp((s) => s.focus);
+  const tl = playback.player?.tl;
+  const branch = tl?.branches[0];
+  const main = pb.phase?.focus ?? 'upper';
+  useEffect(() => {
+    if (cam === 'map') goLocation('map');
+    else {
+      goLocation('flight');
+      setMode(cam);
+    }
+  }, [cam]);
+  useEffect(() => {
+    if (!tl) return;
+    const target = focus === 'booster' && branch ? branch.focus : main;
+    if (frame.bodies[target]?.present || !frame.tl) setFocus(target);
+  }, [focus, main, tl, branch, pb.t]);
+  return null;
+}
+
 export function FocusSwitch() {
   const pb = usePlayback();
   const focus = useApp((s) => s.focus);
   const set = useApp((s) => s.set);
   const tl = playback.player?.tl;
   const branch = tl?.branches[0];
-  const main = pb.phase?.focus ?? 'upper';
-  useEffect(() => {
-    if (!tl) return;
-    const target = focus === 'booster' && branch ? branch.focus : main;
-    if (frame.bodies[target]?.present || !frame.tl) setFocus(target);
-  }, [focus, main, tl, branch, pb.t]);
   if (!branch || pb.t < branch.start - 1) return null;
   return (
     <div className="seg seg--inline focus-switch panel" role="radiogroup" aria-label="Follow">

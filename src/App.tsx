@@ -11,7 +11,7 @@ import { OrbitalMap } from './scene/map/OrbitalMap';
 import { Home } from './ui/Home';
 import { Explore } from './ui/explore/Explore';
 import { Missions } from './ui/mission/Missions';
-import { MissionView } from './ui/mission/MissionView';
+import { MissionDirectorSync, MissionView } from './ui/mission/MissionView';
 import { WatchView } from './ui/watch/WatchView';
 import { Drawer } from './ui/drawers/Drawer';
 import { Learn } from './ui/drawers/Learn';
@@ -271,6 +271,7 @@ function Main() {
           <Drawers />
         </>
       )}
+      {view === 'mission' && <MissionDirectorSync />}
       {FLAGS.diag && <Diag />}
     </div>
   );
