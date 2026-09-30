@@ -163,7 +163,36 @@ layer labels.
 ## Screenshots and recordings
 
 <!-- MEDIA:BEGIN -->
-(listed when rendered)
+Two kinds of recording, both made from the production build on the machine described above:
+
+- **Wall-clock recordings** (`docs/recordings/realtime/`, 1280 × 720, Playwright screen video
+  re-encoded to MP4): what a viewer on this machine actually saw, in real time, including loading.
+  Because SwiftShader renders well under 1 fps here, motion in them is visibly stepped; that is
+  this machine, not the app's frame pacing on a GPU.
+  `home.mp4` (34 s), `explore.mp4` (55 s: find the turbopump, open its cutaway),
+  `mission-leo.mp4` (69 s: play the satellite mission from liftoff), `watch.mp4` (59 s: the
+  overview film with captions and narration).
+- **Virtual-clock recordings** (`docs/recordings/virtual/`, 960 × 540, 30 fps): the page's clock
+  is advanced exactly 1/30 s per captured frame, so each clip shows motion and continuity at
+  true speed regardless of how long a frame took to render. They say nothing about frame rate.
+  Each clip has a `.txt` beside it with the URL and frame count.
+  `pad-ignition-liftoff`, `tower-clearance`, `staging`, `fairing`, `orbital-earth`,
+  `booster-landing`, `station-docking`, `capsule-entry`, `lunar-encounter`, `hangar-exterior`,
+  `engine-cutaway`.
+
+Screenshots (`docs/screenshots/`, JPEG, rendered on the virtual clock with `scripts/still.mjs`):
+desktop (1440 × 900): `desktop-home`, `desktop-explore-turbopump`, `desktop-explore-materials`,
+`desktop-explore-heat-shield`, `desktop-mission-liftoff`, `desktop-mission-staging`,
+`desktop-mission-orbit`, `desktop-mission-landing`, `desktop-mission-docking`,
+`desktop-mission-entry`, `desktop-mission-lunar`, `desktop-map`; phone portrait (390 × 844):
+`phone-home`, `phone-explore-lesson`, `phone-mission`; phone landscape (844 × 390):
+`phone-landscape-mission`.
+
+The hub card (`public/og/poster.jpg`, `preview.mp4` muted 8 s loop, `preview.jpg`) is rendered
+by `scripts/hub-card.mjs` in the brand-only capture mode (`?ui=brand`).
+
+All of it can be regenerated: `scripts/record-all.sh`, `scripts/screenshots.sh`,
+`node scripts/hub-card.mjs` (see the README).
 <!-- MEDIA:END -->
 
 ## Approximations and known limitations
