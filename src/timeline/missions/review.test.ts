@@ -201,6 +201,27 @@ describe('tracks and timing', () => {
     expect(n).toBeGreaterThan(60);
   });
 
+  it('play every booster landing in real time, from its landing shot to after touchdown (both stories share one clock)', () => {
+    let n = 0;
+    for (const id of MISSION_ORDER) {
+      const m = tl(id);
+      for (const b of m.branches) {
+        const td = m.events.find((e) => e.id === 'touchdown' && e.t >= b.start && e.t <= b.end);
+        if (!td) continue;
+        const land = b.shots.find((s) => s.kind === 'landing');
+        const from = land ? land.from : td.t - 30;
+        for (const s of m.pres) {
+          if (s.m1 <= from || s.m0 >= td.t + 5) continue;
+          const rate = (s.m1 - s.m0) / (s.p1 - s.p0);
+          expect(s.omitted ?? false, `${id}: the booster landing (T+${from.toFixed(0)} to T+${td.t.toFixed(0)} s) is inside an omitted interval`).toBe(false);
+          expect(rate, `${id}: the booster landing plays at x${rate.toFixed(1)} ("${s.note ?? ''}")`).toBeCloseTo(1, 6);
+        }
+        n++;
+      }
+    }
+    expect(n).toBeGreaterThan(0);
+  });
+
   it('state the rate each presentation segment plays at, and how much an omitted interval skips', () => {
     const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
     for (const id of MISSION_ORDER) {

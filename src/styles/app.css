@@ -1124,6 +1124,16 @@ code {
   font-size: 13.5px;
   z-index: 5;
 }
+/* beside the lesson panel and the location inset (both at the top right while a part is
+   inspected): at the foot of the free area, above the toolbar, centred on the vehicle's side */
+@media (min-width: 821px) {
+  .inspect-chip {
+    top: auto;
+    bottom: calc(var(--dock-h, 110px) + 22px + var(--safe-bottom));
+    left: calc((100% - var(--panel-w) - 30px - var(--safe-right)) / 2);
+    max-width: calc(100% - var(--panel-w) - 64px - var(--safe-right));
+  }
+}
 
 /* ───────── missions ───────── */
 

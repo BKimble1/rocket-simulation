@@ -185,9 +185,11 @@ export function buildLeo(): MissionTimeline {
 
   // ── presentation: 1x through powered flight, coasts accelerated
   const coast1 = circ.start - 20;
+  // (real time lasts until the booster storyline has landed: both stories share this clock,
+  // and its landing would otherwise pass at x40 in the upper stage's coast)
   const pres = new Pres(START)
-    .to(tSeco + 40)
-    .to(coast1, 40, rateNote('Coast to apogee (half an orbit)', 40))
+    .to(Math.max(tSeco + 40, branchEnd))
+    .to(coast1, 50, rateNote('Coast to apogee (half an orbit)', 50))
     .to(circ.end + 20)
     .to(tSep - 20, 8, rateNote('Coast', 8))
     .to(end).segs;
