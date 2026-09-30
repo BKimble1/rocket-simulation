@@ -76,12 +76,13 @@ Every test fails on any page error, console error, failed request or HTTP status
 | First screen | rocket scene, title, three actions, KIMBLE and ONE / FAB identity (desktop and phones); honest no-WebGL fallback; reduced motion respected |
 | Explore | find a part, read its lesson at every depth, switch views, open the materials layer and follow a material back to a part; deep link to a part and view (phones); keyboard-only part selection |
 | Learning | learning path, glossary search, a knowledge check answered, explored and checked progress kept apart, reset clears both |
-| Missions | satellite walkthrough (start, jump to staging, inspect a part from the phase card, return to exactly the paused moment, switch through every camera mode, finish); seeking reconstructs body positions exactly and never grows the scene; booster storyline keeps the shared mission time; each other mission plays into its final chapter; mission playback on phones |
+| Missions | satellite walkthrough (start, jump to staging, inspect a part from the phase card, return to exactly the paused moment, switch through every camera mode, finish); seeking reconstructs body positions exactly and never grows the scene; booster storyline keeps the shared mission time; deep links keep their camera and followed body; each other mission plays into its final chapter; mission playback on phones |
 | Watch | captions follow the film, pause holds, chapters seek (desktop and phones) |
 
-**Results.** The final full run (all three projects, one worker) passed **24 of 25** in
-18.5 minutes; the one failure was a flaw in the seek test (below), fixed and re-run: **all 25
-pass**. The `/rocket/` base-path build passed the home, explore and watch tests (7 of 7) with
+**Results.** A full run (all three projects, one worker) passed 24 of 25 in 18.5 minutes; the
+one failure was a flaw in the seek test (below), fixed. After the fixes from the screenshot
+review (below) a deep-link test was added and the whole suite re-run on the final build:
+**26 of 26 pass** (19.6 minutes). The `/rocket/` base-path build passed the home, explore and watch tests (7 of 7) with
 no request errors, which checks that every asset, texture and narration file resolves under
 the sub-path.
 
