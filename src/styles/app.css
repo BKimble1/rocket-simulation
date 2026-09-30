@@ -1594,6 +1594,12 @@ code {
     width: 44vw;
     max-height: none;
   }
+  /* too short for both: the open phase card wins, telemetry returns when it is closed; the
+     card already carries the phase title */
+  .phasecard ~ .telemetry,
+  .mission-top:has(~ .phasecard) .mission-title__phase {
+    display: none;
+  }
   .home__actions {
     grid-template-columns: repeat(3, 1fr);
   }
