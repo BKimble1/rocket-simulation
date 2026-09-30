@@ -1,7 +1,7 @@
 // Record a normal wall-clock video of the running app (what a viewer on THIS machine sees):
 //   node scripts/record-realtime.mjs <name> "<url>" <seconds> [width] [height] [setup-json]
 // setup-json: [{ "click": "role=button[name=/Explore a mission/]" }, { "wait": 1000 }, ...]
-// Output: docs/recordings/realtime/<name>.webm (+ .mp4 via imageio-ffmpeg if available).
+// Output: docs/recordings/realtime/<name>.mp4 (via imageio-ffmpeg; the WebM is kept only if that fails).
 // NOTE: this container renders with SwiftShader (CPU); motion is as smooth as that allows.
 import { chromium } from '@playwright/test';
 import { mkdirSync, renameSync, readdirSync, rmSync } from 'node:fs';
@@ -31,8 +31,11 @@ renameSync(join(tmp, f), webm);
 rmSync(tmp, { recursive: true, force: true });
 try {
   const ff = execFileSync('python3', ['-c', 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())']).toString().trim();
-  execFileSync(ff, ['-y', '-loglevel', 'error', '-i', webm, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '24', '-movflags', '+faststart', join(outDir, `${name}.mp4`)]);
+  const mp4 = join(outDir, `${name}.mp4`);
+  execFileSync(ff, ['-y', '-loglevel', 'error', '-i', webm, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '24', '-movflags', '+faststart', mp4]);
+  rmSync(webm); // keep the smaller, widely playable MP4 only
+  console.log(mp4);
 } catch (e) {
-  console.error('mp4 conversion skipped:', e.message);
+  console.error('mp4 conversion skipped, keeping the WebM:', e.message);
+  console.log(webm);
 }
-console.log(webm);
