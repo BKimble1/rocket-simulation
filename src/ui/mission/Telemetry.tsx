@@ -74,9 +74,10 @@ export function Telemetry() {
           <dt>Altitude</dt>
           <dd>{t.alt < 20000 ? `${Math.round(t.alt).toLocaleString('en-US')} m` : km(t.alt)}</dd>
         </div>
+        {/* in the air, speed relative to the (rotating) atmosphere; higher up, orbital speed */}
         <div>
-          <dt>Speed</dt>
-          <dd>{speed(t.v)}</dd>
+          <dt>{t.alt < 80000 ? 'Airspeed' : 'Orbital speed'}</dt>
+          <dd>{speed(t.alt < 80000 ? t.vAir : t.v)}</dd>
         </div>
         {t.alt < 90000 && (
           <div>

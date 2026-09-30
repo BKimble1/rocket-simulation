@@ -49,7 +49,7 @@ export function ascentCards(a: AscentContext): PhaseCard[] {
       equation: 'thrust',
     }),
     card(m, 'liftoff', {
-      what: `The clamps open and the vehicle rises, slowly at first: thrust exceeds weight only by a factor of ${s.tw}, so the net acceleration starts at about ${s.accel}. It climbs straight up past the ${F.towerHeight} service tower while the engine gimbals hold it upright against the wind.`,
+      what: `The clamps open and the vehicle rises, slowly at first: thrust exceeds the fully fuelled weight only by a factor of ${s.tw} (slightly more at release, since a few tonnes of propellant burn while the engines come up to thrust), so the net acceleration starts at about ${s.accel}. It climbs straight up past the ${F.towerHeight} service tower while the engine gimbals hold it upright against the wind.`,
       whyNow: 'Rising vertically first gets the vehicle clear of the tower and the pad quickly, before any turn could bring the plume or the vehicle close to the structure.',
       parts: ['s1-engine-cluster', 'thrust-structure', 'tvc-actuators', 'launch-mount', 'service-tower', 'sound-suppression', 'avionics'],
       forces: `Weight and thrust nearly balance at first, but the engines consume ${F.s1Mdot} of propellant, so the vehicle lightens and accelerates harder every second. Sound reflected from the ground is most intense in these first seconds; the vehicle is too slow for aerodynamic forces to matter yet.`,
