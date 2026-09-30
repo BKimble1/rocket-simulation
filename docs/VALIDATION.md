@@ -92,6 +92,20 @@ the sub-path.
 2. On phones the ONE / FAB wordmark appeared nowhere (the header subtitle that carries it is
    hidden below 720 px); it is now on the phone home card.
 
+**Defects the documentation screenshots found (fixed):** each still was inspected, and these
+were fixed before the final set was rendered:
+
+1. The telemetry's felt acceleration read 0.0 g whenever the mission was paused (it was
+   differentiated between interface ticks); it is now taken from the reference trajectory.
+2. Deep links lost their camera and followed body on load (`?cam=map`, `?focus=booster`); an
+   end-to-end test now covers both.
+3. At the lunar closest approach the camera looked 64° away from the Moon (the probe passes over
+   the night side, with the Sun 46° from the Moon); it now looks past the probe at the Moon, and
+   near the Moon the telemetry reads height above the Moon and speed relative to it.
+4. The station docking was nearly black: the docking lights sat on the docking axis, under a metre
+   apart, and the final-approach framing left the capsule out of frame. Both fixed.
+5. On a landscape phone the telemetry overlapped the mission title while the phase card was open.
+
 **Test flaws fixed along the way** (not application defects): fixed waits that assumed a frame
 rate the software renderer cannot reach were replaced by waits on rendered frames; an
 ambiguous "Pause" locator; a walkthrough that compared a playing mission's time; a location
@@ -200,8 +214,10 @@ All of it can be regenerated: `scripts/record-all.sh`, `scripts/screenshots.sh`,
 - **Physics** is a point-mass model with authored guidance: a spherical rotating Earth with a
   co-rotating standard atmosphere, no J2, winds or third-body perturbations on Earth orbits, and
   an Earth-Moon restricted three-body model for the lunar flyby (see ACCURACY.md).
-- **Eclipse lighting.** The LEO satellite deployment and the station docking happen in Earth's
-  shadow, so the spacecraft read nearly black there (no artificial fill light is added).
+- **Eclipse lighting.** The LEO satellite deployment happens in Earth's shadow, so the
+  spacecraft read nearly black there (no artificial fill light is added). The station docking
+  also happens in shadow; there the capsule and the station carry docking floodlights, as real
+  vehicles do, and those light the final approach.
 - **Thermal view.** The booster's simplified cluster engines show their pump casings as ambient;
   the hangar display engines, modelled in full, show the LOX side as cryogenic.
 - **Hairlines.** MSAA with the logarithmic depth buffer can draw thin lines where an internal
