@@ -46,6 +46,9 @@ export interface VehicleVisualState {
   s2GimbalPitch: number;
   frost: number; // LOX-tank frost on the pad 0..1
   entryScorch: number; // booster soot after entry 0..1
+  /** Engine throttle 0..1 in flight (drives the live engine models: flow, turbine, nozzle glow). */
+  s1Throttle?: number;
+  s2Throttle?: number;
 }
 
 export type ViewMode = 'intact' | 'cutaway' | 'exploded';

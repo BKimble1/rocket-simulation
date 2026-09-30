@@ -258,9 +258,10 @@ export function FlightWorld({ children }: { children?: ReactNode }) {
   useEffect(() => {
     flightModels.vehicle = vehicle;
     if (vehicle) {
+      // the modules decide which meshes cast shadows (small or hidden parts do not); receive on all
       vehicle.root.traverse((o) => {
         const m = o as THREE.Mesh;
-        if (m.isMesh) m.castShadow = m.receiveShadow = true;
+        if (m.isMesh) m.receiveShadow = true;
       });
     }
     if (tl && vehicle) effects.source = makeEffectsSource(tl, vehicle);
@@ -315,6 +316,8 @@ export function FlightWorld({ children }: { children?: ReactNode }) {
     VS.s1GimbalPitch = c('s1.gimbalPitch');
     VS.s1GimbalYaw = c('s1.gimbalYaw');
     VS.s2GimbalPitch = c('s2.gimbalPitch');
+    VS.s1Throttle = Math.max(c('s1.center.throttle'), c('s1.outer.throttle'));
+    VS.s2Throttle = c('s2.throttle');
     VS.frost = t < liftoff ? 1 : Math.max(0, 1 - (t - liftoff) / 70);
     VS.entryScorch = t < entryStart ? 0 : Math.min(1, (t - entryStart) / 25);
     vehicle.setState(VS);

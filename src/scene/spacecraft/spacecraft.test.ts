@@ -273,10 +273,8 @@ describe('draw-call budgets and thermal classes', () => {
 
 describe('material tags agree with the assignments table (known gaps listed)', () => {
   it('uses only assigned materials per part, except documented gaps', () => {
-    // the heat shield's fibrous insulation layer has no assignment row of its own; the service
-    // module's main engine has a niobium (C103) nozzle and a steel chamber and valves, which the
-    // service-module row does not list (reported to the content owners)
-    const gaps = new Set(['heat-shield:ceramic-tiles', 'service-module:niobium-c103', 'service-module:stainless']);
+    // the heat shield's fibrous insulation layer has no assignment row of its own
+    const gaps = new Set(['heat-shield:ceramic-tiles']);
     const bad = new Set<string>();
     for (const kind of ['leoSat', 'gtoSat', 'lunarProbe', 'capsule', 'researchCapsule', 'station'] as SpacecraftKind[]) {
       const m = build(kind, 'hangar', MOUNT_Y.upperStage);

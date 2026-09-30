@@ -57,7 +57,7 @@ export const ASSIGNMENTS: Partial<Record<PartId, MaterialUse[]>> = {
   'backshell-tps': [u('ceramic-tiles', 'Reusable silica tiles on the backshell (lower heating than the shield)'), u('ablator', 'Alternative: some documented capsules use ablative backshells', false)],
   parachutes: [u('textiles', 'Nylon canopies; aramid risers and reefing lines')],
   'docking-system': [u('al-2219', 'Docking ring and latches'), u('stainless', 'Hooks and springs')],
-  'service-module': [u('al-2219', 'Primary structure'), u('mli', 'Thermal blankets'), u('titanium', 'Propellant tanks')],
+  'service-module': [u('al-2219', 'Primary structure'), u('mli', 'Thermal blankets'), u('titanium', 'Propellant tanks and helium spheres'), u('niobium-c103', 'Main-engine nozzle (radiatively cooled)'), u('stainless', 'Engine chamber, injector, valves and struts')],
   'launch-abort-system': [u('cfrp-sandwich', 'Tower fairing and nose'), u('nickel-superalloy', 'Abort motor nozzles')],
   's1-engine-cluster': [u('grcop', 'Chamber liners of the seven engines'), u('nickel-superalloy', 'Turbomachinery and hot manifolds'), u('stainless', 'Lines, bellows and nozzle tubes')],
   'booster-avionics': [u('al-2219', 'Avionics enclosures and mounting shelf')],

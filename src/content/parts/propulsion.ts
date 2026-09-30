@@ -92,7 +92,7 @@ export const PROPULSION: (PartLesson | PartNote)[] = [
   lesson({
     id: 'turbopump',
     summary: `The turbopump is the E-1's heart: a turbine spinning at ${F.rpm} drives two pumps on one shaft that raise LOX and RP-1 from tank pressure to above chamber pressure.`,
-    where: 'Mounted beside the combustion chamber on each engine. Look for the horizontal shaft housing: the LOX pump and the RP-1 pump each have a curved inlet duct rising to the stage feed lines, and the turbine wheel sits at one end with its hot-gas inlet from the gas generator and its exhaust into the duct beside the nozzle.',
+    where: 'Mounted beside the combustion chamber on each engine. Look for the upright shaft housing parallel to the chamber: the LOX pump and the RP-1 pump each have a curved inlet duct rising to the stage feed lines, and the turbine wheel sits at one end with its hot-gas inlet from the gas generator and its exhaust into the duct beside the nozzle.',
     connections: ['engine', 'gas-generator', 'main-valves', 'lox-downcomer', 's1-fuel-tank', 'injector'],
     function: `Deliver about ${F.e1Lox} of LOX and ${F.e1Fuel} of RP-1 per engine at pressures high enough to push through the cooling channels and injector into a chamber at ${F.e1Pc}.`,
     how: `Hot gas from the gas generator expands through the turbine blades and spins the shaft. On the same shaft, each pump first uses an inducer (a screw-like rotor) to raise pressure gently, so the liquid does not boil into vapour bubbles (cavitation) at the low-pressure inlet. The centrifugal impeller then flings the liquid outward at high speed, and the spiral casing (volute) turns that speed into pressure. Seals between the pumps, purged with helium, keep LOX, kerosene and hot turbine gas from ever meeting.`,

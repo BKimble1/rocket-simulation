@@ -70,10 +70,7 @@ export function Hangar() {
     v.root.position.y = hangar.vehicleY;
     v.root.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (m.isMesh) {
-        m.castShadow = true;
-        m.receiveShadow = true;
-      }
+      if (m.isMesh) m.receiveShadow = true; // casting is the module's choice
     });
     return v;
   }, [cfg]);
@@ -95,7 +92,7 @@ export function Hangar() {
     for (const m of [e, v])
       m.root.traverse((o) => {
         const mesh = o as THREE.Mesh;
-        if (mesh.isMesh) mesh.castShadow = mesh.receiveShadow = true;
+        if (mesh.isMesh) mesh.receiveShadow = true; // casting is the module's choice
       });
     return { e, v };
   }, []);

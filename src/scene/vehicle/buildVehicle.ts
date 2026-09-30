@@ -624,13 +624,38 @@ export function buildVehicle(config: VehicleConfig): VehicleModel {
       }
       engineDemo = on;
     }
-    if (!on) return;
+    if (!on) {
+      applyFlightEngines(t);
+      return;
+    }
     const flow = on === 'tvc' ? 0 : 1;
     _run.flow = flow;
     _run.gg = flow > 0;
     _run.shaftAngle = t * Math.PI * 2 * 0.5;
     _run.ignite = on === 'combustion' ? Math.max(0, 1 - demoP * 8) : 0;
     for (const m of liveEngines) m.engine.setOperating(_run);
+  };
+
+  // in flight (no demonstration) the live engine models follow the mission throttles, so the
+  // E-1V extension glows while it burns and the turbine spins; only changes are sent
+  const lastFlow = new Map<EngineMount, number>();
+  let shaft = 0;
+  let lastT = 0;
+  const applyFlightEngines = (t: number) => {
+    const dt = Math.min(0.1, Math.max(0, t - lastT));
+    lastT = t;
+    for (const m of liveEngines) {
+      const th = (m.kind === 'E-1V' ? base.s2Throttle : base.s1Throttle) ?? 0;
+      const f = th > 0.01 ? th : 0;
+      if (f === 0 && (lastFlow.get(m) ?? 0) === 0) continue;
+      lastFlow.set(m, f);
+      shaft += dt * f * Math.PI * 2 * 0.5;
+      _run.flow = f;
+      _run.gg = f > 0;
+      _run.shaftAngle = shaft;
+      _run.ignite = 0;
+      m.engine.setOperating(_run);
+    }
   };
 
   const model: VehicleModel = {
