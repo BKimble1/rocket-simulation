@@ -558,7 +558,7 @@ function jetSpawn(j: PadJet, ts: number, rec: Rec, rnd: (j: number) => number, s
 const VENT: Species = {
   name: 'vent',
   salt: 41,
-  dtT: 10,
+  dtT: 5,
   life: 7.2,
   window: false,
   spawn(k, ts, _dt, snap, rec, rnd, ctx) {
@@ -585,12 +585,13 @@ const VENT: Species = {
     rec.floor = 0;
     rec.spreadK = 0.3;
     horizontal(rec.up, rnd(8) * Math.PI * 2, rec.horiz);
-    rec.size0 = (0.25 + 0.2 * rnd(9)) * ctx.sizeK;
-    rec.size1 = (2 + 2.2 * rnd(10)) * ctx.sizeK;
+    // (a continuous stream of overlapping wisps: isolated round puffs would read as smudges)
+    rec.size0 = (0.3 + 0.25 * rnd(9)) * ctx.sizeK;
+    rec.size1 = (2.6 + 2.6 * rnd(10)) * ctx.sizeK;
     rec.tauS = 2.4;
     rec.sizeLin = 0.12;
     rec.life = 3.8 + 3.2 * rnd(11);
-    rec.alpha0 = Math.min(1, 0.5 * ctx.alphaK);
+    rec.alpha0 = Math.min(1, 0.62 * ctx.alphaK);
     rec.fadeIn0 = 0;
     rec.fadeIn1 = 0.1;
     rec.fadeOut = 0.3;
@@ -630,8 +631,8 @@ const WATER: Species = {
     windWorld(ts, 10, rec.wind).multiplyScalar(0.4);
     rec.dieBelow = cannon ? 0.6 : j.pos[1] - 3.5;
     rec.floor = -1e9;
-    rec.size0 = (cannon ? 0.4 : 0.25) * ctx.sizeK;
-    rec.size1 = (cannon ? 2.6 + 1.6 * rnd(5) : 1.3 + 0.9 * rnd(5)) * ctx.sizeK;
+    rec.size0 = (cannon ? 0.35 : 0.25) * ctx.sizeK;
+    rec.size1 = (cannon ? 1.5 + 1.1 * rnd(5) : 0.9 + 0.7 * rnd(5)) * ctx.sizeK;
     rec.tauS = 1.1;
     rec.sizeLin = 0;
     rec.life = 2.9;
@@ -651,7 +652,8 @@ const WATER: Species = {
     rec.spin = 0;
     rec.variant = Math.floor(rnd(7) * 4);
     rec.gapDt = 0;
-    rec.stretchVel = 0.05;
+    // streaked along the flight path: the jets read as arcs of spray
+    rec.stretchVel = 0.14;
     return true;
   },
 };
