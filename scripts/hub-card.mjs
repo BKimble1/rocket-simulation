@@ -3,7 +3,7 @@
  * on the virtual clock (every frame advances exactly 1/30 s, so the clip plays at true speed
  * whatever the machine), with the interface hidden except the KIMBLE identity (?ui=brand).
  *
- *   node scripts/hub-card.mjs [baseUrl]      default http://127.0.0.1:4173/ (npm run preview)
+ *   node scripts/hub-card.mjs [baseUrl] [--poster-only]   default http://127.0.0.1:4173/ (npm run preview)
  *
  * Writes public/og/poster.jpg (1200 x 630), public/og/preview.mp4 (960 x 540, 8 s, no audio)
  * and public/og/preview.jpg (its first frame, for players that show a poster).
@@ -13,9 +13,10 @@ import { mkdirSync, rmSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
-const base = (process.argv[2] ?? 'http://127.0.0.1:4173/').replace(/\/?$/, '/');
+const posterOnly = process.argv.includes('--poster-only');
+const base = (process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'http://127.0.0.1:4173/').replace(/\/?$/, '/');
 const OUT = 'public/og';
-const POSTER = { t: 7.5, w: 1200, h: 630 };
+const POSTER = { t: 17, w: 1200, h: 630 }; // the pad-wide shot: the vehicle clear of the tower, plume and ground cloud
 const CLIP = { from: -3.5, seconds: 8, w: 960, h: 540, fps: 30 };
 mkdirSync(OUT, { recursive: true });
 const ff = execFileSync('python3', ['-c', 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())']).toString().trim();
@@ -56,7 +57,7 @@ const seek = (page, t) =>
 }
 
 // preview: ignition to liftoff and tower clearance, frame by frame
-{
+if (!posterOnly) {
   const page = await open(CLIP.w, CLIP.h);
   await seek(page, CLIP.from - 0.5);
   for (let i = 0; i < 15; i++) await adv(page);
