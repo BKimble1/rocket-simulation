@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Documentation screenshots from the production preview (npm run build && npm run preview),
 # rendered on the virtual clock (scripts/still.mjs) and stored as JPEG in docs/screenshots/.
-#   scripts/screenshots.sh [baseUrl]
+#   scripts/screenshots.sh [baseUrl]      (ONLY=name1,name2 for a subset)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 BASE="${1:-http://127.0.0.1:4173/}"
@@ -11,9 +11,13 @@ mkdir -p "$OUT"
 
 # name  url  width height frames [setup-js]
 shot() {
-  node scripts/still.mjs "$2" "$TMP/$1.png" "$3" "$4" "$5" "${6:-}" | head -1
-  python3 -c "from PIL import Image; Image.open('$TMP/$1.png').convert('RGB').save('$OUT/$1.jpg', quality=84, optimize=True)"
-  echo "$OUT/$1.jpg"
+  [[ -n "${ONLY:-}" && ",$ONLY," != *",$1,"* ]] && return 0
+  if node scripts/still.mjs "$2" "$TMP/$1.png" "$3" "$4" "$5" "${6:-}" | head -1 && [[ -f "$TMP/$1.png" ]]; then
+    python3 -c "from PIL import Image; Image.open('$TMP/$1.png').convert('RGB').save('$OUT/$1.jpg', quality=84, optimize=True)"
+    echo "$OUT/$1.jpg"
+  else
+    echo "FAILED $1"
+  fi
 }
 seek() { echo "window.__rocketSeekMission($1)"; }
 click() { echo "[...document.querySelectorAll('button')].find(b=>b.textContent.includes('$1'))?.click()"; }

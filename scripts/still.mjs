@@ -24,7 +24,7 @@ const info = await page.evaluate(() => {
   const f = window.__rocketFrame;
   return { location: f.location, t: +f.missionTime.toFixed(2), calls: gl.info.render.calls, tris: gl.info.render.triangles };
 });
-await page.screenshot({ path: out, timeout: 180000 });
+await page.screenshot({ path: out, timeout: 600000 });
 console.log(JSON.stringify(info), 'ms', Date.now() - t0);
 console.log(logs.slice(0, 12).join('\n'));
 await browser.close();
